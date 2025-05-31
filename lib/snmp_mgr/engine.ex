@@ -151,9 +151,10 @@ defmodule SNMPMgr.Engine do
   
   @impl true
   def handle_call({:submit_request, request, opts}, from, state) do
-    ref = make_ref()
+    request_id = generate_request_id()
     enriched_request = Map.merge(request, %{
-      ref: ref,
+      request_id: request_id,
+      ref: make_ref(),  # Keep reference for correlation but use request_id for SNMP
       from: from,
       submitted_at: System.monotonic_time(:millisecond),
       opts: opts
@@ -181,6 +182,7 @@ defmodule SNMPMgr.Engine do
       |> Enum.with_index()
       |> Enum.map(fn {request, index} ->
         Map.merge(request, %{
+          request_id: generate_request_id(),
           ref: make_ref(),
           batch_ref: batch_ref,
           batch_index: index,
@@ -386,6 +388,7 @@ defmodule SNMPMgr.Engine do
     
     # Send requests
     updated_connection = %{connection | 
+      socket: socket,  # Store the socket in the connection
       status: :active,
       active_requests: connection.active_requests ++ requests,
       last_used: System.monotonic_time(:millisecond)
@@ -441,7 +444,14 @@ defmodule SNMPMgr.Engine do
     
     case build_snmp_message(request) do
       {:ok, message} ->
-        :gen_udp.send(socket, target.host, target.port, message)
+        # Ensure host is in the correct format for gen_udp.send
+        resolved_host = case target.host do
+          host when is_binary(host) -> String.to_charlist(host)
+          host when is_list(host) -> host
+          host when is_tuple(host) -> host
+          host -> host
+        end
+        :gen_udp.send(socket, resolved_host, target.port, message)
       {:error, reason} ->
         Logger.error("Failed to build SNMP message: #{inspect(reason)}")
         GenServer.reply(request.from, {:error, reason})
@@ -453,12 +463,12 @@ defmodule SNMPMgr.Engine do
     try do
       case request.type do
         :get ->
-          pdu = SNMPMgr.PDU.build_get_request(request.oid, request.ref)
+          pdu = SNMPMgr.PDU.build_get_request(request.oid, request.request_id)
           message = SNMPMgr.PDU.build_message(pdu, request.community || "public", :v2c)
           SNMPMgr.PDU.encode_message(message)
         :get_bulk ->
           max_rep = Map.get(request, :max_repetitions, 10)
-          pdu = SNMPMgr.PDU.build_get_bulk_request(request.oid, request.ref, 0, max_rep)
+          pdu = SNMPMgr.PDU.build_get_bulk_request(request.oid, request.request_id, 0, max_rep)
           message = SNMPMgr.PDU.build_message(pdu, request.community || "public", :v2c)
           SNMPMgr.PDU.encode_message(message)
         _ ->
@@ -511,7 +521,7 @@ defmodule SNMPMgr.Engine do
   
   defp find_request_by_id(connections, request_id) do
     Enum.find_value(connections, fn {conn_id, conn} ->
-      case Enum.find(conn.active_requests, fn req -> req.ref == request_id end) do
+      case Enum.find(conn.active_requests, fn req -> req.request_id == request_id end) do
         nil -> nil
         request -> {:ok, conn_id, request}
       end
@@ -596,6 +606,11 @@ defmodule SNMPMgr.Engine do
   
   defp count_active_connections(connections) do
     Enum.count(connections, fn {_id, conn} -> conn.status == :active end)
+  end
+  
+  defp generate_request_id() do
+    # Generate a random integer request ID similar to Core module
+    :rand.uniform(1000000)
   end
   
   defp update_metrics(metrics, key, value) do

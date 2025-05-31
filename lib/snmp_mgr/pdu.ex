@@ -6,16 +6,19 @@ defmodule SNMPMgr.PDU do
   Leverages Erlang's SNMP modules when available, with basic fallback implementation.
   """
 
+  alias SNMPMgr.OID
+
   @doc """
   Creates a basic SNMP GET request PDU structure.
   """
   def build_get_request(oid_list, request_id) do
+    normalized_oid = normalize_oid(oid_list)
     %{
       type: :get_request,
       request_id: request_id,
       error_status: :noError,
       error_index: 0,
-      varbinds: [{oid_list, :null, :null}]
+      varbinds: [{normalized_oid, :null, :null}]
     }
   end
 
@@ -23,12 +26,13 @@ defmodule SNMPMgr.PDU do
   Creates a basic SNMP GETNEXT request PDU structure.
   """
   def build_get_next_request(oid_list, request_id) do
+    normalized_oid = normalize_oid(oid_list)
     %{
       type: :get_next_request,
       request_id: request_id,
       error_status: :noError,
       error_index: 0,
-      varbinds: [{oid_list, :null, :null}]
+      varbinds: [{normalized_oid, :null, :null}]
     }
   end
 
@@ -36,12 +40,13 @@ defmodule SNMPMgr.PDU do
   Creates a basic SNMP SET request PDU structure.
   """
   def build_set_request(oid_list, {type, value}, request_id) do
+    normalized_oid = normalize_oid(oid_list)
     %{
       type: :set_request,
       request_id: request_id,
       error_status: :noError,
       error_index: 0,
-      varbinds: [{oid_list, type, value}]
+      varbinds: [{normalized_oid, type, value}]
     }
   end
 
@@ -49,12 +54,13 @@ defmodule SNMPMgr.PDU do
   Creates a basic SNMP GETBULK request PDU structure for SNMPv2c.
   """
   def build_get_bulk_request(oid_list, request_id, non_repeaters \\ 0, max_repetitions \\ 10) do
+    normalized_oid = normalize_oid(oid_list)
     %{
       type: :get_bulk_request,
       request_id: request_id,
       non_repeaters: non_repeaters,
       max_repetitions: max_repetitions,
-      varbinds: [{oid_list, :null, :null}]
+      varbinds: [{normalized_oid, :null, :null}]
     }
   end
 
@@ -176,7 +182,7 @@ defmodule SNMPMgr.PDU do
   defp parse_octet_string(_), do: {:error, :invalid_octet_string}
   
   # Parse PDU (simplified - just extract basic info)
-  defp parse_pdu(<<tag, _length, _rest::binary>>) when tag in [160, 161, 162, 163, 164] do
+  defp parse_pdu(<<tag, length, rest::binary>>) when tag in [160, 161, 162, 163, 164] do
     # PDU types: 160=GetRequest, 161=GetNextRequest, 162=GetResponse, 163=SetRequest, 164=Trap
     pdu_type = case tag do
       160 -> :get_request
@@ -186,9 +192,34 @@ defmodule SNMPMgr.PDU do
       164 -> :trap
     end
     
-    {:ok, %{type: pdu_type, varbinds: [], error_status: 0, error_index: 0}}
+    # Parse PDU fields: request_id, error_status, error_index, varbinds
+    case parse_pdu_fields(rest, length) do
+      {:ok, {request_id, error_status, error_index, _varbinds}} ->
+        {:ok, %{
+          type: pdu_type, 
+          request_id: request_id,
+          error_status: error_status, 
+          error_index: error_index,
+          varbinds: []
+        }}
+      {:error, reason} ->
+        # Fallback to basic structure if parsing fails
+        {:ok, %{type: pdu_type, varbinds: [], error_status: 0, error_index: 0}}
+    end
   end
   defp parse_pdu(_), do: {:error, :invalid_pdu}
+  
+  # Parse PDU fields in order: request_id, error_status, error_index, varbinds
+  defp parse_pdu_fields(data, _length) do
+    with {:ok, {request_id, rest1}} <- parse_integer(data),
+         {:ok, {error_status, rest2}} <- parse_integer(rest1),
+         {:ok, {error_index, rest3}} <- parse_integer(rest2) do
+      # For now, skip varbinds parsing - just need the request_id
+      {:ok, {request_id, error_status, error_index, []}}
+    else
+      error -> error
+    end
+  end
   
   defp try_approaches([], _response) do
     {:error, :all_decode_approaches_failed}
@@ -348,4 +379,14 @@ defmodule SNMPMgr.PDU do
   end
   defp validate_bulk_fields(%{type: :get_bulk_request}), do: {:error, :missing_bulk_fields}
   defp validate_bulk_fields(_), do: :ok
+
+  # Helper function to normalize OID format for Erlang SNMP functions
+  defp normalize_oid(oid) when is_binary(oid) do
+    case OID.string_to_list(oid) do
+      {:ok, oid_list} -> oid_list
+      {:error, _} -> oid  # Return as-is if conversion fails
+    end
+  end
+  defp normalize_oid(oid) when is_list(oid), do: oid
+  defp normalize_oid(oid), do: oid  # Return as-is for other types
 end
