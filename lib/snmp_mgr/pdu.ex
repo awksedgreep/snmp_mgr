@@ -195,13 +195,13 @@ defmodule SNMPMgr.PDU do
     
     # Parse PDU fields: request_id, error_status, error_index, varbinds
     case parse_pdu_fields(rest, length) do
-      {:ok, {request_id, error_status, error_index, _varbinds}} ->
+      {:ok, {request_id, error_status, error_index, varbinds}} ->
         {:ok, %{
           type: pdu_type, 
           request_id: request_id,
           error_status: error_status, 
           error_index: error_index,
-          varbinds: []
+          varbinds: varbinds
         }}
       {:error, _reason} ->
         # Fallback to basic structure if parsing fails
@@ -224,15 +224,9 @@ defmodule SNMPMgr.PDU do
   
   # Parse SNMP varbinds (variable bindings) containing OID-value pairs
   defp parse_varbinds(data) do
-    require Logger
-    Logger.debug("parse_varbinds: data length=#{byte_size(data)}, first 10 bytes=#{inspect(binary_part(data, 0, min(10, byte_size(data))))}")
     case parse_sequence(data) do
-      {:ok, {varbind_data, _rest}} -> 
-        Logger.debug("parse_varbinds: found sequence, varbind_data length=#{byte_size(varbind_data)}")
-        parse_varbind_list(varbind_data, [])
-      {:error, reason} -> 
-        Logger.debug("parse_varbinds: failed to parse sequence: #{inspect(reason)}")
-        {:ok, []} # Return empty list if varbinds can't be parsed
+      {:ok, {varbind_data, _rest}} -> parse_varbind_list(varbind_data, [])
+      {:error, _} -> {:ok, []} # Return empty list if varbinds can't be parsed
     end
   end
   
