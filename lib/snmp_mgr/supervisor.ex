@@ -10,7 +10,8 @@ defmodule SNMPMgr.Supervisor do
   require Logger
   
   def start_link(opts \\ []) do
-    Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
+    name = Keyword.get(opts, :name, SNMPMgr.EngineSupervisor)
+    Supervisor.start_link(__MODULE__, opts, name: name)
   end
   
   @impl true
@@ -33,8 +34,8 @@ defmodule SNMPMgr.Supervisor do
       {SNMPMgr.Pool, pool_config},
       
       # Main engines (can have multiple)
-      {SNMPMgr.Engine, Keyword.put(engine_config, :name, :engine_1)},
-      {SNMPMgr.Engine, Keyword.put(engine_config, :name, :engine_2)},
+      Supervisor.child_spec({SNMPMgr.Engine, Keyword.put(engine_config, :name, :engine_1)}, id: :engine_1),
+      Supervisor.child_spec({SNMPMgr.Engine, Keyword.put(engine_config, :name, :engine_2)}, id: :engine_2),
       
       # Router (coordinates engines)
       {SNMPMgr.Router, 

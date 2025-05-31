@@ -179,7 +179,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       }
       
       pre_shutdown_result = SNMPMgr.engine_request(pre_shutdown_request)
-      assert match?({:ok, _} or {:error, _}, pre_shutdown_result)
+      assert match?({:ok, _}, pre_shutdown_result) or match?({:error, _}, pre_shutdown_result)
       
       # Perform complete shutdown
       shutdown_result = execute_complete_shutdown()

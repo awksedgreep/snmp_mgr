@@ -33,7 +33,7 @@ defmodule SNMPMgr.ConfigComprehensiveTest do
 
   describe "configuration server lifecycle" do
     test "starts with default configuration" do
-      {:ok, pid} = Config.start_link(name: :test_config_server)
+      {:ok, _pid} = Config.start_link(name: :test_config_server)
       
       # Test that defaults are set correctly
       assert GenServer.call(:test_config_server, {:get, :community}) == "public"
@@ -56,7 +56,7 @@ defmodule SNMPMgr.ConfigComprehensiveTest do
         mib_paths: ["/custom/mibs"]
       ]
       
-      {:ok, pid} = Config.start_link(custom_opts ++ [name: :test_custom_config])
+      {:ok, _pid} = Config.start_link(custom_opts ++ [name: :test_custom_config])
       
       # Test that custom values are set
       assert GenServer.call(:test_custom_config, {:get, :community}) == "private"

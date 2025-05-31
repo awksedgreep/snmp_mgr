@@ -161,7 +161,15 @@ defmodule SNMPMgr.Core do
     case :gen_udp.open(0, [:binary, {:active, false}]) do
       {:ok, socket} ->
         try do
-          case :gen_udp.send(socket, host, port, message) do
+          # Ensure host is in the correct format for gen_udp.send
+          resolved_host = case host do
+            host when is_binary(host) -> String.to_charlist(host)
+            host when is_list(host) -> host
+            host when is_tuple(host) -> host
+            host -> host
+          end
+          
+          case :gen_udp.send(socket, resolved_host, port, message) do
             :ok ->
               case :gen_udp.recv(socket, 0, timeout) do
                 {:ok, {_host, _port, response}} -> {:ok, response}

@@ -743,7 +743,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       # Test that engine respects circuit breaker state
       failing_target = "192.0.2.1" # Unreachable
       
-      failing_requests = for i <- 1..10 do
+      failing_requests = for _i <- 1..10 do
         %{
           type: :get,
           target: failing_target,

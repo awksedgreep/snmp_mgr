@@ -357,16 +357,12 @@ defmodule SNMPMgr.StandardMIBTest do
       
       for {group_name, prefix} <- standard_prefixes do
         # Verify that we have objects under each standard prefix
-        objects_found = 0
-        
         all_standard_objects = @rfc1213_system_group ++ @rfc1213_interface_group ++ 
                                @rfc1213_ip_group ++ @rfc1213_snmp_group
         
-        for {_name, oid, _desc} <- all_standard_objects do
-          if List.starts_with?(oid, prefix) do
-            objects_found = objects_found + 1
-          end
-        end
+        objects_found = Enum.count(all_standard_objects, fn {_name, oid, _desc} ->
+          List.starts_with?(oid, prefix)
+        end)
         
         assert objects_found > 0, "Should have objects under #{group_name} prefix #{inspect(prefix)}"
       end

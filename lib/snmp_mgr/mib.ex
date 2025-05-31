@@ -1,4 +1,6 @@
 defmodule SNMPMgr.MIB do
+  @compile {:no_warn_undefined, [:snmpc, :snmp_misc]}
+  
   @moduledoc """
   MIB compilation and symbolic name resolution.
   

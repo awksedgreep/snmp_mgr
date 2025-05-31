@@ -335,7 +335,7 @@ defmodule SNMPMgr.CustomMIBTest do
       # Since we can't actually compile and load custom MIBs in test environment,
       # we'll test the expected behavior for custom objects
       
-      for {object_name, expected_oid} <- @custom_mib_objects do
+      for {object_name, _expected_oid} <- @custom_mib_objects do
         # Test what would happen if custom MIB was loaded
         case MIB.resolve(object_name) do
           {:ok, oid} ->

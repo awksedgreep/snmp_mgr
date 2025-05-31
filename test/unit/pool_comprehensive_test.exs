@@ -21,10 +21,10 @@ defmodule SNMPMgr.PoolComprehensiveTest do
     end
     
     # Start SNMP simulator for testing
-    {:ok, simulator_pid} = SNMPSimulator.start_link()
-    on_exit(fn -> SNMPSimulator.stop(simulator_pid) end)
+    {:ok, device_info} = SNMPSimulator.create_test_device()
+    on_exit(fn -> SNMPSimulator.stop_device(device_info) end)
     
-    %{simulator: simulator_pid}
+    %{device: device_info}
   end
   
   setup do
@@ -815,7 +815,7 @@ defmodule SNMPMgr.PoolComprehensiveTest do
       Pool.checkin(pool, conn2)
     end
     
-    test "pool balances load across connections" do
+    test "pool balances load across connections", %{pool: pool} do
       # This test would verify load balancing algorithms
       # For now, verify basic multiple connection handling
       

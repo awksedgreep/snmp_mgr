@@ -6,7 +6,7 @@ defmodule SNMPMgr.TestSupport.SNMPSimulator do
   SNMPMgr functionality with actual SNMP responses.
   """
   
-  alias SNMPSimEx.{Device, TestHelpers}
+  alias SNMPSimEx.Device
   
   @default_community "public"
   @test_port_start 30000
@@ -206,7 +206,7 @@ defmodule SNMPMgr.TestSupport.SNMPSimulator do
   @doc """
   Waits for a device to be ready for SNMP requests.
   """
-  def wait_for_device_ready(device_info, timeout_ms \\ 5000) do
+  def wait_for_device_ready(device_info, _timeout_ms \\ 5000) do
     # Simple wait - just check if the device process is alive
     # In a real environment with proper SNMP, this would test actual SNMP queries
     case Process.alive?(device_info.device) do

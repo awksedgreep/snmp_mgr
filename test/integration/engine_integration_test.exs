@@ -20,11 +20,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       _pid -> :ok
     end
     
-    # Start SNMP simulator for integration testing
-    {:ok, simulator_pid} = SNMPSimulator.start_link()
-    on_exit(fn -> SNMPSimulator.stop(simulator_pid) end)
+    # Start SNMP test device for integration testing
+    {:ok, device_info} = SNMPSimulator.create_test_device()
+    on_exit(fn -> SNMPSimulator.stop_device(device_info) end)
     
-    %{simulator: simulator_pid}
+    %{device: device_info}
   end
   
   setup do
@@ -264,23 +264,34 @@ defmodule SNMPMgr.EngineIntegrationTest do
       request_count = 0
       
       # Submit requests at regular intervals
-      while System.monotonic_time(:millisecond) - start_time < duration_ms do
-        request = %{
-          type: :get,
-          target: "sustained.load.test",
-          oid: "1.3.6.1.2.1.1.#{rem(request_count, 10)}.0",
-          community: "public"
-        }
-        
-        spawn(fn ->
-          Metrics.time(metrics, :sustained_request, fn ->
-            Router.route_request(router, request)
-          end)
+      max_requests = div(duration_ms, request_interval) + 1
+      
+      request_count = 
+        1..max_requests
+        |> Enum.reduce_while(request_count, fn _i, count ->
+          current_time = System.monotonic_time(:millisecond)
+          if current_time - start_time < duration_ms do
+            request = %{
+              type: :get,
+              target: "sustained.load.test",
+              oid: "1.3.6.1.2.1.1.#{rem(count, 10)}.0",
+              community: "public"
+            }
+            
+            spawn(fn ->
+              Metrics.time(metrics, :sustained_request, fn ->
+                Router.route_request(router, request)
+              end)
+            end)
+            
+            new_count = count + 1
+            Process.sleep(request_interval)
+            
+            {:cont, new_count}
+          else
+            {:halt, count}
+          end
         end)
-        
-        request_count = request_count + 1
-        Process.sleep(request_interval)
-      end
       
       end_time = System.monotonic_time(:millisecond)
       actual_duration = end_time - start_time
@@ -361,7 +372,8 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # Engine memory should also be bounded
       Enum.zip(engine_initial_memory, engine_final_memory)
-      |> Enum.each(fn {{pid, initial}, {^pid, final}} ->
+      |> Enum.each(fn {{pid, initial}, {same_pid, final}} ->
+        assert pid == same_pid, "Engine PID mismatch in memory comparison"
         growth = final - initial
         assert growth < 5_000_000  # Less than 5MB per engine
       end)

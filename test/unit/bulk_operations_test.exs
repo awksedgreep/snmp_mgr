@@ -321,7 +321,6 @@ defmodule SNMPMgr.BulkOperationsTest do
       # Time equivalent GETNEXT operations
       {getnext_time, getnext_results} = :timer.tc(fn ->
         current_oid = start_oid
-        results = []
         
         # Simulate 10 GETNEXT operations
         Enum.reduce(1..10, {current_oid, []}, fn _i, {oid, acc} ->

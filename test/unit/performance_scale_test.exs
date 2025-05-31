@@ -334,7 +334,7 @@ defmodule SNMPMgr.PerformanceScaleTest do
       results = Task.yield_many(tasks, @performance_timeout)
       end_time = :erlang.monotonic_time(:microsecond)
       
-      elapsed_time = end_time - start_time
+      _elapsed_time = end_time - start_time
       
       # Analyze stress test results
       completed_tasks = Enum.count(results, fn {_task, result} -> result != nil end)
@@ -398,30 +398,41 @@ defmodule SNMPMgr.PerformanceScaleTest do
       request_count = 0
       results = []
       
-      # Sustained load loop
-      while :erlang.monotonic_time(:millisecond) - start_time < duration_ms do
-        request = %{
-          type: :get,
-          target: "sustained.test",
-          oid: @test_oids.system_descr,
-          community: "public",
-          request_id: "sustained_#{request_count}"
-        }
-        
-        # Make request and track result
-        result_task = Task.async(fn ->
-          {latency, result} = :timer.tc(fn ->
-            SNMPMgr.engine_request(request)
-          end)
-          {request_count, latency, result}
+      # Sustained load loop - simplified approach
+      max_requests = div(duration_ms, request_interval_ms) + 1
+      
+      {results, request_count} = 
+        1..max_requests
+        |> Enum.reduce_while({results, request_count}, fn _i, {acc_results, count} ->
+          current_time = :erlang.monotonic_time(:millisecond)
+          if current_time - start_time < duration_ms do
+            request = %{
+              type: :get,
+              target: "sustained.test", 
+              oid: @test_oids.system_descr,
+              community: "public",
+              request_id: "sustained_#{count}"
+            }
+            
+            # Make request and track result
+            result_task = Task.async(fn ->
+              {latency, result} = :timer.tc(fn ->
+                SNMPMgr.engine_request(request)
+              end)
+              {count, latency, result}
+            end)
+            
+            new_results = [result_task | acc_results]
+            new_count = count + 1
+            
+            # Control request rate
+            Process.sleep(request_interval_ms)
+            
+            {:cont, {new_results, new_count}}
+          else
+            {:halt, {acc_results, count}}
+          end
         end)
-        
-        results = [result_task | results]
-        request_count = request_count + 1
-        
-        # Control request rate
-        Process.sleep(request_interval_ms)
-      end
       
       end_time = :erlang.monotonic_time(:millisecond)
       actual_duration = end_time - start_time
@@ -494,44 +505,54 @@ defmodule SNMPMgr.PerformanceScaleTest do
         generate_background_load(start_time + duration_ms)
       end)
       
-      # Periodic measurements
-      while :erlang.monotonic_time(:millisecond) - start_time < duration_ms do
-        # Make some immediate requests
-        for i <- 1..5 do
-          request = %{
-            type: :get,
-            target: "resource#{rem(i, 3)}.test",
-            oid: @test_oids.system_descr,
-            community: "public",
-            request_id: "resource_#{request_count + i}"
-          }
-          
-          spawn(fn -> SNMPMgr.engine_request(request) end)
-        end
-        
-        request_count = request_count + 5
-        
-        # Take measurements
-        current_time = :erlang.monotonic_time(:millisecond)
-        :erlang.garbage_collect()
-        current_memory = :erlang.memory(:total)
-        
-        current_stats = case SNMPMgr.get_engine_stats() do
-          {:ok, stats} -> stats
-          {:error, _} -> %{}
-        end
-        
-        measurement = %{
-          time: current_time - start_time,
-          memory: current_memory,
-          stats: current_stats,
-          request_count: request_count
-        }
-        
-        measurements = [measurement | measurements]
-        
-        Process.sleep(measurement_interval)
-      end
+      # Periodic measurements - using reduce_while
+      max_measurements = div(duration_ms, measurement_interval) + 1
+      
+      {measurements, request_count} = 
+        1..max_measurements
+        |> Enum.reduce_while({measurements, request_count}, fn _i, {acc_measurements, count} ->
+          current_time = :erlang.monotonic_time(:millisecond)
+          if current_time - start_time < duration_ms do
+            # Make some immediate requests
+            for i <- 1..5 do
+              request = %{
+                type: :get,
+                target: "resource#{rem(i, 3)}.test",
+                oid: @test_oids.system_descr,
+                community: "public",
+                request_id: "resource_#{count + i}"
+              }
+              
+              spawn(fn -> SNMPMgr.engine_request(request) end)
+            end
+            
+            new_count = count + 5
+            
+            # Take measurements
+            :erlang.garbage_collect()
+            current_memory = :erlang.memory(:total)
+            
+            current_stats = case SNMPMgr.get_engine_stats() do
+              {:ok, stats} -> stats
+              {:error, _} -> %{}
+            end
+            
+            measurement = %{
+              time: current_time - start_time,
+              memory: current_memory,
+              stats: current_stats,
+              request_count: new_count
+            }
+            
+            new_measurements = [measurement | acc_measurements]
+            
+            Process.sleep(measurement_interval)
+            
+            {:cont, {new_measurements, new_count}}
+          else
+            {:halt, {acc_measurements, count}}
+          end
+        end)
       
       # Stop background generator
       Process.exit(generator_pid, :normal)
@@ -553,7 +574,7 @@ defmodule SNMPMgr.PerformanceScaleTest do
       
       # Check for memory leaks (increasing trend)
       if length(memory_measurements) >= 3 do
-        {early_memories, late_memories} = Enum.split(memory_measurements, length(memory_measurements) div 2)
+        {early_memories, late_memories} = Enum.split(memory_measurements, div(length(memory_measurements), 2))
         
         early_avg = Enum.sum(early_memories) / length(early_memories)
         late_avg = Enum.sum(late_memories) / length(late_memories)

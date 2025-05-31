@@ -270,7 +270,7 @@ defmodule SNMPMgr.Pool do
   def handle_cast({:checkin, %{id: conn_id}}, state) do
     case Map.get(state.connections, conn_id) do
       nil ->
-        Logger.warning("Attempted to checkin unknown connection: #{conn_id}")
+        Logger.warning("Attempted to checkin unknown connection: #{inspect(conn_id)}")
         {:noreply, state}
       
       connection ->
@@ -303,11 +303,11 @@ defmodule SNMPMgr.Pool do
   def handle_cast({:return_error, %{id: conn_id}, error}, state) do
     case Map.get(state.connections, conn_id) do
       nil ->
-        Logger.warning("Attempted to return error for unknown connection: #{conn_id}")
+        Logger.warning("Attempted to return error for unknown connection: #{inspect(conn_id)}")
         {:noreply, state}
       
       connection ->
-        Logger.warning("Connection #{conn_id} returned with error: #{inspect(error)}")
+        Logger.warning("Connection #{inspect(conn_id)} returned with error: #{inspect(error)}")
         
         # Increment error count and potentially remove connection
         updated_connection = %{connection | 
@@ -335,7 +335,7 @@ defmodule SNMPMgr.Pool do
             metrics: metrics
           }
           
-          Logger.info("Removed connection #{conn_id} due to excessive errors")
+          Logger.info("Removed connection #{inspect(conn_id)} due to excessive errors")
           {:noreply, new_state}
         else
           # Keep connection but mark as available with error
