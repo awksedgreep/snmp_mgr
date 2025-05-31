@@ -30,28 +30,39 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
   ]
 
   describe "multi-target GET operations" do
-    test "validates get_multi with various request formats" do
-      # Test different request formats
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates get_multi with various request formats", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test different request formats using simulator targets
       request_formats = [
         # Simple format
         [
-          {"127.0.0.1", @test_oids.system_descr},
-          {"localhost", @test_oids.system_uptime},
-          {"192.168.1.1", @test_oids.if_number}
+          {target, @test_oids.system_descr},
+          {target, @test_oids.system_uptime},
+          {target, @test_oids.if_number}
         ],
         
         # Format with per-request options
         [
-          {"127.0.0.1", @test_oids.system_descr, [community: "public"]},
-          {"localhost", @test_oids.system_uptime, [timeout: 5000]},
-          {"device1.local", @test_oids.system_name, [retries: 2]}
+          {target, @test_oids.system_descr, [community: device.community]},
+          {target, @test_oids.system_uptime, [timeout: 200]},
+          {target, @test_oids.system_name, [retries: 2]}
         ],
         
         # Mixed formats
         [
-          {"127.0.0.1", @test_oids.system_descr},
-          {"localhost", @test_oids.system_uptime, [community: "private"]},
-          {"192.168.1.1", @test_oids.if_number}
+          {target, @test_oids.system_descr},
+          {target, @test_oids.system_uptime, [community: device.community]},
+          {target, @test_oids.if_number}
         ]
       ]
       
@@ -80,17 +91,18 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
       end
     end
 
-    test "handles concurrent request execution" do
-      # Create many requests to test concurrency
+    test "handles concurrent request execution", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Create many requests to test concurrency using simulator
       requests = for i <- 1..20 do
-        target = Enum.at(@test_targets, rem(i, length(@test_targets)))
         oid = case rem(i, 4) do
           0 -> @test_oids.system_descr
           1 -> @test_oids.system_uptime
           2 -> @test_oids.if_number
           3 -> @test_oids.system_name
         end
-        {target, oid, [timeout: 2000]}
+        {target, oid, [timeout: 200, community: device.community]}
       end
       
       # Measure execution time
@@ -123,11 +135,13 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
       end
     end
 
-    test "respects global options and per-request overrides" do
+    test "respects global options and per-request overrides", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       requests = [
-        {"127.0.0.1", @test_oids.system_descr},
-        {"localhost", @test_oids.system_uptime, [timeout: 1000]},  # Override global timeout
-        {"192.168.1.1", @test_oids.if_number, [community: "override"]}  # Override global community
+        {target, @test_oids.system_descr},
+        {target, @test_oids.system_uptime, [timeout: 200]},  # Override global timeout
+        {target, @test_oids.if_number, [community: "override"]}  # Override global community
       ]
       
       global_opts = [
@@ -232,14 +246,25 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
   end
 
   describe "multi-target GETBULK operations" do
-    test "validates get_bulk_multi with table requests" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates get_bulk_multi with table requests", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       bulk_requests = [
-        {"127.0.0.1", @test_oids.if_table},
-        {"localhost", @test_oids.snmp_group},
-        {"192.168.1.1", @test_oids.if_entry, [max_repetitions: 20]}
+        {target, @test_oids.if_table, [community: device.community, timeout: 200]},
+        {target, @test_oids.snmp_group, [community: device.community, timeout: 200]},
+        {target, @test_oids.if_entry, [max_repetitions: 20, community: device.community, timeout: 200]}
       ]
       
-      global_opts = [max_repetitions: 10, timeout: 5000]
+      global_opts = [max_repetitions: 10, timeout: 200, community: device.community]
       
       results = SNMPMgr.Multi.get_bulk_multi(bulk_requests, global_opts)
       
@@ -269,14 +294,16 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
       end
     end
 
-    test "enforces SNMPv2c version for all bulk requests" do
-      # Test that v2c is enforced even if v1 is specified
+    test "enforces SNMPv2c version for all bulk requests", %{device: device} do
+      # Test that v2c is enforced even if v1 is specified - Rule 1 & 5: Use SNMPSimulator
+      target = SNMPSimulator.device_target(device)
+      
       bulk_requests = [
-        {"127.0.0.1", @test_oids.if_table, [version: :v1, max_repetitions: 5]},
-        {"localhost", @test_oids.snmp_group, [max_repetitions: 10]}
+        {target, @test_oids.if_table, [version: :v1, max_repetitions: 5, community: device.community, timeout: 200]},
+        {target, @test_oids.snmp_group, [max_repetitions: 10, community: device.community, timeout: 200]}
       ]
       
-      results = SNMPMgr.Multi.get_bulk_multi(bulk_requests, [version: :v1])
+      results = SNMPMgr.Multi.get_bulk_multi(bulk_requests, [version: :v1, timeout: 200])
       
       assert is_list(results), "Should handle version enforcement"
       assert length(results) == 2, "Should process all bulk requests"
@@ -287,8 +314,8 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
           {:ok, _data} ->
             assert true, "Bulk request #{i} succeeded with enforced v2c"
             
-          {:error, reason} when reason in [:version_not_supported, :snmp_modules_not_available] ->
-            assert true, "Bulk request #{i} appropriately rejected or unavailable"
+          {:error, reason} when reason in [:version_not_supported, :snmp_modules_not_available, :unsupported_operation] ->
+            assert true, "Bulk request #{i} appropriately rejected or unavailable: #{inspect(reason)}"
             
           {:error, reason} ->
             assert is_atom(reason), "Bulk request #{i} error: #{inspect(reason)}"
@@ -296,16 +323,18 @@ defmodule SNMPMgr.MultiTargetOperationsTest do
       end
     end
 
-    test "handles large bulk operations efficiently" do
-      # Test bulk operations with high repetition counts
+    test "handles large bulk operations efficiently", %{device: device} do
+      # Test bulk operations with high repetition counts - Rule 1 & 5: Use SNMPSimulator  
+      target = SNMPSimulator.device_target(device)
+      
       large_bulk_requests = [
-        {"127.0.0.1", @test_oids.if_table, [max_repetitions: 50]},
-        {"localhost", @test_oids.if_table, [max_repetitions: 100]},
-        {"192.168.1.1", @test_oids.snmp_group, [max_repetitions: 25]}
+        {target, @test_oids.if_table, [max_repetitions: 50, community: device.community, timeout: 200]},
+        {target, @test_oids.if_table, [max_repetitions: 100, community: device.community, timeout: 200]},
+        {target, @test_oids.snmp_group, [max_repetitions: 25, community: device.community, timeout: 200]}
       ]
       
       {time_microseconds, results} = :timer.tc(fn ->
-        SNMPMgr.Multi.get_bulk_multi(large_bulk_requests, [timeout: 10000])
+        SNMPMgr.Multi.get_bulk_multi(large_bulk_requests, [timeout: 200])
       end)
       
       assert is_list(results), "Large bulk operations should complete"

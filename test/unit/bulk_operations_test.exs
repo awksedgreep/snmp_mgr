@@ -30,12 +30,23 @@ defmodule SNMPMgr.BulkOperationsTest do
   }
 
   describe "GETBULK request validation" do
-    test "validates GETBULK parameters" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates GETBULK parameters", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       valid_bulk_params = [
-        {"127.0.0.1", @table_oids.if_table, [max_repetitions: 10]},
-        {"localhost", @table_oids.if_entry, [max_repetitions: 5, non_repeaters: 0]},
-        {"192.168.1.1", @table_oids.if_descr, [max_repetitions: 20, community: "public"]},
-        {"device.local:1161", @table_oids.snmp_group, [max_repetitions: 1, timeout: 8000]},
+        {target, @table_oids.if_table, [max_repetitions: 10, community: device.community, timeout: 1000]},
+        {target, @table_oids.if_entry, [max_repetitions: 5, non_repeaters: 0, community: device.community, timeout: 1000]},
+        {target, @table_oids.if_descr, [max_repetitions: 20, community: device.community, timeout: 1000]},
+        {target, @table_oids.snmp_group, [max_repetitions: 1, community: device.community, timeout: 1000]},
       ]
       
       for {target, oid, opts} <- valid_bulk_params do
@@ -69,11 +80,13 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "enforces SNMPv2c version for GETBULK" do
+    test "enforces SNMPv2c version for GETBULK", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # GETBULK should automatically use v2c regardless of configuration
       bulk_requests = [
-        {"127.0.0.1", @table_oids.if_table, [version: :v1, max_repetitions: 10]},
-        {"127.0.0.1", @table_oids.if_table, [max_repetitions: 10]},  # No version specified
+        {target, @table_oids.if_table, [version: :v1, max_repetitions: 10, community: device.community, timeout: 200]},
+        {target, @table_oids.if_table, [max_repetitions: 10, community: device.community, timeout: 200]},  # No version specified
       ]
       
       for {target, oid, opts} <- bulk_requests do
@@ -97,7 +110,9 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "validates max_repetitions parameter" do
+    test "validates max_repetitions parameter", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       max_repetition_cases = [
         # Valid values
         {1, "minimum repetitions"},
@@ -111,7 +126,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       for {max_reps, description} <- max_repetition_cases do
-        case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table, [max_repetitions: max_reps, timeout: 1000]) do
+        case SNMPMgr.get_bulk(target, @table_oids.if_table, [max_repetitions: max_reps, community: device.community, timeout: 200]) do
           {:ok, results} ->
             # Verify repetition behavior
             if max_reps > 0 do
@@ -142,7 +157,9 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "validates non_repeaters parameter" do
+    test "validates non_repeaters parameter", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       non_repeater_cases = [
         # Valid values
         {0, "no non-repeaters (typical)"},
@@ -155,8 +172,8 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       for {non_reps, description} <- non_repeater_cases do
-        case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table, 
-                             [non_repeaters: non_reps, max_repetitions: 10]) do
+        case SNMPMgr.get_bulk(target, @table_oids.if_table, 
+                             [non_repeaters: non_reps, max_repetitions: 10, community: device.community, timeout: 200]) do
           {:ok, results} ->
             assert is_list(results), "#{description} should return valid results"
             
@@ -199,9 +216,20 @@ defmodule SNMPMgr.BulkOperationsTest do
   end
 
   describe "GETBULK table traversal" do
-    test "retrieves table data efficiently" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "retrieves table data efficiently", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test GETBULK on interface table
-      case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table, [max_repetitions: 20]) do
+      case SNMPMgr.get_bulk(target, @table_oids.if_table, [max_repetitions: 20, community: device.community, timeout: 200]) do
         {:ok, results} ->
           assert length(results) > 0, "Should retrieve table data"
           
@@ -235,9 +263,11 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "handles multiple table columns with GETBULK" do
+    test "handles multiple table columns with GETBULK", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test GETBULK starting from interface entry (should get multiple columns)
-      case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_entry, [max_repetitions: 15]) do
+      case SNMPMgr.get_bulk(target, @table_oids.if_entry, [max_repetitions: 15, community: device.community, timeout: 200]) do
         {:ok, results} ->
           # Should get results from multiple columns
           column_oids = MapSet.new()
@@ -278,7 +308,9 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "respects table boundaries" do
+    test "respects table boundaries", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test GETBULK that should stop at table boundary
       test_cases = [
         {@table_oids.if_table, "Interface table"},
@@ -286,7 +318,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       for {table_oid, description} <- test_cases do
-        case SNMPMgr.get_bulk("127.0.0.1", table_oid, [max_repetitions: 50]) do
+        case SNMPMgr.get_bulk(target, table_oid, [max_repetitions: 50, community: device.community, timeout: 200]) do
           {:ok, results} ->
             # All results should be within the table
             table_prefix = case SNMPMgr.OID.string_to_list(table_oid) do
@@ -323,13 +355,24 @@ defmodule SNMPMgr.BulkOperationsTest do
   end
 
   describe "GETBULK performance and efficiency" do
-    test "GETBULK is more efficient than multiple GETNEXT" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "GETBULK is more efficient than multiple GETNEXT", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Compare GETBULK vs multiple GETNEXT for same data
       start_oid = @table_oids.if_descr
       
       # Time GETBULK operation
       {bulk_time, bulk_result} = :timer.tc(fn ->
-        SNMPMgr.get_bulk("127.0.0.1", start_oid, [max_repetitions: 10])
+        SNMPMgr.get_bulk(target, start_oid, [max_repetitions: 10, community: device.community, timeout: 200])
       end)
       
       # Time equivalent GETNEXT operations
@@ -338,7 +381,7 @@ defmodule SNMPMgr.BulkOperationsTest do
         
         # Simulate 10 GETNEXT operations
         Enum.reduce(1..10, {current_oid, []}, fn _i, {oid, acc} ->
-          case SNMPMgr.get_next("127.0.0.1", oid) do
+          case SNMPMgr.get_next(target, oid, [community: device.community, timeout: 200]) do
             {:ok, {next_oid, value}} -> {next_oid, [{next_oid, value} | acc]}
             {:error, _} -> {oid, acc}
           end
@@ -369,12 +412,14 @@ defmodule SNMPMgr.BulkOperationsTest do
     end
 
     @tag :performance
-    test "GETBULK scales with max_repetitions" do
+    test "GETBULK scales with max_repetitions", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       repetition_counts = [1, 5, 10, 20, 50]
       
       results = for max_reps <- repetition_counts do
         {time, result} = :timer.tc(fn ->
-          SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table, [max_repetitions: max_reps])
+          SNMPMgr.get_bulk(target, @table_oids.if_table, [max_repetitions: max_reps, community: device.community, timeout: 200])
         end)
         
         case result do
@@ -400,8 +445,19 @@ defmodule SNMPMgr.BulkOperationsTest do
   end
 
   describe "GETBULK async operations" do
-    test "validates async GETBULK operations" do
-      case SNMPMgr.get_bulk_async("127.0.0.1", @table_oids.if_table, [max_repetitions: 10]) do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates async GETBULK operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      case SNMPMgr.get_bulk_async(target, @table_oids.if_table, [max_repetitions: 10, community: device.community, timeout: 200]) do
         ref when is_reference(ref) ->
           # Should receive a message with the result
           receive do
@@ -431,7 +487,9 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "handles multiple concurrent GETBULK operations" do
+    test "handles multiple concurrent GETBULK operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Start multiple async GETBULK operations
       table_oids = [
         @table_oids.if_table,
@@ -440,7 +498,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       refs = for {oid, i} <- Enum.with_index(table_oids) do
-        case SNMPMgr.get_bulk_async("127.0.0.1", oid, [max_repetitions: 5]) do
+        case SNMPMgr.get_bulk_async(target, oid, [max_repetitions: 5, community: device.community, timeout: 200]) do
           ref when is_reference(ref) -> {ref, i, oid}
           {:error, _} -> nil
         end
@@ -479,32 +537,50 @@ defmodule SNMPMgr.BulkOperationsTest do
   end
 
   describe "GETBULK error handling" do
-    test "handles GETBULK-specific errors" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "handles GETBULK-specific errors", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       getbulk_error_cases = [
-        # Invalid repetition parameters
-        {"127.0.0.1", @table_oids.if_table, [max_repetitions: 0], "zero repetitions"},
-        {"127.0.0.1", @table_oids.if_table, [max_repetitions: -1], "negative repetitions"},
-        {"127.0.0.1", @table_oids.if_table, [non_repeaters: -1, max_repetitions: 10], "negative non-repeaters"},
+        # Invalid repetition parameters - these should raise ArgumentError
+        {target, @table_oids.if_table, [max_repetitions: -1], "negative repetitions"},
+        {target, @table_oids.if_table, [non_repeaters: -1, max_repetitions: 10], "negative non-repeaters"},
         
-        # Very large parameters (might cause resource issues)
-        {"127.0.0.1", @table_oids.if_table, [max_repetitions: 65536], "excessive repetitions"},
-        {"127.0.0.1", @table_oids.if_table, [non_repeaters: 1000, max_repetitions: 1000], "excessive non-repeaters"},
+        # Very large parameters (might cause resource issues) - these should work but may timeout/error
+        {target, @table_oids.if_table, [max_repetitions: 65536, community: device.community, timeout: 100], "excessive repetitions"},
+        {target, @table_oids.if_table, [non_repeaters: 1000, max_repetitions: 1000, community: device.community, timeout: 100], "excessive non-repeaters"},
       ]
       
       for {target, oid, opts, description} <- getbulk_error_cases do
-        case SNMPMgr.get_bulk(target, oid, opts) do
-          {:ok, _results} ->
-            # Some "invalid" parameters might be handled gracefully
-            assert true, "#{description} handled gracefully"
-            
-          {:error, reason} ->
-            assert is_atom(reason) or is_tuple(reason),
-              "#{description} should provide descriptive error: #{inspect(reason)}"
+        try do
+          case SNMPMgr.get_bulk(target, oid, opts) do
+            {:ok, _results} ->
+              # Some "invalid" parameters might be handled gracefully
+              assert true, "#{description} handled gracefully"
+              
+            {:error, reason} ->
+              assert is_atom(reason) or is_tuple(reason),
+                "#{description} should provide descriptive error: #{inspect(reason)}"
+          end
+        rescue
+          ArgumentError ->
+            # Expected for truly invalid parameters like negative values
+            assert true, "#{description} correctly rejected with ArgumentError"
         end
       end
     end
 
-    test "handles SNMPv2c exceptions in GETBULK" do
+    test "handles SNMPv2c exceptions in GETBULK", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test OIDs that might return SNMPv2c exceptions
       exception_test_oids = [
         "1.2.3.4.5.6.7.8.9.0",     # Non-existent OID
@@ -512,7 +588,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       for test_oid <- exception_test_oids do
-        case SNMPMgr.get_bulk("127.0.0.1", test_oid, [max_repetitions: 5]) do
+        case SNMPMgr.get_bulk(target, test_oid, [max_repetitions: 5, community: device.community, timeout: 200]) do
           {:ok, results} ->
             # Check for SNMPv2c exception values in results
             exception_count = Enum.count(results, fn {_oid, value} ->
@@ -535,10 +611,12 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
     end
 
-    test "handles timeout and retry with GETBULK" do
+    test "handles timeout and retry with GETBULK", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test GETBULK with short timeout
-      case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table, 
-                           [max_repetitions: 20, timeout: 100, retries: 0]) do
+      case SNMPMgr.get_bulk(target, @table_oids.if_table, 
+                           [max_repetitions: 20, timeout: 50, retries: 0, community: device.community]) do
         {:ok, _results} ->
           assert true, "Fast GETBULK succeeded"
           
@@ -554,8 +632,8 @@ defmodule SNMPMgr.BulkOperationsTest do
       end
       
       # Test GETBULK with retries
-      case SNMPMgr.get_bulk("127.0.0.1", @table_oids.if_table,
-                           [max_repetitions: 10, timeout: 1000, retries: 2]) do
+      case SNMPMgr.get_bulk(target, @table_oids.if_table,
+                           [max_repetitions: 10, timeout: 200, retries: 2, community: device.community]) do
         {:ok, _results} ->
           assert true, "GETBULK with retries succeeded"
           

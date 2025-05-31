@@ -30,7 +30,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       
       for target <- unreachable_targets do
         # Test GET operation
-        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 1000, retries: 0]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 200, retries: 0]) do
           {:ok, _value} ->
             # Unexpected success - maybe the network actually exists
             assert true, "Unexpectedly reached #{target}"
@@ -49,7 +49,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
         end
         
         # Test GETBULK operation
-        case SNMPMgr.get_bulk(target, @test_oids.if_table, [max_repetitions: 5, timeout: 1000, retries: 0]) do
+        case SNMPMgr.get_bulk(target, @test_oids.if_table, [max_repetitions: 5, timeout: 200, retries: 0]) do
           {:ok, _data} ->
             assert true, "Unexpectedly reached #{target} for GETBULK"
             
@@ -76,7 +76,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       for target <- refusing_targets do
-        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 2000, retries: 0]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 300, retries: 0]) do
           {:ok, _value} ->
             flunk("Should not get valid SNMP response from #{target}")
             
@@ -102,7 +102,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       for target <- malformed_targets do
-        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 2000, retries: 0]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 300, retries: 0]) do
           {:ok, _value} ->
             flunk("Should not decode non-SNMP response from #{target}")
             
@@ -155,7 +155,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       for {target, oid, opts, description} <- auth_error_cases do
-        case SNMPMgr.get(target, oid, opts ++ [timeout: 2000, retries: 0]) do
+        case SNMPMgr.get(target, oid, opts ++ [timeout: 300, retries: 0]) do
           {:ok, _value} ->
             # Might succeed if community is actually valid or device has weak auth
             assert true, "#{description} unexpectedly succeeded"
@@ -187,7 +187,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       for {target, oid, description} <- invalid_oid_cases do
-        case SNMPMgr.get(target, oid, [timeout: 2000]) do
+        case SNMPMgr.get(target, oid, [timeout: 300]) do
           {:ok, _value} ->
             flunk("#{description} should not succeed")
             
@@ -215,7 +215,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
         case String.contains?(description, "GETBULK") do
           true ->
             # GETBULK should enforce v2c
-            case SNMPMgr.get_bulk(target, oid, opts ++ [timeout: 2000]) do
+            case SNMPMgr.get_bulk(target, oid, opts ++ [timeout: 300]) do
               {:ok, _data} ->
                 assert true, "#{description} succeeded (version enforced to v2c)"
                 
@@ -232,7 +232,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
             
           false ->
             # Regular operations
-            case SNMPMgr.get(target, oid, opts ++ [timeout: 2000]) do
+            case SNMPMgr.get(target, oid, opts ++ [timeout: 300]) do
               {:ok, _value} ->
                 assert true, "#{description} succeeded (version supported)"
                 
@@ -265,7 +265,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       for {target, oid, value, description} <- set_error_cases do
-        case SNMPMgr.set(target, oid, value, [timeout: 2000, retries: 0]) do
+        case SNMPMgr.set(target, oid, value, [timeout: 300, retries: 0]) do
           {:ok, _result} ->
             # Might succeed if OID is actually writable
             assert true, "#{description} unexpectedly succeeded"

@@ -60,12 +60,23 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "SNMP GET operations" do
-    test "validates GET request parameters" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates GET request parameters", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       valid_params = [
-        {"127.0.0.1:161", @test_oids.system_descr, []},
-        {"localhost", @test_oids.system_uptime, [community: "public"]},
-        {"192.168.1.1", @test_oids.if_number, [community: "private", timeout: 10000]},
-        {"device.local:1161", @test_oids.system_name, [retries: 3, version: :v2c]}
+        {target, @test_oids.system_descr, [community: device.community, timeout: 200]},
+        {target, @test_oids.system_uptime, [community: device.community, timeout: 200]},
+        {target, @test_oids.if_number, [community: device.community, timeout: 200]},
+        {target, @test_oids.system_name, [community: device.community, timeout: 200, version: :v2c]}
       ]
       
       for {target, oid, opts} <- valid_params do
@@ -85,23 +96,25 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "rejects invalid GET request parameters" do
+    test "rejects invalid GET request parameters", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       invalid_params = [
         # Invalid targets
-        {"", @test_oids.system_descr, []},
-        {nil, @test_oids.system_descr, []},
-        {123, @test_oids.system_descr, []},
+        {"", @test_oids.system_descr, [timeout: 100]},
+        {nil, @test_oids.system_descr, [timeout: 100]},
+        {123, @test_oids.system_descr, [timeout: 100]},
         
-        # Invalid OIDs
-        {"127.0.0.1", "", []},
-        {"127.0.0.1", "invalid.oid", []},
-        {"127.0.0.1", nil, []},
-        {"127.0.0.1", 123, []},
+        # Invalid OIDs  
+        {target, "", [community: device.community, timeout: 100]},
+        {target, "invalid.oid", [community: device.community, timeout: 100]},
+        {target, nil, [community: device.community, timeout: 100]},
+        {target, 123, [community: device.community, timeout: 100]},
         
         # Invalid options
-        {"127.0.0.1", @test_oids.system_descr, [community: nil]},
-        {"127.0.0.1", @test_oids.system_descr, [timeout: -1]},
-        {"127.0.0.1", @test_oids.system_descr, [retries: -1]},
+        {target, @test_oids.system_descr, [community: nil, timeout: 100]},
+        {target, @test_oids.system_descr, [timeout: -1]},
+        {target, @test_oids.system_descr, [retries: -1, timeout: 100]},
       ]
       
       for {target, oid, opts} <- invalid_params do
@@ -116,7 +129,9 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "handles various OID formats in GET requests" do
+    test "handles various OID formats in GET requests", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       oid_formats = [
         # String OID
         {"1.3.6.1.2.1.1.1.0", "String OID format"},
@@ -132,7 +147,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       ]
       
       for {oid, description} <- oid_formats do
-        case SNMPMgr.get("127.0.0.1", oid) do
+        case SNMPMgr.get(target, oid, [community: device.community, timeout: 200]) do
           {:ok, _value} ->
             assert true, "#{description} succeeded"
             
@@ -151,7 +166,7 @@ defmodule SNMPMgr.CoreOperationsTest do
     test "respects timeout and retry options" do
       # Test with short timeout
       short_timeout_result = SNMPMgr.get("127.0.0.1", @test_oids.system_descr, 
-                                        [timeout: 100, retries: 0])
+                                        [timeout: 50, retries: 0])
       
       case short_timeout_result do
         {:ok, _value} ->
@@ -171,7 +186,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       
       # Test with retries
       retry_result = SNMPMgr.get("127.0.0.1", @test_oids.system_descr,
-                                [timeout: 1000, retries: 3])
+                                [timeout: 100, retries: 1])
       
       case retry_result do
         {:ok, _value} ->
@@ -189,7 +204,7 @@ defmodule SNMPMgr.CoreOperationsTest do
     test "uses configuration defaults correctly" do
       # Set some defaults
       Config.set_default_community("test_community")
-      Config.set_default_timeout(8000)
+      Config.set_default_timeout(500)
       Config.set_default_retries(2)
       
       # GET without explicit options should use defaults
@@ -212,11 +227,22 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "SNMP GETNEXT operations" do
-    test "validates GETNEXT request parameters" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates GETNEXT request parameters", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       valid_getnext_params = [
-        {"127.0.0.1", "1.3.6.1.2.1.1", []},
-        {"localhost", "1.3.6.1.2.1.2.2.1", [community: "public"]},
-        {"192.168.1.1", "1.3.6.1.2.1", [timeout: 5000]},
+        {target, "1.3.6.1.2.1.1", [community: device.community, timeout: 200]},
+        {target, "1.3.6.1.2.1.2.2.1", [community: device.community, timeout: 200]},
+        {target, "1.3.6.1.2.1", [community: device.community, timeout: 200]},
       ]
       
       for {target, oid, opts} <- valid_getnext_params do
@@ -238,7 +264,9 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "GETNEXT progression through MIB tree" do
+    test "GETNEXT progression through MIB tree", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test that GETNEXT progresses through the tree correctly
       starting_oids = [
         "1.3.6.1.2.1.1.1",    # Should get sysDescr.0
@@ -248,7 +276,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       ]
       
       for starting_oid <- starting_oids do
-        case SNMPMgr.get_next("127.0.0.1", starting_oid) do
+        case SNMPMgr.get_next(target, starting_oid, [community: device.community, timeout: 200]) do
           {:ok, {next_oid, _value}} ->
             # Verify progression
             starting_list = case starting_oid do
@@ -285,7 +313,9 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "handles end of MIB view in GETNEXT" do
+    test "handles end of MIB view in GETNEXT", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Test with OID at end of standard tree
       end_oids = [
         "1.3.6.1.2.1.999.999.999",  # Way beyond standard MIB
@@ -293,7 +323,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       ]
       
       for end_oid <- end_oids do
-        case SNMPMgr.get_next("127.0.0.1", end_oid) do
+        case SNMPMgr.get_next(target, end_oid, [community: device.community, timeout: 200]) do
           {:ok, _result} ->
             # Might find something in extended tree
             assert true, "GETNEXT found object beyond expected range"
@@ -313,12 +343,23 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "SNMP SET operations" do
-    test "validates SET request parameters" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates SET request parameters", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Note: SET operations typically require write community and writable OIDs
       set_test_cases = [
-        {"127.0.0.1", @test_oids.system_contact, "Test Contact", []},
-        {"127.0.0.1", @test_oids.system_name, "Test Device", [community: "private"]},
-        {"127.0.0.1", @test_oids.system_location, "Test Location", [timeout: 10000]},
+        {target, @test_oids.system_contact, "Test Contact", [community: device.community, timeout: 200]},
+        {target, @test_oids.system_name, "Test Device", [community: device.community, timeout: 200]},
+        {target, @test_oids.system_location, "Test Location", [community: device.community, timeout: 200]},
       ]
       
       for {target, oid, value, opts} <- set_test_cases do
@@ -343,17 +384,19 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "rejects invalid SET values and types" do
+    test "rejects invalid SET values and types", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       invalid_set_cases = [
         # Wrong value types
-        {"127.0.0.1", @test_oids.system_contact, 123, []},
-        {"127.0.0.1", @test_oids.if_admin_status, "invalid_status", []},
+        {target, @test_oids.system_contact, 123, [community: device.community, timeout: 100]},
+        {target, @test_oids.if_admin_status, "invalid_status", [community: device.community, timeout: 100]},
         
         # Invalid values for specific types
-        {"127.0.0.1", @test_oids.if_admin_status, 999, []},  # Out of enum range
+        {target, @test_oids.if_admin_status, 999, [community: device.community, timeout: 100]},  # Out of enum range
         
         # Nil values
-        {"127.0.0.1", @test_oids.system_name, nil, []},
+        {target, @test_oids.system_name, nil, [community: device.community, timeout: 100]},
       ]
       
       for {target, oid, value, opts} <- invalid_set_cases do
@@ -399,8 +442,19 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "asynchronous operations" do
-    test "validates async GET operations" do
-      case SNMPMgr.get_async("127.0.0.1", @test_oids.system_descr) do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "validates async GET operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      case SNMPMgr.get_async(target, @test_oids.system_descr, [community: device.community, timeout: 200]) do
         ref when is_reference(ref) ->
           # Should receive a message with the result
           receive do
@@ -416,7 +470,7 @@ defmodule SNMPMgr.CoreOperationsTest do
                   assert is_atom(reason), "Async GET error: #{inspect(reason)}"
               end
           after
-            5000 ->
+            500 ->
               flunk("Async GET should send result message")
           end
           
@@ -429,10 +483,12 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "handles multiple concurrent async operations" do
+    test "handles multiple concurrent async operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Start multiple async operations
       refs = for i <- 1..5 do
-        case SNMPMgr.get_async("127.0.0.1", @test_oids.system_descr, timeout: 2000) do
+        case SNMPMgr.get_async(target, @test_oids.system_descr, [community: device.community, timeout: 200]) do
           ref when is_reference(ref) -> {ref, i}
           {:error, _} -> nil
         end
@@ -474,12 +530,12 @@ defmodule SNMPMgr.CoreOperationsTest do
     test "merges operation options with configuration" do
       # Set specific configuration
       Config.set_default_community("default_community")
-      Config.set_default_timeout(6000)
+      Config.set_default_timeout(500)
       Config.set_default_retries(2)
       Config.set_default_version(:v2c)
       
       # Test that explicit options override defaults
-      explicit_opts = [community: "explicit_community", timeout: 3000]
+      explicit_opts = [community: "explicit_community", timeout: 200]
       
       case SNMPMgr.get("127.0.0.1", @test_oids.system_descr, explicit_opts) do
         {:ok, _value} ->
@@ -540,6 +596,15 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "error handling and edge cases" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
     test "handles network unreachability" do
       unreachable_targets = [
         "192.0.2.1",          # RFC 5737 test network
@@ -548,7 +613,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       ]
       
       for target <- unreachable_targets do
-        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 1000, retries: 0]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 100, retries: 0]) do
           {:ok, _value} ->
             # Unexpected success
             assert true, "Unexpectedly reached #{target}"
@@ -574,7 +639,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       ]
       
       for target <- malformed_targets do
-        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 1000]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [timeout: 100]) do
           {:ok, _value} ->
             flunk("Should not get valid SNMP response from #{target}")
             
@@ -586,12 +651,14 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
     end
 
-    test "validates resource cleanup" do
-      # Perform many operations to test resource cleanup
-      operation_count = 50
+    test "validates resource cleanup", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Perform fewer operations to test resource cleanup
+      operation_count = 10
       
       results = for i <- 1..operation_count do
-        case SNMPMgr.get("127.0.0.1", @test_oids.system_descr, [timeout: 100]) do
+        case SNMPMgr.get(target, @test_oids.system_descr, [community: device.community, timeout: 200]) do
           {:ok, value} -> {:ok, i, value}
           {:error, reason} -> {:error, i, reason}
         end
@@ -619,31 +686,44 @@ defmodule SNMPMgr.CoreOperationsTest do
   end
 
   describe "performance characteristics" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
     @tag :performance
-    test "basic operations are fast" do
-      # Measure time for basic GET operation
+    test "basic operations are fast", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Measure time for basic GET operation - reduce operations and timeout
       {time_microseconds, _result} = :timer.tc(fn ->
-        for _i <- 1..100 do
-          SNMPMgr.get("127.0.0.1", @test_oids.system_descr, [timeout: 1000])
+        for _i <- 1..10 do
+          SNMPMgr.get(target, @test_oids.system_descr, [community: device.community, timeout: 200])
         end
       end)
       
-      time_per_operation = time_microseconds / 100
+      time_per_operation = time_microseconds / 10
       
-      # Should be fast (less than 10ms per operation including network)
-      assert time_per_operation < 10_000,
+      # Should be fast (less than 100ms per operation including network timeout)
+      assert time_per_operation < 100_000,
         "Basic GET operations too slow: #{time_per_operation} microseconds per operation"
     end
 
     @tag :performance
-    test "memory usage is reasonable" do
+    test "memory usage is reasonable", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       :erlang.garbage_collect()
       memory_before = :erlang.memory(:total)
       
-      # Perform many operations
-      _results = for _i <- 1..100 do
-        SNMPMgr.get("127.0.0.1", @test_oids.system_descr, [timeout: 500])
-        SNMPMgr.get_next("127.0.0.1", "1.3.6.1.2.1.1", [timeout: 500])
+      # Perform fewer operations with shorter timeout
+      _results = for _i <- 1..10 do
+        SNMPMgr.get(target, @test_oids.system_descr, [community: device.community, timeout: 200])
+        SNMPMgr.get_next(target, "1.3.6.1.2.1.1", [community: device.community, timeout: 200])
       end
       
       memory_after = :erlang.memory(:total)

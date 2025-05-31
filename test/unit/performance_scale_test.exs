@@ -15,7 +15,7 @@ defmodule SNMPMgr.PerformanceScaleTest do
   @heavy_load_concurrent 200
   @stress_load_concurrent 500
   @sustained_duration_ms 5000
-  @performance_timeout 30_000
+  @performance_timeout 5_000
 
   # Standard OIDs for performance testing
   @test_oids %{
@@ -28,27 +28,49 @@ defmodule SNMPMgr.PerformanceScaleTest do
   }
 
   setup_all do
-    # Start high-performance engine configuration
-    case SNMPMgr.start_engine([
-      engine: [pool_size: 50, max_rps: 1000, batch_size: 100],
-      router: [strategy: :round_robin, max_engines: 10],
-      pool: [pool_size: 100, max_idle_time: 60_000],
-      circuit_breaker: [failure_threshold: 10, recovery_timeout: 5000],
-      metrics: [collection_interval: 100, window_size: 300]
-    ]) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-      error -> error
+    # Start components individually to avoid startup conflicts
+    # Following pattern from circuit_breaker_comprehensive_test.exs
+    
+    # Start circuit breaker if not already running
+    case GenServer.whereis(SNMPMgr.CircuitBreaker) do
+      nil ->
+        case SNMPMgr.CircuitBreaker.start_link() do
+          {:ok, _pid} -> :ok
+          {:error, {:already_started, _pid}} -> :ok
+          error -> error
+        end
+      _pid -> :ok
+    end
+    
+    # Start metrics if not already running
+    case GenServer.whereis(SNMPMgr.Metrics) do
+      nil ->
+        case SNMPMgr.Metrics.start_link() do
+          {:ok, _pid} -> :ok
+          {:error, {:already_started, _pid}} -> :ok
+          error -> error
+        end
+      _pid -> :ok
     end
     
     :ok
   end
 
   describe "engine throughput and latency performance" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
     @tag :performance
-    test "validates engine throughput under light concurrent load" do
+    test "validates engine throughput under light concurrent load", %{device: device} do
       concurrent_count = @light_load_concurrent
       requests_per_task = 10
+      target = SNMPSimulator.device_target(device)
       
       start_time = :erlang.monotonic_time(:microsecond)
       
@@ -58,9 +80,10 @@ defmodule SNMPMgr.PerformanceScaleTest do
           task_results = for j <- 1..requests_per_task do
             request = %{
               type: :get,
-              target: "127.0.0.1",
+              target: target,
               oid: @test_oids.system_descr,
-              community: "public",
+              community: device.community,
+              timeout: 200,
               request_id: "light_#{i}_#{j}"
             }
             
