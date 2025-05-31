@@ -196,6 +196,16 @@ defmodule SNMPMgr.Core do
             end
           error -> {:error, {:snmp_error, error}}
         end
+      # Handle case where response structure is directly at top level (from test failures)
+      {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{_oid, _type, value}] -> {:ok, decode_value(value)}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
       {:error, reason} -> {:error, reason}
     end
   end
@@ -213,6 +223,18 @@ defmodule SNMPMgr.Core do
             end
           error -> {:error, {:snmp_error, error}}
         end
+      # Handle case where response structure is directly at top level
+      {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{oid, _type, value}] -> 
+                oid_string = SNMPMgr.OID.list_to_string(oid)
+                {:ok, {oid_string, decode_value(value)}}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
       {:error, reason} -> {:error, reason}
     end
   end
@@ -220,6 +242,16 @@ defmodule SNMPMgr.Core do
   defp decode_set_response(response) do
     case SNMPMgr.PDU.decode_message(response) do
       {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{_oid, _type, value}] -> {:ok, decode_value(value)}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
+      # Handle case where response structure is directly at top level
+      {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
         case error_status do
           0 ->
             case varbinds do

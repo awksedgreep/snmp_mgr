@@ -57,7 +57,7 @@ defmodule SNMPMgr.TypesComprehensiveTest do
     # Octet string (binary data)
     {:octetString, <<1, 2, 3, 4>>, {:octetString, <<1, 2, 3, 4>>}},
     {:octetString, <<>>, {:octetString, <<>>}},
-    {:octetString, :crypto.strong_rand_bytes(100), {:octetString, :crypto.strong_rand_bytes(100)}},
+    {:octetString, <<0, 1, 2, 3, 4, 5, 255, 254, 253>>, {:octetString, <<0, 1, 2, 3, 4, 5, 255, 254, 253>>}},
     
     # Null
     {:null, nil, {:null, :null}},
@@ -108,7 +108,7 @@ defmodule SNMPMgr.TypesComprehensiveTest do
       edge_cases = [
         # Empty collections
         {[], :objectIdentifier},  # Empty OID list
-        {<<>>, :octetString},     # Empty binary
+        {<<>>, :string},          # Empty string
         
         # Boundary values
         {2147483647, :unsigned32},    # Max 32-bit signed (should be unsigned)
@@ -156,6 +156,9 @@ defmodule SNMPMgr.TypesComprehensiveTest do
               :ipAddress when is_binary(input) ->
                 # IP strings decode to tuples
                 assert decoded == elem(encoded, 1)
+              :null ->
+                # Null values decode to nil regardless of input
+                assert decoded == nil
               _ ->
                 # Most types should roundtrip exactly
                 original_value = elem(encoded, 1)
@@ -331,7 +334,7 @@ defmodule SNMPMgr.TypesComprehensiveTest do
       oid_lengths = [0, 1, 2, 128, 256, 512]
       
       for length <- oid_lengths do
-        test_oid = for i <- 1..length, do: rem(i, 256)
+        test_oid = if length == 0, do: [], else: for(i <- 1..length, do: rem(i, 256))
         
         case Types.encode_value(test_oid, type: :objectIdentifier) do
           {:ok, {:objectIdentifier, encoded_oid}} ->
@@ -430,7 +433,7 @@ defmodule SNMPMgr.TypesComprehensiveTest do
       large_values = [
         {String.duplicate("X", 1000), :string},
         {for(i <- 1..1000, do: rem(i, 256)), :objectIdentifier},
-        {:crypto.strong_rand_bytes(1000), :octetString},
+        {<<1, 2, 3, 4, 5>> |> List.duplicate(200) |> IO.iodata_to_binary(), :octetString},
       ]
       
       encoded_values = for {value, type} <- large_values do

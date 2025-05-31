@@ -230,4 +230,269 @@ defmodule SNMPMgr.Errors do
   end
 
   defp format_error_details(_), do: ""
+
+  @doc """
+  Classifies an error into a category for better handling.
+  
+  ## Examples
+  
+      iex> SNMPMgr.Errors.classify_error({:snmp_error, :no_such_name}, "Get request")
+      {:user_error, :invalid_oid}
+      
+      iex> SNMPMgr.Errors.classify_error({:network_error, :timeout}, "Network operation")
+      {:transient_error, :network_timeout}
+      
+      iex> SNMPMgr.Errors.classify_error({:snmp_error, :too_big}, "Bulk request")
+      {:recoverable_error, :response_too_large}
+  """
+  def classify_error(error, context \\ nil)
+  
+  def classify_error({:snmp_error, :no_such_name}, _context) do
+    {:user_error, :invalid_oid}
+  end
+  
+  def classify_error({:snmp_error, :bad_value}, _context) do
+    {:user_error, :invalid_value}
+  end
+  
+  def classify_error({:snmp_error, :read_only}, _context) do
+    {:user_error, :write_to_readonly}
+  end
+  
+  def classify_error({:snmp_error, :too_big}, _context) do
+    {:recoverable_error, :response_too_large}
+  end
+  
+  def classify_error({:snmp_error, :gen_err}, _context) do
+    {:device_error, :general_failure}
+  end
+  
+  def classify_error({:v2c_error, :no_access}, _context) do
+    {:security_error, :access_denied}
+  end
+  
+  def classify_error({:v2c_error, :authorization_error}, _context) do
+    {:security_error, :authorization_failed}
+  end
+  
+  def classify_error({:v2c_error, :wrong_type}, _context) do
+    {:user_error, :type_mismatch}
+  end
+  
+  def classify_error({:v2c_error, :resource_unavailable}, _context) do
+    {:device_error, :resource_exhausted}
+  end
+  
+  def classify_error({:network_error, :timeout}, _context) do
+    {:transient_error, :network_timeout}
+  end
+  
+  def classify_error({:network_error, :host_unreachable}, _context) do
+    {:configuration_error, :unreachable_host}
+  end
+  
+  def classify_error({:network_error, :network_unreachable}, _context) do
+    {:configuration_error, :network_unavailable}
+  end
+  
+  def classify_error({:encoding_error, _reason}, _context) do
+    {:protocol_error, :message_encoding_failed}
+  end
+  
+  def classify_error({:decoding_error, _reason}, _context) do
+    {:protocol_error, :message_decoding_failed}
+  end
+  
+  def classify_error(:timeout, _context) do
+    {:transient_error, :operation_timeout}
+  end
+  
+  def classify_error(error, _context) do
+    {:unknown_error, error}
+  end
+
+  @doc """
+  Formats an error message in a user-friendly way with context.
+  
+  ## Examples
+  
+      iex> SNMPMgr.Errors.format_user_friendly_error({:snmp_error, :no_such_name}, "Getting system description")
+      "Unable to get system description: The requested OID does not exist on the device"
+      
+      iex> SNMPMgr.Errors.format_user_friendly_error({:network_error, :timeout}, "Contacting device")
+      "Failed contacting device: The device did not respond within the timeout period"
+  """
+  def format_user_friendly_error(error, context \\ "Operation")
+  
+  def format_user_friendly_error({:snmp_error, :no_such_name}, context) do
+    "#{context} failed: The requested OID does not exist on the device"
+  end
+  
+  def format_user_friendly_error({:snmp_error, :bad_value}, context) do
+    "#{context} failed: The provided value is invalid for this OID"
+  end
+  
+  def format_user_friendly_error({:snmp_error, :read_only}, context) do
+    "#{context} failed: This OID is read-only and cannot be modified"
+  end
+  
+  def format_user_friendly_error({:snmp_error, :too_big}, context) do
+    "#{context} failed: The response is too large. Try requesting fewer OIDs or use BULK operations"
+  end
+  
+  def format_user_friendly_error({:snmp_error, :gen_err}, context) do
+    "#{context} failed: The device reported a general error"
+  end
+  
+  def format_user_friendly_error({:v2c_error, :no_access}, context) do
+    "#{context} failed: Access denied. Check your community string and device configuration"
+  end
+  
+  def format_user_friendly_error({:v2c_error, :authorization_error}, context) do
+    "#{context} failed: Authorization failed. Verify your credentials"
+  end
+  
+  def format_user_friendly_error({:v2c_error, :wrong_type}, context) do
+    "#{context} failed: The value type does not match the expected type for this OID"
+  end
+  
+  def format_user_friendly_error({:network_error, :timeout}, context) do
+    "#{context} failed: The device did not respond within the timeout period"
+  end
+  
+  def format_user_friendly_error({:network_error, :host_unreachable}, context) do
+    "#{context} failed: Cannot reach the device. Check the IP address and network connectivity"
+  end
+  
+  def format_user_friendly_error({:network_error, :network_unreachable}, context) do
+    "#{context} failed: Network is unreachable. Check your network configuration"
+  end
+  
+  def format_user_friendly_error(:timeout, context) do
+    "#{context} timed out: The operation took too long to complete"
+  end
+  
+  def format_user_friendly_error({:encoding_error, _reason}, context) do
+    "#{context} failed: Unable to encode the SNMP message"
+  end
+  
+  def format_user_friendly_error({:decoding_error, _reason}, context) do
+    "#{context} failed: Unable to decode the SNMP response"
+  end
+  
+  def format_user_friendly_error(error, context) do
+    "#{context} failed: #{inspect(error)}"
+  end
+
+  @doc """
+  Provides recovery suggestions for common errors.
+  
+  ## Examples
+  
+      iex> SNMPMgr.Errors.get_recovery_suggestions({:snmp_error, :no_such_name})
+      ["Verify the OID is correct", "Check if the OID is supported by this device", "Try using MIB browser to explore available OIDs"]
+      
+      iex> SNMPMgr.Errors.get_recovery_suggestions({:network_error, :timeout})
+      ["Increase timeout value", "Check network connectivity", "Verify device is responding to ping"]
+  """
+  def get_recovery_suggestions({:snmp_error, :no_such_name}) do
+    [
+      "Verify the OID is correct",
+      "Check if the OID is supported by this device",
+      "Try using MIB browser to explore available OIDs",
+      "Ensure you're using the correct SNMP version"
+    ]
+  end
+  
+  def get_recovery_suggestions({:snmp_error, :bad_value}) do
+    [
+      "Check the value format and type",
+      "Verify the value is within acceptable range",
+      "Ensure the value matches the OID's expected data type",
+      "Check device documentation for valid values"
+    ]
+  end
+  
+  def get_recovery_suggestions({:snmp_error, :read_only}) do
+    [
+      "This OID cannot be modified",
+      "Use GET operation instead of SET",
+      "Check device documentation for writable OIDs",
+      "Verify you have the correct OID for writing"
+    ]
+  end
+  
+  def get_recovery_suggestions({:snmp_error, :too_big}) do
+    [
+      "Reduce the number of OIDs in the request",
+      "Use GETBULK operation with smaller max-repetitions",
+      "Split the request into multiple smaller requests",
+      "Check device's maximum PDU size settings"
+    ]
+  end
+  
+  def get_recovery_suggestions({:v2c_error, :no_access}) do
+    [
+      "Verify the community string is correct",
+      "Check device SNMP access configuration",
+      "Ensure the device allows SNMP access from your IP",
+      "Verify SNMP version compatibility (v1/v2c)"
+    ]
+  end
+  
+  def get_recovery_suggestions({:network_error, :timeout}) do
+    [
+      "Increase timeout value",
+      "Check network connectivity to the device",
+      "Verify device is responding to ping",
+      "Check for network congestion or packet loss",
+      "Ensure device SNMP service is running"
+    ]
+  end
+  
+  def get_recovery_suggestions({:network_error, :host_unreachable}) do
+    [
+      "Verify the IP address is correct",
+      "Check network routing",
+      "Ensure device is powered on and connected",
+      "Test basic connectivity with ping",
+      "Check firewall rules"
+    ]
+  end
+  
+  def get_recovery_suggestions({:encoding_error, _reason}) do
+    [
+      "Check OID format",
+      "Verify value types are supported",
+      "Ensure SNMP version compatibility",
+      "Check for invalid characters in community string"
+    ]
+  end
+  
+  def get_recovery_suggestions({:decoding_error, _reason}) do
+    [
+      "Device may not support SNMP",
+      "Check SNMP version compatibility",
+      "Verify device is not sending corrupted responses",
+      "Try different SNMP version (v1/v2c)"
+    ]
+  end
+  
+  def get_recovery_suggestions(:timeout) do
+    [
+      "Increase operation timeout",
+      "Check if operation is too complex",
+      "Verify device resources are available",
+      "Try simpler operations first"
+    ]
+  end
+  
+  def get_recovery_suggestions(_error) do
+    [
+      "Check device documentation",
+      "Verify SNMP configuration",
+      "Try basic connectivity tests",
+      "Contact device vendor support"
+    ]
+  end
 end

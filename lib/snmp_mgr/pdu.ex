@@ -315,8 +315,58 @@ defmodule SNMPMgr.PDU do
     {:ok, {:null, rest}}
   end
   defp parse_value(<<tag, length, value::binary-size(length), rest::binary>>) do
-    # Other types - return as binary for now
-    {:ok, {"SNMP_TYPE_#{tag}_#{Base.encode16(value)}", rest}}
+    # Handle specific SNMP types by tag
+    case tag do
+      0x40 -> # IpAddress (4 bytes)
+        case value do
+          <<a, b, c, d>> -> {:ok, {"#{a}.#{b}.#{c}.#{d}", rest}}
+          _ -> {:ok, {Base.encode16(value), rest}}
+        end
+      
+      0x41 -> # Counter32
+        case decode_unsigned_integer(value) do
+          {:ok, counter_value} -> {:ok, {counter_value, rest}}
+          _ -> {:ok, {"COUNTER_#{Base.encode16(value)}", rest}}
+        end
+      
+      0x42 -> # Gauge32 / Unsigned32
+        case decode_unsigned_integer(value) do
+          {:ok, gauge_value} -> {:ok, {gauge_value, rest}}
+          _ -> {:ok, {"GAUGE_#{Base.encode16(value)}", rest}}
+        end
+      
+      0x43 -> # TimeTicks
+        case decode_unsigned_integer(value) do
+          {:ok, ticks} -> 
+            # Convert to human readable format (centiseconds to time)
+            seconds = div(ticks, 100)
+            centiseconds = rem(ticks, 100)
+            {:ok, {"#{format_uptime(seconds)}.#{centiseconds}", rest}}
+          _ -> {:ok, {"TIMETICKS_#{Base.encode16(value)}", rest}}
+        end
+      
+      0x44 -> # Opaque
+        {:ok, {"OPAQUE_#{Base.encode16(value)}", rest}}
+      
+      0x46 -> # Counter64 
+        case decode_counter64(value) do
+          {:ok, counter64_value} -> {:ok, {counter64_value, rest}}
+          _ -> {:ok, {"COUNTER64_#{Base.encode16(value)}", rest}}
+        end
+      
+      0x80 -> # NoSuchObject
+        {:ok, {:noSuchObject, rest}}
+      
+      0x81 -> # NoSuchInstance  
+        {:ok, {:noSuchInstance, rest}}
+      
+      0x82 -> # EndOfMibView
+        {:ok, {:endOfMibView, rest}}
+      
+      _ -> 
+        # Fallback for truly unknown types
+        {:ok, {"UNKNOWN_TYPE_#{tag}_#{Base.encode16(value)}", rest}}
+    end
   end
   defp parse_value(_), do: {:error, :invalid_value}
   
@@ -334,6 +384,50 @@ defmodule SNMPMgr.PDU do
         end
       _ -> {:error, :invalid_integer}
     end
+  end
+  
+  # Decode unsigned integer (for Counter32, Gauge32, TimeTicks)
+  defp decode_unsigned_integer(data) when byte_size(data) <= 4 do
+    case :binary.decode_unsigned(data, :big) do
+      value when is_integer(value) -> {:ok, value}
+      _ -> {:error, :invalid_unsigned_integer}
+    end
+  end
+  defp decode_unsigned_integer(_), do: {:error, :invalid_unsigned_integer}
+  
+  # Decode Counter64 (8-byte unsigned integer)
+  defp decode_counter64(data) when byte_size(data) == 8 do
+    case :binary.decode_unsigned(data, :big) do
+      value when is_integer(value) -> {:ok, value}
+      _ -> {:error, :invalid_counter64}
+    end
+  end
+  defp decode_counter64(_), do: {:error, :invalid_counter64}
+  
+  # Format uptime in human readable format
+  defp format_uptime(seconds) when seconds < 60 do
+    "#{seconds}s"
+  end
+  defp format_uptime(seconds) when seconds < 3600 do
+    minutes = div(seconds, 60)
+    remaining_seconds = rem(seconds, 60)
+    "#{minutes}m #{remaining_seconds}s"
+  end
+  defp format_uptime(seconds) when seconds < 86400 do
+    hours = div(seconds, 3600)
+    remaining_seconds = rem(seconds, 3600)
+    minutes = div(remaining_seconds, 60)
+    remaining_seconds = rem(remaining_seconds, 60)
+    "#{hours}h #{minutes}m #{remaining_seconds}s"
+  end
+  defp format_uptime(seconds) do
+    days = div(seconds, 86400)
+    remaining_seconds = rem(seconds, 86400)
+    hours = div(remaining_seconds, 3600)
+    remaining_seconds = rem(remaining_seconds, 3600)
+    minutes = div(remaining_seconds, 60)
+    remaining_seconds = rem(remaining_seconds, 60)
+    "#{days}d #{hours}h #{minutes}m #{remaining_seconds}s"
   end
   
   defp try_approaches([], _response) do

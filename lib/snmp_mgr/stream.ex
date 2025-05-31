@@ -243,7 +243,7 @@ defmodule SNMPMgr.Stream do
         if Enum.empty?(in_scope) or next_oid == nil do
           {in_scope, %{state | finished: true}}
         else
-          new_state = if state.adaptive and start_time and end_time do
+          new_state = if state.adaptive and start_time != nil and end_time != nil do
             response_time = end_time - start_time
             adaptive_state = update_stream_adaptive_state(state.adaptive_state, response_time, length(in_scope))
             %{state | current_oid: next_oid, adaptive_state: adaptive_state}

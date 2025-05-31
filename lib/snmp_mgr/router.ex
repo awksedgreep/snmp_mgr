@@ -119,6 +119,62 @@ defmodule SNMPMgr.Router do
   def set_strategy(router, strategy) do
     GenServer.call(router, {:set_strategy, strategy})
   end
+
+  @doc """
+  Configures engine settings.
+  """
+  def configure_engines(router, config) do
+    GenServer.call(router, {:configure_engines, config})
+  end
+
+  @doc """
+  Configures health check settings.
+  """
+  def configure_health_check(router, config) do
+    GenServer.call(router, {:configure_health_check, config})
+  end
+
+  @doc """
+  Sets engine weights for weighted routing.
+  """
+  def set_engine_weights(router, weights) do
+    GenServer.call(router, {:set_engine_weights, weights})
+  end
+
+  @doc """
+  Gets engine health information.
+  """
+  def get_engine_health(router) do
+    GenServer.call(router, :get_engine_health)
+  end
+
+  @doc """
+  Marks an engine as unhealthy.
+  """
+  def mark_engine_unhealthy(router, engine_name, reason) do
+    GenServer.call(router, {:mark_engine_unhealthy, engine_name, reason})
+  end
+
+  @doc """
+  Marks an engine as healthy.
+  """
+  def mark_engine_healthy(router, engine_name) do
+    GenServer.call(router, {:mark_engine_healthy, engine_name})
+  end
+
+  @doc """
+  Attempts to recover a failed engine.
+  """
+  def attempt_engine_recovery(router, engine_name) do
+    GenServer.call(router, {:attempt_engine_recovery, engine_name})
+  end
+
+  @doc """
+  Configures batch processing strategy.
+  """
+  def configure_batch_strategy(router, strategy_config) do
+    GenServer.call(router, {:configure_batch_strategy, strategy_config})
+  end
   
   # GenServer callbacks
   
@@ -221,7 +277,7 @@ defmodule SNMPMgr.Router do
     stats = %{
       strategy: state.strategy,
       engine_count: map_size(state.engines),
-      engine_health: get_engine_health(state.engines),
+      engine_health: get_engines_summary(state.engines),
       metrics: state.metrics,
       affinity_entries: map_size(state.affinity_table)
     }
@@ -233,6 +289,68 @@ defmodule SNMPMgr.Router do
     new_state = %{state | strategy: strategy}
     Logger.info("Changed routing strategy to #{strategy}")
     {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_call({:configure_engines, config}, _from, state) do
+    case apply_engine_config(state, config) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:configure_health_check, config}, _from, state) do
+    case apply_health_check_config(state, config) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:set_engine_weights, weights}, _from, state) do
+    case apply_engine_weights(state, weights) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(:get_engine_health, _from, state) do
+    health_data = get_detailed_engine_health(state.engines)
+    {:reply, health_data, state}
+  end
+
+  @impl true
+  def handle_call({:mark_engine_unhealthy, engine_name, reason}, _from, state) do
+    case mark_engine_status(state, engine_name, :unhealthy, reason) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:mark_engine_healthy, engine_name}, _from, state) do
+    case mark_engine_status(state, engine_name, :healthy, nil) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:attempt_engine_recovery, engine_name}, _from, state) do
+    case attempt_recovery(state, engine_name) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:configure_batch_strategy, strategy_config}, _from, state) do
+    case apply_batch_strategy_config(state, strategy_config) do
+      {:ok, new_state} -> {:reply, :ok, new_state}
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
   end
   
   @impl true
@@ -490,7 +608,13 @@ defmodule SNMPMgr.Router do
   defp route_to_engine(engine, request, opts, max_retries, attempt) when attempt < max_retries do
     start_time = System.monotonic_time(:millisecond)
     
-    case SNMPMgr.Engine.submit_request(engine.pid || engine.name, request, opts) do
+    # Convert engine name to atom if it's a string
+    engine_identifier = case engine.pid || engine.name do
+      name when is_binary(name) -> String.to_atom(name)
+      name -> name
+    end
+    
+    case SNMPMgr.Engine.submit_request(engine_identifier, request, opts) do
       {:ok, result} ->
         end_time = System.monotonic_time(:millisecond)
         response_time = end_time - start_time
@@ -516,7 +640,13 @@ defmodule SNMPMgr.Router do
     tasks = 
       Enum.map(routing_plan, fn {:ok, engine, requests} ->
         Task.async(fn ->
-          case SNMPMgr.Engine.submit_batch(engine.pid || engine.name, requests, opts) do
+          # Convert engine name to atom if it's a string
+          engine_identifier = case engine.pid || engine.name do
+            name when is_binary(name) -> String.to_atom(name)
+            name -> name
+          end
+          
+          case SNMPMgr.Engine.submit_batch(engine_identifier, requests, opts) do
             {:ok, results} -> {:ok, engine.name, results}
             {:error, reason} -> {:error, engine.name, reason}
           end
@@ -565,7 +695,7 @@ defmodule SNMPMgr.Router do
     }
   end
   
-  defp get_engine_health(engines) do
+  defp get_engines_summary(engines) do
     Enum.map(engines, fn {name, engine} ->
       %{
         name: name,
@@ -580,5 +710,132 @@ defmodule SNMPMgr.Router do
   
   defp update_metrics(metrics, key, value) do
     Map.update(metrics, key, value, fn current -> current + value end)
+  end
+
+  # Configuration helper functions
+
+  defp apply_engine_config(state, config) do
+    try do
+      new_state = cond do
+        Keyword.has_key?(config, :engines) ->
+          engines = Keyword.get(config, :engines, [])
+          backup_engines = Keyword.get(config, :backup_engines, [])
+          all_engines = engines ++ backup_engines
+          # Convert string names to atoms for proper GenServer handling
+          engine_specs = Enum.map(all_engines, fn engine_name ->
+            name = if is_binary(engine_name), do: String.to_atom(engine_name), else: engine_name
+            %{name: name}
+          end)
+          new_engines = initialize_engines(engine_specs)
+          %{state | engines: new_engines}
+        
+        Keyword.has_key?(config, :max_engines) or Keyword.has_key?(config, :min_engines) ->
+          # Engine limits configuration - just store in state for now
+          state
+        
+        true ->
+          state
+      end
+      {:ok, new_state}
+    rescue
+      error -> {:error, {:config_error, error}}
+    end
+  end
+
+  defp apply_health_check_config(state, config) do
+    try do
+      new_interval = Keyword.get(config, :health_check_interval, state.health_check_interval)
+      enabled = Keyword.get(config, :health_check_enabled, true)
+      
+      new_state = %{state | 
+        health_check_interval: if(enabled, do: new_interval, else: 0)
+      }
+      {:ok, new_state}
+    rescue
+      error -> {:error, {:config_error, error}}
+    end
+  end
+
+  defp apply_engine_weights(state, weights) do
+    try do
+      new_engines = Enum.reduce(weights, state.engines, fn {engine_name, weight}, acc ->
+        case Map.get(acc, engine_name) do
+          nil -> acc
+          engine -> Map.put(acc, engine_name, %{engine | weight: weight})
+        end
+      end)
+      {:ok, %{state | engines: new_engines}}
+    rescue
+      error -> {:error, {:weight_error, error}}
+    end
+  end
+
+  defp get_detailed_engine_health(engines) do
+    Enum.reduce(engines, %{}, fn {name, engine}, acc ->
+      Map.put(acc, name, %{
+        status: engine.health,
+        last_check: engine.last_health_check,
+        response_time: calculate_avg_response_time(engine.response_times),
+        failure_count: engine.error_count,
+        total_requests: engine.total_requests,
+        current_load: engine.current_load,
+        max_load: engine.max_load
+      })
+    end)
+  end
+
+  defp mark_engine_status(state, engine_name, status, reason) do
+    case Map.get(state.engines, engine_name) do
+      nil -> 
+        {:error, {:engine_not_found, engine_name}}
+      engine ->
+        updated_engine = %{engine | 
+          health: status,
+          last_health_check: System.monotonic_time(:second)
+        }
+        updated_engine = if reason do
+          %{updated_engine | error_count: updated_engine.error_count + 1}
+        else
+          updated_engine
+        end
+        new_engines = Map.put(state.engines, engine_name, updated_engine)
+        {:ok, %{state | engines: new_engines}}
+    end
+  end
+
+  defp attempt_recovery(state, engine_name) do
+    case Map.get(state.engines, engine_name) do
+      nil -> 
+        {:error, {:engine_not_found, engine_name}}
+      engine ->
+        # Simple recovery: reset error count and mark healthy
+        recovered_engine = %{engine | 
+          health: :healthy,
+          error_count: 0,
+          last_health_check: System.monotonic_time(:second)
+        }
+        new_engines = Map.put(state.engines, engine_name, recovered_engine)
+        {:ok, %{state | engines: new_engines}}
+    end
+  end
+
+  defp apply_batch_strategy_config(state, strategy_config) do
+    try do
+      # Store batch strategy in state (could extend router struct to include this)
+      _batch_strategy = Keyword.get(strategy_config, :batch_strategy, :default)
+      # For now, just return success - could add batch_strategy field to state
+      {:ok, state}
+    rescue
+      error -> {:error, {:batch_config_error, error}}
+    end
+  end
+
+  defp calculate_avg_response_time(response_times) do
+    case :queue.len(response_times) do
+      0 -> 0
+      len ->
+        times = :queue.to_list(response_times)
+        Enum.sum(times) / len
+    end
   end
 end

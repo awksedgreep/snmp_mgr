@@ -113,6 +113,76 @@ defmodule SNMPMgr.CircuitBreaker do
   def reset_all(cb) do
     GenServer.cast(cb, :reset_all)
   end
+
+  @doc """
+  Resets a specific circuit breaker for a target.
+  """
+  def reset(cb, target) do
+    GenServer.cast(cb, {:reset, target})
+  end
+
+  @doc """
+  Configures circuit breaker settings.
+  """
+  def configure(cb, config) do
+    GenServer.call(cb, {:configure, config})
+  end
+
+  @doc """
+  Gets configuration for a specific target.
+  """
+  def get_config(cb, target) do
+    GenServer.call(cb, {:get_config, target})
+  end
+
+  @doc """
+  Configures settings for a specific target.
+  """
+  def configure_target(cb, target, config) do
+    GenServer.call(cb, {:configure_target, target, config})
+  end
+
+  @doc """
+  Forces a circuit breaker to open state.
+  """
+  def force_open(cb, target) do
+    GenServer.cast(cb, {:force_open, target})
+  end
+
+  @doc """
+  Forces a circuit breaker to half-open state.
+  """
+  def force_half_open(cb, target) do
+    GenServer.cast(cb, {:force_half_open, target})
+  end
+
+  @doc """
+  Gets all active targets.
+  """
+  def get_all_targets(cb) do
+    GenServer.call(cb, :get_all_targets)
+  end
+
+  @doc """
+  Gets statistics for a specific target.
+  """
+  def get_stats(cb, target) do
+    GenServer.call(cb, {:get_stats, target})
+  end
+
+  @doc """
+  Removes a target from the circuit breaker.
+  """
+  def remove_target(cb, target) do
+    GenServer.cast(cb, {:remove_target, target})
+  end
+
+  @doc """
+  Gets global circuit breaker statistics.
+  """
+  def get_global_stats(cb) do
+    GenServer.call(cb, :get_global_stats)
+  end
   
   # GenServer callbacks
   
@@ -205,6 +275,89 @@ defmodule SNMPMgr.CircuitBreaker do
       metrics: state.metrics
     }
     {:reply, stats, state}
+  end
+
+  @impl true
+  def handle_call({:configure, config}, _from, state) do
+    new_state = %{state |
+      failure_threshold: Keyword.get(config, :failure_threshold, state.failure_threshold),
+      recovery_timeout: Keyword.get(config, :recovery_timeout, state.recovery_timeout),
+      timeout_threshold: Keyword.get(config, :timeout_threshold, state.timeout_threshold),
+      half_open_max_calls: Keyword.get(config, :half_open_max_calls, state.half_open_max_calls)
+    }
+    {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_call({:get_config, target}, _from, state) do
+    breaker = Map.get(state.breakers, target)
+    if breaker do
+      config = %{
+        failure_threshold: state.failure_threshold,
+        recovery_timeout: state.recovery_timeout,
+        timeout_threshold: state.timeout_threshold,
+        half_open_max_calls: state.half_open_max_calls
+      }
+      {:reply, {:ok, config}, state}
+    else
+      {:reply, {:error, :not_found}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:configure_target, target, config}, _from, state) do
+    # For now, just acknowledge - could extend to per-target config
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call(:get_all_targets, _from, state) do
+    targets = Map.keys(state.breakers)
+    {:reply, {:ok, targets}, state}
+  end
+
+  @impl true
+  def handle_call({:get_stats, target}, _from, state) do
+    breaker = Map.get(state.breakers, target)
+    if breaker do
+      stats = %{
+        state: breaker.state,
+        failure_count: breaker.failure_count,
+        success_count: breaker.success_count,
+        last_failure_time: breaker.last_failure_time,
+        last_success_time: breaker.last_success_time,
+        last_failure_reason: breaker.last_failure_reason,
+        half_open_calls: breaker.half_open_calls,
+        created_at: breaker.created_at
+      }
+      {:reply, {:ok, stats}, state}
+    else
+      {:reply, {:error, :not_found}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(:get_global_stats, _from, state) do
+    total_targets = map_size(state.breakers)
+    breaker_states = get_breaker_states(state.breakers)
+    
+    total_failures = Enum.reduce(state.breakers, 0, fn {_target, breaker}, acc ->
+      acc + breaker.failure_count
+    end)
+    
+    total_successes = Enum.reduce(state.breakers, 0, fn {_target, breaker}, acc ->
+      acc + breaker.success_count
+    end)
+    
+    global_stats = %{
+      total_targets: total_targets,
+      total_failures: total_failures,
+      total_successes: total_successes,
+      state_distribution: breaker_states,
+      system_metrics: state.metrics
+    }
+    
+    {:reply, {:ok, global_stats}, state}
   end
   
   @impl true
@@ -309,6 +462,57 @@ defmodule SNMPMgr.CircuitBreaker do
       end)
       |> Enum.into(%{})
     
+    new_state = %{state | breakers: new_breakers}
+    {:noreply, new_state}
+  end
+
+  @impl true
+  def handle_cast({:reset, target}, state) do
+    Logger.info("Resetting circuit breaker for #{target}")
+    
+    new_breaker = create_breaker()
+    new_breakers = Map.put(state.breakers, target, new_breaker)
+    
+    new_state = %{state | breakers: new_breakers}
+    {:noreply, new_state}
+  end
+
+  @impl true
+  def handle_cast({:force_open, target}, state) do
+    Logger.info("Forcing circuit breaker open for #{target}")
+    
+    breaker = get_or_create_breaker(state.breakers, target, state)
+    new_breaker = %{breaker | 
+      state: :open,
+      last_failure_time: System.monotonic_time(:millisecond)
+    }
+    new_breakers = Map.put(state.breakers, target, new_breaker)
+    
+    new_state = %{state | breakers: new_breakers}
+    {:noreply, new_state}
+  end
+
+  @impl true
+  def handle_cast({:force_half_open, target}, state) do
+    Logger.info("Forcing circuit breaker half-open for #{target}")
+    
+    breaker = get_or_create_breaker(state.breakers, target, state)
+    new_breaker = %{breaker | 
+      state: :half_open,
+      half_open_calls: 0,
+      last_failure_time: System.monotonic_time(:millisecond)
+    }
+    new_breakers = Map.put(state.breakers, target, new_breaker)
+    
+    new_state = %{state | breakers: new_breakers}
+    {:noreply, new_state}
+  end
+
+  @impl true
+  def handle_cast({:remove_target, target}, state) do
+    Logger.info("Removing circuit breaker target #{target}")
+    
+    new_breakers = Map.delete(state.breakers, target)
     new_state = %{state | breakers: new_breakers}
     {:noreply, new_state}
   end

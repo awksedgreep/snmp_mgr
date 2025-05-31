@@ -9,7 +9,9 @@ defmodule SNMPMgr.Application do
       # Configuration management
       {SNMPMgr.Config, []},
       # MIB registry and management
-      {SNMPMgr.MIB, []}
+      {SNMPMgr.MIB, []},
+      # Circuit breaker for fault tolerance
+      {SNMPMgr.CircuitBreaker, []}
     ]
 
     opts = [strategy: :one_for_one, name: SNMPMgr.Supervisor]

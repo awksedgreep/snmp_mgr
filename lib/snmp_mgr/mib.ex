@@ -296,6 +296,10 @@ defmodule SNMPMgr.MIB do
 
   defp resolve_name(name, name_to_oid_map) do
     cond do
+      # Handle nil or invalid names first
+      is_nil(name) or not is_binary(name) ->
+        {:error, :invalid_name}
+      
       # Direct match
       Map.has_key?(name_to_oid_map, name) ->
         {:ok, Map.get(name_to_oid_map, name)}
@@ -330,8 +334,13 @@ defmodule SNMPMgr.MIB do
   end
 
   defp find_partial_reverse_match(oid, oid_to_name_map) do
-    # Try progressively shorter OIDs to find a base match
-    find_partial_match(oid, oid_to_name_map, length(oid) - 1)
+    # Handle case where oid might be a string instead of list
+    if is_binary(oid) do
+      {:error, :invalid_oid_format}
+    else
+      # Try progressively shorter OIDs to find a base match  
+      find_partial_match(oid, oid_to_name_map, length(oid) - 1)
+    end
   end
 
   defp find_partial_match(_oid, _map, 0), do: {:error, :not_found}
@@ -352,41 +361,54 @@ defmodule SNMPMgr.MIB do
   end
 
   defp find_children(parent_oid, name_to_oid_map) do
-    parent_oid = if is_binary(parent_oid) do
-      case SNMPMgr.OID.string_to_list(parent_oid) do
-        {:ok, oid_list} -> oid_list
-        {:error, _} -> []
-      end
-    else
-      parent_oid
+    normalized_oid = cond do
+      is_nil(parent_oid) -> []
+      is_binary(parent_oid) ->
+        case SNMPMgr.OID.string_to_list(parent_oid) do
+          {:ok, oid_list} -> oid_list
+          {:error, _} -> []
+        end
+      is_list(parent_oid) -> parent_oid
+      true -> []
     end
 
-    children = 
-      name_to_oid_map
-      |> Enum.filter(fn {_name, oid} ->
-        length(oid) == length(parent_oid) + 1 and 
-        List.starts_with?(oid, parent_oid)
-      end)
-      |> Enum.map(fn {name, _oid} -> name end)
-      |> Enum.sort()
+    # Return error for invalid OIDs
+    if normalized_oid == [] and not is_nil(parent_oid) do
+      {:error, :invalid_parent_oid}
+    else
+      children = 
+        name_to_oid_map
+        |> Enum.filter(fn {_name, oid} ->
+          is_list(oid) and is_list(normalized_oid) and
+          length(oid) == length(normalized_oid) + 1 and 
+          List.starts_with?(oid, normalized_oid)
+        end)
+        |> Enum.map(fn {name, _oid} -> name end)
+        |> Enum.sort()
 
-    {:ok, children}
+      {:ok, children}
+    end
   end
 
   defp walk_tree_from_root(root_oid, name_to_oid_map) do
-    root_oid = if is_binary(root_oid) do
-      case SNMPMgr.OID.string_to_list(root_oid) do
-        {:ok, oid_list} -> oid_list
-        {:error, _} -> []
-      end
-    else
-      root_oid
+    root_oid = cond do
+      is_binary(root_oid) ->
+        case SNMPMgr.OID.string_to_list(root_oid) do
+          {:ok, oid_list} -> oid_list
+          {:error, _} -> []
+        end
+      is_list(root_oid) ->
+        root_oid
+      is_nil(root_oid) ->
+        []
+      true ->
+        []
     end
 
     descendants = 
       name_to_oid_map
       |> Enum.filter(fn {_name, oid} ->
-        List.starts_with?(oid, root_oid)
+        is_list(oid) and List.starts_with?(oid, root_oid)
       end)
       |> Enum.map(fn {name, oid} -> {name, oid} end)
       |> Enum.sort_by(fn {_name, oid} -> oid end)

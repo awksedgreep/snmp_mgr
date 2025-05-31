@@ -181,11 +181,17 @@ defmodule SNMPMgr.TestSupport.SNMPSimulator do
   @doc """
   Stops a test device and cleans up resources.
   """
-  def stop_device(%{device: device_pid}) do
-    GenServer.stop(device_pid, :normal, 5000)
+  def stop_device(%{device: device_pid}) when is_pid(device_pid) do
+    if Process.alive?(device_pid) do
+      GenServer.stop(device_pid, :normal, 5000)
+    else
+      :ok
+    end
   rescue
     _ -> :ok
   end
+  
+  def stop_device(_), do: :ok
   
   @doc """
   Stops multiple devices and cleans up resources.

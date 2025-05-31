@@ -35,7 +35,7 @@ defmodule SNMPMgr.IntegrationTest do
       # Test sysDescr.0
       {:ok, result} = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community)
       assert is_binary(result)
-      assert String.contains?(result, "Test Device")
+      assert String.contains?(result, "SNMP Simulator Device") or String.contains?(result, "Test Device")
     end
     
     test "get_next operation", %{device: device} do

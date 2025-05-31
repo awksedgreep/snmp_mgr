@@ -280,6 +280,11 @@ defmodule SNMPMgr.Config do
     {:reply, :ok, @default_config}
   end
 
+  @impl true
+  def handle_call(msg, _from, config) do
+    {:reply, {:error, {:unknown_call, msg}}, config}
+  end
+
   ## Private Functions
 
   defp get_from_app_config(key) do
