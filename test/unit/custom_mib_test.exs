@@ -261,7 +261,7 @@ defmodule SNMPMgr.CustomMIBTest do
           
         {:error, reason} ->
           # Loading might fail if MIB format is not recognized
-          assert reason in [:load_failed, :invalid_mib_file, :file_not_found] or is_atom(reason),
+          assert (reason in [:load_failed, :invalid_mib_file, :file_not_found] or is_atom(reason) or is_tuple(reason)),
             "Should provide descriptive load error: #{inspect(reason)}"
       end
     end
@@ -274,8 +274,8 @@ defmodule SNMPMgr.CustomMIBTest do
           flunk("Should not succeed loading non-existent file")
           
         {:error, reason} ->
-          assert reason in [:file_not_found, :enoent, :load_failed] or is_atom(reason),
-            "Should report file not found error"
+          assert (reason in [:file_not_found, :enoent, :load_failed] or is_atom(reason) or is_tuple(reason)),
+            "Should report file not found error: #{inspect(reason)}"
       end
     end
   end

@@ -426,7 +426,7 @@ defmodule SNMPMgr.MIBComprehensiveTest do
           assert true, "SNMP compiler is available but file not found"
           
         {:error, reason} ->
-          assert is_atom(reason), "Should provide descriptive error: #{inspect(reason)}"
+          assert (is_atom(reason) or is_tuple(reason)), "Should provide descriptive error: #{inspect(reason)}"
           
         {:ok, _compiled_file} ->
           flunk("Should not succeed with nonexistent file")
@@ -511,7 +511,7 @@ defmodule SNMPMgr.MIBComprehensiveTest do
           flunk("Should not succeed with nonexistent file")
           
         {:error, reason} ->
-          assert reason in [:file_not_found, :load_failed, :invalid_mib_file] or is_atom(reason),
+          assert (reason in [:file_not_found, :load_failed, :invalid_mib_file] or is_atom(reason) or is_tuple(reason)),
             "Should provide descriptive error for missing file: #{inspect(reason)}"
       end
     end

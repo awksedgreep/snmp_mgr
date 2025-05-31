@@ -338,12 +338,17 @@ defmodule SNMPMgr.MIB do
     if is_binary(oid) do
       {:error, :invalid_oid_format}
     else
-      # Try progressively shorter OIDs to find a base match  
-      find_partial_match(oid, oid_to_name_map, length(oid) - 1)
+      # Handle empty list case
+      if Enum.empty?(oid) do
+        {:error, :empty_oid}
+      else
+        # Try progressively shorter OIDs to find a base match  
+        find_partial_match(oid, oid_to_name_map, length(oid) - 1)
+      end
     end
   end
 
-  defp find_partial_match(_oid, _map, 0), do: {:error, :not_found}
+  defp find_partial_match(_oid, _map, length) when length <= 0, do: {:error, :not_found}
 
   defp find_partial_match(oid, oid_to_name_map, length) do
     partial_oid = Enum.take(oid, length)

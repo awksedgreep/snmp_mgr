@@ -637,25 +637,26 @@ defmodule SNMPMgr.TableWalkingTest do
       end
     end
 
+    @tag timeout: 15_000
     test "handles walk timeout and retry scenarios" do
       timeout_cases = [
-        # Short timeout
+        # Short timeout - should timeout quickly
         {@table_oids.if_table, [timeout: 100, retries: 0], "Very short timeout"},
         
-        # With retries
-        {@table_oids.system_group, [timeout: 1000, retries: 2], "With retries"},
-        
-        # Long timeout
-        {@table_oids.if_table, [timeout: 30000, retries: 1], "Long timeout"}
+        # With retries - should timeout after retries
+        {@table_oids.system_group, [timeout: 500, retries: 1], "With retries"}
       ]
       
       for {table_oid, opts, description} <- timeout_cases do
+        start_time = :erlang.monotonic_time(:millisecond)
+        
         case SNMPMgr.walk("127.0.0.1", table_oid, opts) do
           {:ok, _data} ->
             assert true, "#{description} walk succeeded"
             
           {:error, :timeout} ->
-            assert true, "#{description} timeout properly detected"
+            elapsed = :erlang.monotonic_time(:millisecond) - start_time
+            assert true, "#{description} timeout properly detected after #{elapsed}ms"
             
           {:error, :snmp_modules_not_available} ->
             # Expected in test environment

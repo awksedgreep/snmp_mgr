@@ -105,13 +105,19 @@ defmodule SNMPMgr do
       {:error, :snmp_modules_not_available}
   """
   def get_bulk(target, oid, opts \\ []) do
-    # Force version to v2c for GETBULK
-    merged_opts = 
-      opts
-      |> Keyword.put(:version, :v2c)
-      |> (&SNMPMgr.Config.merge_opts/1).()
-    
-    SNMPMgr.Core.send_get_bulk_request(target, oid, merged_opts)
+    # Check if user explicitly specified a version other than v2c
+    case Keyword.get(opts, :version) do
+      :v1 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      :v3 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      _ ->
+        # Force version to v2c for GETBULK
+        merged_opts = 
+          opts
+          |> Keyword.put(:version, :v2c)
+          |> (&SNMPMgr.Config.merge_opts/1).()
+        
+        SNMPMgr.Core.send_get_bulk_request(target, oid, merged_opts)
+    end
   end
 
   @doc """
@@ -121,13 +127,19 @@ defmodule SNMPMgr do
   with the result.
   """
   def get_bulk_async(target, oid, opts \\ []) do
-    # Force version to v2c for GETBULK
-    merged_opts = 
-      opts
-      |> Keyword.put(:version, :v2c)
-      |> (&SNMPMgr.Config.merge_opts/1).()
-    
-    SNMPMgr.Core.send_get_bulk_request_async(target, oid, merged_opts)
+    # Check if user explicitly specified a version other than v2c
+    case Keyword.get(opts, :version) do
+      :v1 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      :v3 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      _ ->
+        # Force version to v2c for GETBULK
+        merged_opts = 
+          opts
+          |> Keyword.put(:version, :v2c)
+          |> (&SNMPMgr.Config.merge_opts/1).()
+        
+        SNMPMgr.Core.send_get_bulk_request_async(target, oid, merged_opts)
+    end
   end
 
   @doc """

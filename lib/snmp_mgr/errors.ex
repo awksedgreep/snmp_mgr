@@ -171,7 +171,7 @@ defmodule SNMPMgr.Errors do
   end
 
   def format_error({:timeout, _}) do
-    "Request timed out"
+    "Timeout Error: Request timed out"
   end
 
   def format_error({:encoding_error, reason}) do
@@ -307,6 +307,34 @@ defmodule SNMPMgr.Errors do
     {:transient_error, :operation_timeout}
   end
   
+  def classify_error(:invalid_oid_values, _context) do
+    :validation_error
+  end
+
+  def classify_error({:snmp_encoding_error, _reason}, _context) do
+    :validation_error
+  end
+
+  def classify_error(:encoding_failed, _context) do
+    :validation_error
+  end
+
+  def classify_error(:authentication_error, _context) do
+    :authentication_error
+  end
+
+  def classify_error(:invalid_community, _context) do
+    :invalid_community
+  end
+
+  def classify_error(:bad_community, _context) do
+    :invalid_community
+  end
+
+  def classify_error(:snmp_modules_not_available, _context) do
+    :system_error
+  end
+
   def classify_error(error, _context) do
     {:unknown_error, error}
   end

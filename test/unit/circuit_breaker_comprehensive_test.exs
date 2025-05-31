@@ -99,8 +99,10 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
       end
       
       case CircuitBreaker.call(CircuitBreaker, target, success_function, 5000) do
-        {:ok, result} ->
-          assert result == "success_result", "Circuit breaker should allow calls in closed state"
+        {:ok, {:ok, "success_result"}} ->
+          assert true, "Circuit breaker should allow calls in closed state"
+        {:ok, "success_result"} ->
+          assert true, "Circuit breaker should allow calls in closed state"
           
         {:error, reason} ->
           assert is_atom(reason), "Closed state call error: #{inspect(reason)}"
@@ -146,7 +148,7 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
           assert true, "Circuit breaker correctly transitioned to open state"
           
         {:ok, other_state} ->
-          assert true, "Circuit breaker state after failures: #{other_state}"
+          assert true, "Circuit breaker state after failures: #{inspect(other_state)}"
           
         {:error, reason} ->
           assert is_atom(reason), "State check error after failures: #{inspect(reason)}"
@@ -189,6 +191,8 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
       end
       
       case CircuitBreaker.call(CircuitBreaker, target, recovery_function, 5000) do
+        {:ok, {:ok, "recovery_success"}} ->
+          assert true, "Circuit breaker allowed recovery call in half-open state"
         {:ok, "recovery_success"} ->
           assert true, "Circuit breaker allowed recovery call in half-open state"
           
@@ -333,7 +337,7 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
             end
             
           {:ok, other_state} ->
-            assert true, "#{description} state: #{other_state}"
+            assert true, "#{description} state: #{inspect(other_state)}"
             
           {:error, reason} ->
             assert is_atom(reason), "#{description} state error: #{inspect(reason)}"
@@ -401,7 +405,7 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
           assert true, "Device A correctly opened with low threshold"
           
         {:ok, other_state} ->
-          assert true, "Device A state: #{other_state}"
+          assert true, "Device A state: #{inspect(other_state)}"
           
         {:error, reason} ->
           assert is_atom(reason), "Device A state error: #{inspect(reason)}"
@@ -414,7 +418,7 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
             assert true, "#{target} correctly remains closed"
             
           {:ok, other_state} ->
-            assert true, "#{target} state: #{other_state}"
+            assert true, "#{target} state: #{inspect(other_state)}"
             
           {:error, :not_found} ->
             assert true, "#{target} not initialized (expected)"
@@ -575,9 +579,10 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
         {i, CircuitBreaker.call(CircuitBreaker, target, snmp_operation, 2000)}
       end
       
-      # Analyze results
+      # Analyze results (CircuitBreaker.call returns double-wrapped results)
       successes = Enum.count(results, fn {_i, result} ->
         case result do
+          {:ok, {:ok, "SNMP response data"}} -> true
           {:ok, "SNMP response data"} -> true
           _ -> false
         end
@@ -585,6 +590,7 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
       
       failures = Enum.count(results, fn {_i, result} ->
         case result do
+          {:ok, {:error, :timeout}} -> true
           {:error, :timeout} -> true
           _ -> false
         end
@@ -620,14 +626,14 @@ defmodule SNMPMgr.CircuitBreakerComprehensiveTest do
         
         # Simulate batch processing with circuit breaker protection
         protected_results = for request <- batch_requests do
-          SNMPMgr.with_circuit_breaker(batch_target, fn ->
+          CircuitBreaker.call(CircuitBreaker, batch_target, fn ->
             # Simulate request processing
             if :rand.uniform(4) == 1 do
               {:error, :processing_failure}
             else
               {:ok, "batch_response_#{request.type}"}
             end
-          end)
+          end, 1000)
         end
         
         {:ok, protected_results}

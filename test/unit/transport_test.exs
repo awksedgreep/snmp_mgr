@@ -257,9 +257,6 @@ defmodule SNMPMgr.TransportTest do
                 "Pool should have #{pool_size} connections"
               assert stats.available_connections <= pool_size,
                 "Available connections should not exceed total"
-            {:error, _reason} ->
-              # Pool stats might not be implemented
-              assert true
           end
           
           # Test connection checkout/checkin
@@ -269,7 +266,7 @@ defmodule SNMPMgr.TransportTest do
                 "Socket should be a port"
               
               # Check connection back in (use socket as connection identifier)
-              :ok = Transport.checkin_connection(updated_pool, socket)
+              {:ok, _pool_after_checkin} = Transport.checkin_connection(updated_pool, socket)
               
             {:error, reason} ->
               flunk("Failed to checkout connection: #{inspect(reason)}")
@@ -299,8 +296,10 @@ defmodule SNMPMgr.TransportTest do
           
           # Try to checkout one more (should fail or block)
           case Transport.checkout_connection(final_pool, timeout: 100) do
-            {:ok, _conn} ->
+            {:ok, _socket, _updated_pool} ->
               flunk("Should not be able to checkout from exhausted pool")
+            {:error, :no_available_connections} ->
+              assert true, "Pool exhaustion properly detected"
             {:error, :pool_exhausted} ->
               assert true, "Pool exhaustion properly detected"
             {:error, :timeout} ->
@@ -310,12 +309,13 @@ defmodule SNMPMgr.TransportTest do
           end
           
           # Return connections
-          for socket <- _sockets do
-            :ok = Transport.checkin_connection(final_pool, socket)
-          end
+          pool_after_checkins = Enum.reduce(checked_out_sockets, final_pool, fn socket, current_pool ->
+            {:ok, updated_pool} = Transport.checkin_connection(current_pool, socket)
+            updated_pool
+          end)
           
           # Should be able to checkout again
-          {:ok, _socket, _updated_pool} = Transport.checkout_connection(final_pool)
+          {:ok, _socket, _updated_pool} = Transport.checkout_connection(pool_after_checkins)
           
           :ok = Transport.close_connection_pool(pool)
           

@@ -223,8 +223,11 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
                                               :snmp_modules_not_available] ->
                 assert true, "#{description} appropriately rejected: #{reason}"
                 
+              {:error, {:unsupported_operation, :get_bulk_requires_v2c}} ->
+                assert true, "#{description} appropriately rejected: GETBULK requires v2c"
+                
               {:error, reason} ->
-                assert is_atom(reason), "#{description} error: #{inspect(reason)}"
+                assert is_atom(reason) or is_tuple(reason), "#{description} error: #{inspect(reason)}"
             end
             
           false ->

@@ -137,8 +137,12 @@ defmodule SNMPMgr.Core do
   defp encode_message(pdu, opts) do
     community = Keyword.get(opts, :community, @default_community)
     version = Keyword.get(opts, :version, :v1)
-    message = SNMPMgr.PDU.build_message(pdu, community, version)
-    SNMPMgr.PDU.encode_message(message)
+    try do
+      message = SNMPMgr.PDU.build_message(pdu, community, version)
+      SNMPMgr.PDU.encode_message(message)
+    rescue
+      e in ArgumentError -> {:error, {:invalid_parameters, e.message}}
+    end
   end
 
   defp send_receive_udp(target_info, message, opts) do
@@ -187,7 +191,8 @@ defmodule SNMPMgr.Core do
 
   defp decode_get_response(response) do
     case SNMPMgr.PDU.decode_message(response) do
-      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
+      # Handle the actual PDU decoder response format
+      {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -196,8 +201,18 @@ defmodule SNMPMgr.Core do
             end
           error -> {:error, {:snmp_error, error}}
         end
-      # Handle case where response structure is directly at top level (from test failures)
+      # Handle case where PDU is at the top level  
       {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{_oid, _type, value}] -> {:ok, decode_value(value)}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
+      # Legacy format for backward compatibility
+      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -212,7 +227,8 @@ defmodule SNMPMgr.Core do
 
   defp decode_get_next_response(response) do
     case SNMPMgr.PDU.decode_message(response) do
-      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
+      # Handle the actual PDU decoder response format
+      {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -223,8 +239,20 @@ defmodule SNMPMgr.Core do
             end
           error -> {:error, {:snmp_error, error}}
         end
-      # Handle case where response structure is directly at top level
+      # Handle case where PDU is at the top level
       {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{oid, _type, value}] -> 
+                oid_string = SNMPMgr.OID.list_to_string(oid)
+                {:ok, {oid_string, decode_value(value)}}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
+      # Legacy format for backward compatibility
+      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -241,7 +269,8 @@ defmodule SNMPMgr.Core do
 
   defp decode_set_response(response) do
     case SNMPMgr.PDU.decode_message(response) do
-      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
+      # Handle the actual PDU decoder response format
+      {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -250,8 +279,18 @@ defmodule SNMPMgr.Core do
             end
           error -> {:error, {:snmp_error, error}}
         end
-      # Handle case where response structure is directly at top level
+      # Handle case where PDU is at the top level
       {:ok, %{type: :get_response, varbinds: varbinds, error_status: error_status}} ->
+        case error_status do
+          0 ->
+            case varbinds do
+              [{_oid, _type, value}] -> {:ok, decode_value(value)}
+              _ -> {:error, :invalid_response}
+            end
+          error -> {:error, {:snmp_error, error}}
+        end
+      # Legacy format for backward compatibility
+      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             case varbinds do
@@ -266,7 +305,7 @@ defmodule SNMPMgr.Core do
 
   defp decode_get_bulk_response(response) do
     case SNMPMgr.PDU.decode_message(response) do
-      {:ok, %{data: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
+      {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->
             results = 

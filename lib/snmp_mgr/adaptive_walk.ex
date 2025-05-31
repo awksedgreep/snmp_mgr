@@ -170,7 +170,7 @@ defmodule SNMPMgr.AdaptiveWalk do
   end
 
   defp adaptive_walk_loop(target, current_oid, root_oid, acc, remaining, opts, state, performance_threshold) do
-    bulk_size = min(state.current_bulk_size, remaining)
+    bulk_size = max(1, min(state.current_bulk_size, remaining))
     
     # Measure request time
     start_time = System.monotonic_time(:millisecond)

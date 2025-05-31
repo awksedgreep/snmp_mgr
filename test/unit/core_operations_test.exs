@@ -532,7 +532,10 @@ defmodule SNMPMgr.CoreOperationsTest do
       end
       
       # Restart configuration server
-      {:ok, _pid} = Config.start_link()
+      case Config.start_link() do
+        {:ok, _pid} -> :ok
+        {:error, {:already_started, _pid}} -> :ok
+      end
     end
   end
 

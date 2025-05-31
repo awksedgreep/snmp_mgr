@@ -27,24 +27,30 @@ defmodule SNMPMgr.Bulk do
       ]}
   """
   def get_bulk(target, oids, opts \\ []) do
-    oids_list = if is_list(oids), do: oids, else: [oids]
-    
-    case resolve_oids(oids_list) do
-      {:ok, resolved_oids} ->
-        # For multiple OIDs, use non_repeaters to get single values for some
-        non_repeaters = Keyword.get(opts, :non_repeaters, @default_non_repeaters)
-        max_repetitions = Keyword.get(opts, :max_repetitions, @default_max_repetitions)
+    # Check if user explicitly specified a version other than v2c
+    case Keyword.get(opts, :version) do
+      :v1 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      :v3 -> {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
+      _ ->
+        oids_list = if is_list(oids), do: oids, else: [oids]
         
-        bulk_opts = opts
-        |> Keyword.put(:non_repeaters, non_repeaters)
-        |> Keyword.put(:max_repetitions, max_repetitions)
-        |> Keyword.put(:version, :v2c)
-        
-        # Use the first OID as the starting point for GETBULK
-        starting_oid = hd(resolved_oids)
-        SNMPMgr.Core.send_get_bulk_request(target, starting_oid, bulk_opts)
-      
-      error -> error
+        case resolve_oids(oids_list) do
+          {:ok, resolved_oids} ->
+            # For multiple OIDs, use non_repeaters to get single values for some
+            non_repeaters = Keyword.get(opts, :non_repeaters, @default_non_repeaters)
+            max_repetitions = Keyword.get(opts, :max_repetitions, @default_max_repetitions)
+            
+            bulk_opts = opts
+            |> Keyword.put(:non_repeaters, non_repeaters)
+            |> Keyword.put(:max_repetitions, max_repetitions)
+            |> Keyword.put(:version, :v2c)
+            
+            # Use the first OID as the starting point for GETBULK
+            starting_oid = hd(resolved_oids)
+            SNMPMgr.Core.send_get_bulk_request(target, starting_oid, bulk_opts)
+          
+          error -> error
+        end
     end
   end
 

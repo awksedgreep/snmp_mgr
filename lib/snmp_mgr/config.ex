@@ -225,7 +225,18 @@ defmodule SNMPMgr.Config do
       [community: "private", timeout: 10000, retries: 1, port: 161]
   """
   def merge_opts(opts) do
-    config = get_all()
+    config = case GenServer.whereis(__MODULE__) do
+      nil -> 
+        # Config server not running, use defaults
+        @default_config
+      _pid -> 
+        # Config server running, get current config
+        try do
+          get_all()
+        catch
+          :exit, _ -> @default_config
+        end
+    end
     
     merged = 
       config
@@ -239,8 +250,19 @@ defmodule SNMPMgr.Config do
 
   @impl true
   def init(opts) do
+    # Start with defaults, then merge application environment, then passed options
+    app_env_config = %{
+      community: Application.get_env(:snmp_mgr, :community, @default_config.community),
+      timeout: Application.get_env(:snmp_mgr, :timeout, @default_config.timeout),
+      retries: Application.get_env(:snmp_mgr, :retries, @default_config.retries),
+      port: Application.get_env(:snmp_mgr, :port, @default_config.port),
+      version: Application.get_env(:snmp_mgr, :version, @default_config.version),
+      mib_paths: Application.get_env(:snmp_mgr, :mib_paths, @default_config.mib_paths)
+    }
+    
     config = 
       @default_config
+      |> Map.merge(app_env_config)
       |> Map.merge(Enum.into(opts, %{}))
     
     {:ok, config}

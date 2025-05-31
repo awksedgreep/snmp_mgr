@@ -28,39 +28,61 @@ defmodule SNMPMgr.EngineIntegrationTest do
   end
   
   setup do
-    # Start the full engine ecosystem
-    {:ok, metrics_pid} = Metrics.start_link(
+    # Start the full engine ecosystem with unique names to avoid conflicts
+    test_id = :rand.uniform(100000)
+    
+    metrics_pid = case Metrics.start_link([
+      name: :"TestMetrics#{test_id}",
       collection_interval: 100,
       window_size: 5
-    )
+    ]) do
+      {:ok, pid} -> pid
+      {:error, {:already_started, pid}} -> pid
+    end
     
-    {:ok, pool_pid} = Pool.start_link(
+    pool_pid = case Pool.start_link([
+      name: :"TestPool#{test_id}",
       pool_size: @pool_size,
       max_idle_time: 30_000,
       cleanup_interval: 5_000
-    )
+    ]) do
+      {:ok, pid} -> pid
+      {:error, {:already_started, pid}} -> pid
+    end
     
-    {:ok, cb_pid} = CircuitBreaker.start_link(
+    cb_pid = case CircuitBreaker.start_link([
+      name: :"TestCircuitBreaker#{test_id}",
       failure_threshold: 3,
       recovery_timeout: 2_000
-    )
+    ]) do
+      {:ok, pid} -> pid
+      {:error, {:already_started, pid}} -> pid
+    end
     
-    # Start multiple engines
+    # Start multiple engines with unique names
     engine_specs = Enum.map(1..@num_engines, fn i ->
-      {:ok, engine_pid} = Engine.start_link(
-        name: :"engine_#{i}",
+      engine_name = :"TestEngine#{test_id}_#{i}"
+      engine_pid = case Engine.start_link([
+        name: engine_name,
         pool_size: @pool_size,
         max_requests_per_second: 50,
         batch_size: 10
-      )
-      %{name: :"engine_#{i}", pid: engine_pid, weight: i, max_load: 50 * i}
+      ]) do
+        {:ok, pid} -> pid
+        {:error, {:already_started, pid}} -> pid
+      end
+      %{name: engine_name, pid: engine_pid, weight: i, max_load: 50 * i}
     end)
     
-    {:ok, router_pid} = Router.start_link(
+    router_pid = case Router.start_link([
+      name: :"TestRouter#{test_id}",
       strategy: :round_robin,
       engines: engine_specs,
       max_retries: 2
-    )
+    ]) do
+      {:ok, pid} -> pid
+      {:error, {:already_started, pid}} -> pid
+    end
     
     on_exit(fn ->
       # Cleanup in reverse order
