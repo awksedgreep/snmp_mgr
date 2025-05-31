@@ -6,6 +6,7 @@ defmodule SNMPMgr.PDU do
   Leverages Erlang's SNMP modules when available, with basic fallback implementation.
   """
 
+  import Bitwise
   alias SNMPMgr.OID
 
   @doc """
@@ -202,7 +203,7 @@ defmodule SNMPMgr.PDU do
           error_index: error_index,
           varbinds: []
         }}
-      {:error, reason} ->
+      {:error, _reason} ->
         # Fallback to basic structure if parsing fails
         {:ok, %{type: pdu_type, varbinds: [], error_status: 0, error_index: 0}}
     end
@@ -213,11 +214,131 @@ defmodule SNMPMgr.PDU do
   defp parse_pdu_fields(data, _length) do
     with {:ok, {request_id, rest1}} <- parse_integer(data),
          {:ok, {error_status, rest2}} <- parse_integer(rest1),
-         {:ok, {error_index, rest3}} <- parse_integer(rest2) do
-      # For now, skip varbinds parsing - just need the request_id
-      {:ok, {request_id, error_status, error_index, []}}
+         {:ok, {error_index, rest3}} <- parse_integer(rest2),
+         {:ok, varbinds} <- parse_varbinds(rest3) do
+      {:ok, {request_id, error_status, error_index, varbinds}}
     else
       error -> error
+    end
+  end
+  
+  # Parse SNMP varbinds (variable bindings) containing OID-value pairs
+  defp parse_varbinds(data) do
+    require Logger
+    Logger.debug("parse_varbinds: data length=#{byte_size(data)}, first 10 bytes=#{inspect(binary_part(data, 0, min(10, byte_size(data))))}")
+    case parse_sequence(data) do
+      {:ok, {varbind_data, _rest}} -> 
+        Logger.debug("parse_varbinds: found sequence, varbind_data length=#{byte_size(varbind_data)}")
+        parse_varbind_list(varbind_data, [])
+      {:error, reason} -> 
+        Logger.debug("parse_varbinds: failed to parse sequence: #{inspect(reason)}")
+        {:ok, []} # Return empty list if varbinds can't be parsed
+    end
+  end
+  
+  # Parse an ASN.1 SEQUENCE
+  defp parse_sequence(<<0x30, length, data::binary-size(length), rest::binary>>) do
+    {:ok, {data, rest}}
+  end
+  defp parse_sequence(_), do: {:error, :not_sequence}
+  
+  defp parse_varbind_list(<<>>, acc), do: {:ok, Enum.reverse(acc)}
+  defp parse_varbind_list(data, acc) do
+    case parse_sequence(data) do
+      {:ok, {varbind_data, rest}} ->
+        case parse_single_varbind(varbind_data) do
+          {:ok, varbind} -> parse_varbind_list(rest, [varbind | acc])
+          {:error, _} -> parse_varbind_list(rest, acc) # Skip invalid varbinds
+        end
+      {:error, _} -> {:ok, Enum.reverse(acc)}
+    end
+  end
+  
+  defp parse_single_varbind(data) do
+    with {:ok, {oid, rest1}} <- parse_oid(data),
+         {:ok, {value, _rest2}} <- parse_value(rest1) do
+      {:ok, {oid, :octet_string, value}}
+    else
+      _ -> {:error, :invalid_varbind}
+    end
+  end
+  
+  # Parse an OID from ASN.1 data
+  defp parse_oid(<<0x06, length, oid_data::binary-size(length), rest::binary>>) do
+    case decode_oid_data(oid_data) do
+      {:ok, oid} -> {:ok, {oid, rest}}
+      error -> error
+    end
+  end
+  defp parse_oid(_), do: {:error, :invalid_oid}
+  
+  # Decode OID data according to ASN.1 rules
+  defp decode_oid_data(<<first, rest::binary>>) do
+    # First byte encodes first two sub-identifiers: first_subid * 40 + second_subid
+    first_subid = div(first, 40)
+    second_subid = rem(first, 40)
+    
+    case decode_oid_subids(rest, [second_subid, first_subid]) do
+      {:ok, subids} -> {:ok, Enum.reverse(subids)}
+      error -> error
+    end
+  end
+  defp decode_oid_data(_), do: {:error, :invalid_oid_data}
+  
+  defp decode_oid_subids(<<>>, acc), do: {:ok, acc}
+  defp decode_oid_subids(data, acc) do
+    case decode_oid_subid(data, 0) do
+      {:ok, {subid, rest}} -> decode_oid_subids(rest, [subid | acc])
+      error -> error
+    end
+  end
+  
+  # Decode a single OID sub-identifier (variable length encoding)
+  defp decode_oid_subid(<<byte, rest::binary>>, acc) do
+    new_acc = (acc <<< 7) + (byte &&& 0x7F)
+    if (byte &&& 0x80) == 0 do
+      {:ok, {new_acc, rest}}
+    else
+      decode_oid_subid(rest, new_acc)
+    end
+  end
+  defp decode_oid_subid(<<>>, _), do: {:error, :incomplete_oid}
+  
+  # Parse a value (simplified - handles common SNMP types)
+  defp parse_value(<<0x04, length, value::binary-size(length), rest::binary>>) do
+    # OCTET STRING
+    {:ok, {value, rest}}
+  end
+  defp parse_value(<<0x02, length, value_data::binary-size(length), rest::binary>>) do
+    # INTEGER
+    case decode_integer_value(value_data) do
+      {:ok, int_value} -> {:ok, {int_value, rest}}
+      error -> error
+    end
+  end
+  defp parse_value(<<0x05, 0, rest::binary>>) do
+    # NULL
+    {:ok, {:null, rest}}
+  end
+  defp parse_value(<<tag, length, value::binary-size(length), rest::binary>>) do
+    # Other types - return as binary for now
+    {:ok, {"SNMP_TYPE_#{tag}_#{Base.encode16(value)}", rest}}
+  end
+  defp parse_value(_), do: {:error, :invalid_value}
+  
+  defp decode_integer_value(<<byte>>) when byte < 128, do: {:ok, byte}
+  defp decode_integer_value(<<byte>>) when byte >= 128, do: {:ok, byte - 256}
+  defp decode_integer_value(data) do
+    case Integer.parse(Base.encode16(data), 16) do
+      {value, ""} -> 
+        # Handle two's complement for negative numbers
+        bit_size = byte_size(data) * 8
+        if value >= (1 <<< (bit_size - 1)) do
+          {:ok, value - (1 <<< bit_size)}
+        else
+          {:ok, value}
+        end
+      _ -> {:error, :invalid_integer}
     end
   end
   

@@ -192,11 +192,20 @@ defmodule SNMPMgr.Core do
           0 ->
             case varbinds do
               [{_oid, _type, value}] -> {:ok, decode_value(value)}
-              _ -> {:error, :invalid_response}
+              _ -> 
+                # Debug: Log what we actually received
+                require Logger
+                Logger.debug("decode_get_response: received varbinds: #{inspect(varbinds)}")
+                {:error, :invalid_response}
             end
           error -> {:error, {:snmp_error, error}}
         end
       {:error, reason} -> {:error, reason}
+      result -> 
+        # Debug: Log unexpected result structure
+        require Logger
+        Logger.debug("decode_get_response: unexpected result: #{inspect(result)}")
+        {:error, :invalid_response}
     end
   end
 
