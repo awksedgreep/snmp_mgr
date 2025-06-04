@@ -141,4 +141,4 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
   defp skip_if_no_device(nil), do: ExUnit.skip("SNMP simulator not available")
   defp skip_if_no_device(%{setup_error: error}), do: ExUnit.skip("Setup error: #{inspect(error)}")
   defp skip_if_no_device(_device), do: :ok
-
+end

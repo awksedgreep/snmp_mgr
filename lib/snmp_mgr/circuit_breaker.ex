@@ -305,7 +305,7 @@ defmodule SNMPMgr.CircuitBreaker do
   end
 
   @impl true
-  def handle_call({:configure_target, target, config}, _from, state) do
+  def handle_call({:configure_target, _target, _config}, _from, state) do
     # For now, just acknowledge - could extend to per-target config
     {:reply, :ok, state}
   end

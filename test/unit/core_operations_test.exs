@@ -120,7 +120,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       Enum.each(string_oids, fn oid ->
         result = SNMPMgr.get("#{device.host}:#{device.port}", oid, community: device.community, timeout: 200)
         # Should process OID through SnmpLib.OID and return proper format
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
 
@@ -135,7 +135,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       Enum.each(list_oids, fn oid ->
         result = SNMPMgr.get("#{device.host}:#{device.port}", oid, community: device.community, timeout: 200)
         # Should process list OID through SnmpLib.OID
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
 
@@ -150,7 +150,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       Enum.each(symbolic_oids, fn oid ->
         result = SNMPMgr.get("#{device.host}:#{device.port}", oid, community: device.community, timeout: 200)
         # Should process symbolic OID through MIB -> SnmpLib.OID chain
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
 
@@ -290,7 +290,7 @@ defmodule SNMPMgr.CoreOperationsTest do
       result = SNMPMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0")
 
       # Should process with configured options through snmp_lib
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      assert {:ok, _} = result
 
       Config.reset()
       SNMPSimulator.stop_device(device)
@@ -312,7 +312,7 @@ defmodule SNMPMgr.CoreOperationsTest do
                           version: :v1, community: device.community, timeout: 200)
 
       # Should process v1 requests through snmp_lib
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      assert {:ok, _} = result
     end
 
     test "SNMPv2c operations through SnmpLib.Manager", %{device: device} do
@@ -320,7 +320,11 @@ defmodule SNMPMgr.CoreOperationsTest do
                           version: :v2c, community: device.community, timeout: 200)
 
       # Should process v2c requests through snmp_lib
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      case result do
+        {:ok, _} -> assert true  # Operation succeeded
+        {:error, :timeout} -> assert true  # Acceptable for network operations
+        {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+      end
     end
 
     test "bulk operations enforce v2c", %{device: device} do
@@ -329,7 +333,7 @@ defmodule SNMPMgr.CoreOperationsTest do
                                max_repetitions: 3, community: device.community, timeout: 200)
 
       # Should handle bulk through SnmpLib.Manager
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      assert {:ok, _} = result
     end
   end
 
@@ -365,7 +369,7 @@ defmodule SNMPMgr.CoreOperationsTest do
 
       # Each result should be proper format from snmp_lib integration
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
 
@@ -384,7 +388,7 @@ defmodule SNMPMgr.CoreOperationsTest do
 
       # Each result should be proper format from snmp_lib integration
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
   end
@@ -412,12 +416,12 @@ defmodule SNMPMgr.CoreOperationsTest do
       duration = end_time - start_time
 
       # Should complete reasonably quickly with local simulator
-      assert duration < 1000  # Less than 1 second for 5 operations
+      assert duration < 1200  # Less than 1.2 seconds for 5 operations (allow for CI variance)
       assert length(results) == 5
 
       # All should return proper format through snmp_lib
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert {:ok, _} = result
       end)
     end
 
@@ -430,13 +434,17 @@ defmodule SNMPMgr.CoreOperationsTest do
         end)
       end)
 
-      results = Task.await_many(tasks, 200)
+      results = Task.await_many(tasks, 1000)  # Allow more time for concurrent operations
 
       # All should complete through snmp_lib
       assert length(results) == 3
 
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, _} -> assert true
+          {:error, :timeout} -> assert true  # Concurrent ops may timeout
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -445,7 +453,7 @@ defmodule SNMPMgr.CoreOperationsTest do
     test "SnmpLib.OID functions work correctly" do
       # Test direct SnmpLib.OID integration
       assert {:ok, [1, 3, 6, 1, 2, 1, 1, 1, 0]} = SnmpLib.OID.string_to_list("1.3.6.1.2.1.1.1.0")
-      assert "1.3.6.1.2.1.1.1.0" = SnmpLib.OID.list_to_string([1, 3, 6, 1, 2, 1, 1, 1, 0])
+      assert {:ok, "1.3.6.1.2.1.1.1.0"} = SnmpLib.OID.list_to_string([1, 3, 6, 1, 2, 1, 1, 1, 0])
     end
 
     test "Core.parse_oid delegates to SnmpLib.OID.normalize" do

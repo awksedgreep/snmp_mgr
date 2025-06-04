@@ -229,7 +229,7 @@ defmodule SNMPMgr.Types do
   defp encode_with_explicit_type(value, :objectIdentifier) when is_binary(value) do
     case SnmpLib.OID.string_to_list(value) do
       {:ok, oid_list} -> {:ok, {:objectIdentifier, oid_list}}
-      {:error, reason} -> {:error, {:unsupported_type_conversion, value, :objectIdentifier}}
+      {:error, _reason} -> {:error, {:unsupported_type_conversion, value, :objectIdentifier}}
     end
   end
 

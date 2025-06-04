@@ -16,12 +16,12 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.get("192.168.1.1:161", "1.3.6.1.2.1.1.1.0", community: "public")
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
 
-      iex> SNMPMgr.get("device.local", "1.3.6.1.2.1.1.1.0")
-      {:error, :snmp_modules_not_available}
+      iex> SNMPMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0")
+      {:error, :timeout}
   """
   def get(target, oid, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -38,9 +38,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.get_next("192.168.1.1", "1.3.6.1.2.1.1")
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
   """
   def get_next(target, oid, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -58,9 +58,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
-      iex> SNMPMgr.set("device.local", "1.3.6.1.2.1.1.6.0", "New Location")
-      {:error, :snmp_modules_not_available}
+      # Note: Network operations will timeout on unreachable hosts
+      iex> SNMPMgr.set("192.168.1.1", "1.3.6.1.2.1.1.6.0", "New Location")
+      {:error, :timeout}
   """
   def set(target, oid, value, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -100,9 +100,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1-2 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.get_bulk("192.168.1.1", "1.3.6.1.2.1.2.2", max_repetitions: 10)
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
   """
   def get_bulk(target, oid, opts \\ []) do
     # Check if user explicitly specified a version other than v2c
@@ -155,9 +155,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.walk("192.168.1.1", "1.3.6.1.2.1.1")
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
   """
   def walk(target, root_oid, opts \\ []) do
     SNMPMgr.Walk.walk(target, root_oid, opts)
@@ -173,9 +173,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.walk_table("192.168.1.1", "1.3.6.1.2.1.2.2")
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
   """
   def walk_table(target, table_oid, opts \\ []) do
     SNMPMgr.Walk.walk_table(target, table_oid, opts)
@@ -191,9 +191,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1 requires Erlang SNMP modules
+      # Note: Network operations will timeout on unreachable hosts
       iex> SNMPMgr.get_table("192.168.1.1", "ifTable")
-      {:error, :snmp_modules_not_available}
+      {:error, :timeout}
   """
   def get_table(target, table_oid, opts \\ []) do
     case resolve_oid_if_needed(table_oid) do
@@ -240,9 +240,9 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Phase 1-3 requires Erlang SNMP modules for actual operations
+      # Note: Network operations will fail on unreachable hosts
       iex> SNMPMgr.get_multi([{"device1", [1,3,6,1,2,1,1,1,0]}, {"device2", [1,3,6,1,2,1,1,3,0]}])
-      [{:error, :snmp_modules_not_available}, {:error, :snmp_modules_not_available}]
+      [{:error, {:network_error, :hostname_resolution_failed}}, {:error, {:network_error, :hostname_resolution_failed}}]
   """
   def get_multi(targets_and_oids, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -290,8 +290,8 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      iex> SNMPMgr.adaptive_walk("switch.local", "ifTable")
-      {:error, :snmp_modules_not_available}
+      iex> SNMPMgr.adaptive_walk("192.168.1.1", "ifTable")
+      {:error, :timeout}
   """
   def adaptive_walk(target, root_oid, opts \\ []) do
     SNMPMgr.AdaptiveWalk.bulk_walk(target, root_oid, opts)
@@ -308,7 +308,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.walk_stream("device.local", "ifTable")
+      stream = SNMPMgr.walk_stream("192.168.1.1", "ifTable")
       # Process stream lazily...
   """
   def walk_stream(target, root_oid, opts \\ []) do
@@ -326,7 +326,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.table_stream("switch.local", "ifTable")
+      stream = SNMPMgr.table_stream("192.168.1.1", "ifTable")
       # Process table stream...
   """
   def table_stream(target, table_oid, opts \\ []) do
@@ -342,7 +342,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, table} = SNMPMgr.get_table("device.local", "ifTable")
+      {:ok, table} = SNMPMgr.get_table("192.168.1.1", "ifTable")
       {:ok, analysis} = SNMPMgr.analyze_table(table)
       IO.inspect(analysis.completeness)  # Shows data completeness ratio
   """
@@ -360,7 +360,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, results} = SNMPMgr.benchmark_device("switch.local", "ifTable")
+      {:ok, results} = SNMPMgr.benchmark_device("192.168.1.1", "ifTable")
       optimal_size = results.optimal_bulk_size
   """
   def benchmark_device(target, test_oid, opts \\ []) do
@@ -463,8 +463,10 @@ defmodule SNMPMgr do
       stats
     end
     
+    # Pool component no longer exists after snmp_lib migration
+    # Connection pooling is handled internally by SnmpLib.Manager
     stats = if :pool in components do
-      Map.put(stats, :pool, SNMPMgr.Pool.get_stats(SNMPMgr.Pool))
+      Map.put(stats, :pool, %{status: :delegated_to_snmp_lib})
     else
       stats
     end

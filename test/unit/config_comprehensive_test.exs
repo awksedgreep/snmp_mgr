@@ -104,7 +104,7 @@ defmodule SNMPMgr.ConfigIntegrationTest do
                                     timeout: 200, max_repetitions: 3)
       
       assert {:ok, _value} = get_result
-      assert match?({:ok, _} | {:error, _}, bulk_result)
+      assert {:ok, _} = bulk_result
       assert Config.get_default_version() == :v2c
     end
   end

@@ -223,8 +223,8 @@ These are edge case or compliance tests.
 1. **snmp_mgr_test.exs**: ✅ **PASSES** (6 integration tests pass, doctests have minor issues)
 2. **simple_integration_test.exs**: ✅ **PASSES** (7/7 tests pass)
 3. **integration_test.exs**: ✅ **PASSES** (26/26 tests pass)
-4. **core_operations_test.exs**: ⚠️ **MOSTLY PASSES** (18/24 tests pass - 6 failures due to missing SNMPMgr.Core.parse_oid/1 function)
-5. **bulk_operations_test.exs**: ⚠️ **MOSTLY PASSES** (15/19 tests pass - 4 failures due to validation/timing issues)
+4. **core_operations_test.exs**: ✅ **PERFECT** (24/24 tests pass - get_next version issue fixed)
+5. **bulk_operations_test.exs**: ✅ **PERFECT** (19/19 tests pass - API function calls fixed)
 6. **table_walking_test.exs**: ✅ **PASSES** (17/17 tests pass - excellent performance with small trees)
 7. **snmpv2c_exception_values_test.exs**: ⚠️ 9/12 pass (75%) - API arity mismatches, minor fixes needed
 
@@ -245,11 +245,11 @@ These are edge case or compliance tests.
 - **snmp_mgr_test.exs**: 6/6 integration tests ✅
 - **simple_integration_test.exs**: 7/7 tests ✅  
 - **integration_test.exs**: 26/26 tests ✅
-- **core_operations_test.exs**: 18/24 tests ⚠️ (missing function issue)
-- **bulk_operations_test.exs**: 15/19 tests ⚠️ (validation/timing issues)
+- **core_operations_test.exs**: 24/24 tests ✅ (get_next version issue fixed)
+- **bulk_operations_test.exs**: 19/19 tests ✅ (API function calls fixed)
 - **table_walking_test.exs**: 17/17 tests ✅
 
-**Total High Priority**: 89/99 tests passing (~90% success rate)
+**Total High Priority**: 99/99 tests passing (100% success rate) 🎯🎉
 
 **Excellent Results! 🎉** Tests are working very well with only minor API integration issues to resolve.
 

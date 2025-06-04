@@ -52,8 +52,8 @@ defmodule SNMPMgr.TableWalkingTest do
                                version: :v2c, community: device.community, timeout: 200)
       
       # Both should work through appropriate snmp_lib mechanisms
-      assert match?({:ok, _}, result_v1) or match?({:error, _}, result_v1)
-      assert match?({:ok, _}, result_v2c) or match?({:error, _}, result_v2c)
+      assert {:ok, _} = result_v1
+      assert {:ok, _} = result_v2c
     end
 
     test "walk handles various OID formats", %{device: device} do
@@ -293,7 +293,11 @@ defmodule SNMPMgr.TableWalkingTest do
       
       # All should return proper format through snmp_lib
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, _} -> assert true  # Operation succeeded
+          {:error, :timeout} -> assert true  # Acceptable in concurrent operations
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 
@@ -323,8 +327,8 @@ defmodule SNMPMgr.TableWalkingTest do
           
         _ ->
           # If either fails, just verify they return proper formats
-          assert match?({:ok, _}, bulk_result) or match?({:error, _}, bulk_result)
-          assert match?({:ok, _}, individual_result) or match?({:error, _}, individual_result)
+          assert {:ok, _} = bulk_result
+          assert {:ok, _} = individual_result
       end
     end
 
@@ -344,7 +348,11 @@ defmodule SNMPMgr.TableWalkingTest do
       assert length(results) == 3
       
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, _} -> assert true  # Operation succeeded
+          {:error, :timeout} -> assert true  # Acceptable in concurrent operations
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 

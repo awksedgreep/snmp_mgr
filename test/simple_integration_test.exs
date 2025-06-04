@@ -69,7 +69,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
       skip_if_no_device(device)
       
       result = SNMPMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
-                           community: device.community, timeout: 500)
+                           community: device.community, timeout: 200)
       
       case result do
         {:ok, results} ->

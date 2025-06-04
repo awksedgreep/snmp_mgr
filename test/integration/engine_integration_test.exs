@@ -364,7 +364,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Verify snmp_lib can still process requests
       final_result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                                  community: device.community, timeout: 100)
-      assert match?({:ok, _} | {:error, _}, final_result)
+      assert match?({:ok, _}, final_result) or match?({:error, _}, final_result)
     end
 
     test "memory usage remains bounded with snmp_lib", %{device: device} do
@@ -521,11 +521,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # 2. Core operation through snmp_lib with MIB resolution
       result1 = SNMPMgr.get(target, "sysDescr.0")
-      assert match?({:ok, _} | {:error, _}, result1)
+      assert match?({:ok, _}, result1) or match?({:error, _}, result1)
       
       # 3. Bulk operation through SnmpLib.Manager
       result2 = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", max_repetitions: 3)
-      assert match?({:ok, _} | {:error, _}, result2)
+      assert match?({:ok, _}, result2) or match?({:error, _}, result2)
       
       # 4. Multi-target operation through snmp_lib
       requests = [
@@ -537,7 +537,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # 5. Walk operation through snmp_lib
       result3 = SNMPMgr.walk(target, "1.3.6.1.2.1.1")
-      assert match?({:ok, _} | {:error, _}, result3)
+      assert match?({:ok, _}, result3) or match?({:error, _}, result3)
       
       # All operations should complete properly through snmp_lib integration
       assert true

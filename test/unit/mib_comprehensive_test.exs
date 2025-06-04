@@ -44,7 +44,7 @@ defmodule SNMPMgr.MIBIntegrationTest do
             oid_string = oid |> Enum.join(".") |> then(&("#{&1}.0"))
             result = SNMPMgr.get(device.host, device.port, device.community, oid_string, timeout: 200)
             
-            assert match?({:ok, _} | {:error, _}, result)
+            assert {:ok, _} = result
             
           {:error, reason} ->
             # MIB resolution might fail if MIB not loaded, which is acceptable

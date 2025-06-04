@@ -6,19 +6,24 @@ defmodule SNMPMgr.Core do
   without requiring the heavyweight :snmpm manager process.
   """
 
-  @default_community "public"
-  @default_timeout 5000
-  @default_retries 1
 
   @doc """
   Sends an SNMP GET request and returns the response.
   """
   def send_get_request(target, oid, opts \\ []) do
-    # Convert target to host string if needed
-    host = case SNMPMgr.Target.parse(target) do
-      {:ok, %{host: host}} -> host
-      {:ok, %{address: address}} -> address
-      _ -> target
+    # Parse target to extract host and port
+    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+      {:ok, %{host: host, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {host, opts_with_port}
+      {:ok, %{address: address, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {address, opts_with_port}
+      _ -> 
+        # Failed to parse, use as-is
+        {target, opts}
     end
     
     # Convert oid to proper format
@@ -28,7 +33,7 @@ defmodule SNMPMgr.Core do
     end
     
     # Map options to snmp_lib format
-    snmp_lib_opts = map_options_to_snmp_lib(opts)
+    snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
     
     # Use SnmpLib.Manager for the actual operation
     case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
@@ -42,11 +47,19 @@ defmodule SNMPMgr.Core do
   Note: SnmpLib.Manager doesn't have direct GETNEXT support, so we fall back to bulk with max_repetitions=1
   """
   def send_get_next_request(target, oid, opts \\ []) do
-    # Convert target to host string if needed
-    host = case SNMPMgr.Target.parse(target) do
-      {:ok, %{host: host}} -> host
-      {:ok, %{address: address}} -> address
-      _ -> target
+    # Parse target to extract host and port
+    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+      {:ok, %{host: host, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {host, opts_with_port}
+      {:ok, %{address: address, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {address, opts_with_port}
+      _ -> 
+        # Failed to parse, use as-is
+        {target, opts}
     end
     
     # Convert oid to proper format
@@ -56,8 +69,9 @@ defmodule SNMPMgr.Core do
     end
     
     # Map options to snmp_lib format and force max_repetitions=1 for GETNEXT behavior
-    snmp_lib_opts = map_options_to_snmp_lib(opts)
-    snmp_lib_opts = [{:max_repetitions, 1} | snmp_lib_opts]
+    # Also force version to :v2c since we're using get_bulk
+    snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
+    snmp_lib_opts = [{:max_repetitions, 1}, {:version, :v2c} | snmp_lib_opts]
     
     # Use SnmpLib.Manager.get_bulk with single repetition to simulate GETNEXT
     case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
@@ -71,11 +85,19 @@ defmodule SNMPMgr.Core do
   Sends an SNMP SET request and returns the response.
   """
   def send_set_request(target, oid, value, opts \\ []) do
-    # Convert target to host string if needed
-    host = case SNMPMgr.Target.parse(target) do
-      {:ok, %{host: host}} -> host
-      {:ok, %{address: address}} -> address
-      _ -> target
+    # Parse target to extract host and port
+    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+      {:ok, %{host: host, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {host, opts_with_port}
+      {:ok, %{address: address, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {address, opts_with_port}
+      _ -> 
+        # Failed to parse, use as-is
+        {target, opts}
     end
     
     # Convert oid to proper format
@@ -91,7 +113,7 @@ defmodule SNMPMgr.Core do
     end
     
     # Map options to snmp_lib format
-    snmp_lib_opts = map_options_to_snmp_lib(opts)
+    snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
     
     # Use SnmpLib.Manager for the actual operation
     case SnmpLib.Manager.set(host, oid_parsed, typed_value, snmp_lib_opts) do
@@ -108,11 +130,19 @@ defmodule SNMPMgr.Core do
     if version != :v2c do
       {:error, {:unsupported_operation, :get_bulk_requires_v2c}}
     else
-      # Convert target to host string if needed
-      host = case SNMPMgr.Target.parse(target) do
-        {:ok, %{host: host}} -> host
-        {:ok, %{address: address}} -> address
-        _ -> target
+      # Parse target to extract host and port
+      {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+        {:ok, %{host: host, port: port}} -> 
+          # Use parsed port, overriding any default
+          opts_with_port = Keyword.put(opts, :port, port)
+          {host, opts_with_port}
+        {:ok, %{address: address, port: port}} -> 
+          # Use parsed port, overriding any default
+          opts_with_port = Keyword.put(opts, :port, port)
+          {address, opts_with_port}
+        _ -> 
+          # Failed to parse, use as-is
+          {target, opts}
       end
       
       # Convert oid to proper format
@@ -122,7 +152,7 @@ defmodule SNMPMgr.Core do
       end
       
       # Map options to snmp_lib format
-      snmp_lib_opts = map_options_to_snmp_lib(opts)
+      snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
       
       # Use SnmpLib.Manager for the actual operation
       case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
@@ -191,12 +221,16 @@ defmodule SNMPMgr.Core do
       :no_such_name -> :no_such_name
       :no_such_object -> :no_such_object
       :no_such_instance -> :no_such_instance
+      :invalid_input -> :gen_err  # Map genErr (status 5) to proper SNMP error
       {:snmp_error, code} -> {:snmp_error, code}
       other -> other
     end
   end
 
-  defp parse_oid(oid) do
+  @doc """
+  Parses and normalizes an OID using SnmpLib.OID.normalize.
+  """
+  def parse_oid(oid) do
     # Use SnmpLib.OID.normalize which handles both string and list inputs
     # and provides comprehensive validation and normalization
     case SnmpLib.OID.normalize(oid) do

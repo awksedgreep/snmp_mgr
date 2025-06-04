@@ -66,8 +66,13 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       
       result = execute_with_circuit_breaker(cb, operation)
       
-      # Should either succeed or fail gracefully
-      assert match?({:ok, _} | {:error, _} | :circuit_open, result)
+      # Should either succeed or fail gracefully (but not crash)
+      case result do
+        {:ok, _} -> :ok
+        {:error, _} -> :ok
+        :circuit_open -> :ok
+        other -> flunk("Unexpected result: #{inspect(other)}")
+      end
     end
   end
 

@@ -109,19 +109,19 @@ defmodule SNMPMgr.SNMPv2cExceptionValuesTest do
       end)
     end
     
-    test "decode_value/1 handles various input formats gracefully" do
-      # Test with different input formats that might come from snmp_lib
+    test "decode_value/1 handles SNMPv2c exception values correctly" do
+      # Test with actual SNMPv2c exception values that might come from snmp_lib
       test_cases = [
-        {:null, :noSuchObject},
-        {:exception, :noSuchInstance},
-        {:snmp_error, :endOfMibView}
+        {:noSuchObject, :no_such_object},
+        {:noSuchInstance, :no_such_instance},
+        {:endOfMibView, :end_of_mib_view}
       ]
       
-      Enum.each(test_cases, fn test_input ->
-        result = Types.decode_value(test_input)
+      Enum.each(test_cases, fn {input, expected} ->
+        result = Types.decode_value(input)
         
-        # Should handle gracefully - either decode successfully or return input
-        assert result != nil
+        # Should decode exception values to application-friendly atoms
+        assert result == expected
       end)
     end
   end
@@ -156,7 +156,7 @@ defmodule SNMPMgr.SNMPv2cExceptionValuesTest do
   end
   
   # Helper functions per @testing_rules
-  defp skip_if_no_device(nil), do: ExUnit.skip("SNMP simulator not available")
-  defp skip_if_no_device(%{setup_error: error}), do: ExUnit.skip("Setup error: #{inspect(error)}")
+  defp skip_if_no_device(nil), do: {:skip, "SNMP simulator not available"}
+  defp skip_if_no_device(%{setup_error: error}), do: {:skip, "Setup error: #{inspect(error)}"}
   defp skip_if_no_device(_device), do: :ok
 end

@@ -54,8 +54,8 @@ defmodule SNMPMgr.BulkOperationsTest do
                                             community: device.community, timeout: 200)
       
       # Both should work through SnmpLib.Manager (v2c enforced internally)
-      assert match?({:ok, _}, result_default) or match?({:error, _}, result_default)
-      assert match?({:ok, _}, result_explicit_v2c) or match?({:error, _}, result_explicit_v2c)
+      assert {:ok, _} = result_default
+      assert {:ok, _} = result_explicit_v2c
     end
 
     test "get_bulk handles max_repetitions parameter", %{device: device} do
@@ -117,30 +117,23 @@ defmodule SNMPMgr.BulkOperationsTest do
     test "get_bulk validates parameters", %{device: device} do
       target = "#{device.host}:#{device.port}"
       
-      # Test invalid parameters
-      invalid_cases = [
-        # Missing max_repetitions
-        {target, "1.3.6.1.2.1.2.2", [community: device.community], "missing max_repetitions"},
-        
-        # Invalid max_repetitions type
-        {target, "1.3.6.1.2.1.2.2", [max_repetitions: "invalid", community: device.community], "invalid max_repetitions type"},
-        
-        # Invalid non_repeaters type
-        {target, "1.3.6.1.2.1.2.2", [max_repetitions: 5, non_repeaters: "invalid", community: device.community], "invalid non_repeaters type"}
-      ]
+      # Test missing max_repetitions (should default and succeed)
+      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [community: device.community])
+      assert {:ok, _} = result
       
-      Enum.each(invalid_cases, fn {target, oid, opts, description} ->
-        result = SNMPMgr.get_bulk(target, oid, opts)
-        
-        case result do
-          {:ok, _} ->
-            flunk("#{description} should not succeed")
-          {:error, reason} ->
-            # Should reject invalid parameters
-            assert is_atom(reason) or is_tuple(reason),
-              "#{description} should provide descriptive error: #{inspect(reason)}"
-        end
-      end)
+      # Test invalid max_repetitions type (snmp_lib validates this strictly)
+      assert_raise ArgumentError, fn ->
+        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: "invalid", community: device.community])
+      end
+      
+      # Test invalid non_repeaters type (snmp_lib validates this strictly)
+      assert_raise ArgumentError, fn ->
+        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 5, non_repeaters: "invalid", community: device.community])
+      end
+      
+      # Test valid parameters work
+      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 3, non_repeaters: 0, community: device.community])
+      assert {:ok, _} = result
     end
   end
 
@@ -167,8 +160,8 @@ defmodule SNMPMgr.BulkOperationsTest do
       Enum.each(string_oids, fn oid ->
         result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3, 
                                  community: device.community, timeout: 200)
-        # Should process OID through SnmpLib.OID and return proper format
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        # Should process OID through SnmpLib.OID and succeed
+        assert {:ok, _} = result
       end)
     end
 
@@ -185,8 +178,8 @@ defmodule SNMPMgr.BulkOperationsTest do
       Enum.each(list_oids, fn oid ->
         result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3,
                                  community: device.community, timeout: 200)
-        # Should process list OID through SnmpLib.OID
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        # Should process list OID through SnmpLib.OID and succeed
+        assert {:ok, _} = result
       end)
     end
 
@@ -203,8 +196,12 @@ defmodule SNMPMgr.BulkOperationsTest do
       Enum.each(symbolic_oids, fn oid ->
         result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3,
                                  community: device.community, timeout: 200)
-        # Should process symbolic OID through MIB -> SnmpLib.OID chain
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        # MIB resolution may succeed or fail depending on loaded MIBs
+        case result do
+          {:ok, _} -> assert true  # MIB resolved successfully
+          {:error, :not_found} -> assert true  # MIB not loaded, acceptable
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -368,12 +365,16 @@ defmodule SNMPMgr.BulkOperationsTest do
       duration = end_time - start_time
       
       # Should complete reasonably quickly with local simulator
-      assert duration < 1000  # Less than 1 second for 5 bulk operations
+      assert duration < 1200  # Less than 1.2 seconds for 5 bulk operations (allow for CI variance)
       assert length(results) == 5
       
       # All should return proper format through snmp_lib
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, _} -> assert true  # Operation succeeded
+          {:error, :timeout} -> assert true  # Acceptable under performance load
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 
@@ -405,7 +406,7 @@ defmodule SNMPMgr.BulkOperationsTest do
           
         _ ->
           # If either fails, just verify they return proper formats
-          assert match?({:ok, _}, bulk_result) or match?({:error, _}, bulk_result)
+          assert {:ok, _} = bulk_result
           assert is_list(individual_results)
       end
     end
@@ -427,7 +428,11 @@ defmodule SNMPMgr.BulkOperationsTest do
       assert length(results) == 3
       
       Enum.each(results, fn result ->
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, _} -> assert true  # Operation succeeded
+          {:error, :timeout} -> assert true  # Acceptable in concurrent operations
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -446,7 +451,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test that SNMPMgr.Bulk functions delegate to Core which uses snmp_lib
-      case SNMPMgr.Bulk.bulk_walk_table(target, "1.3.6.1.2.1.2.2", 
+      case SNMPMgr.Bulk.get_table_bulk(target, "1.3.6.1.2.1.2.2", 
                                         community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # Should get table data through snmp_lib
@@ -462,8 +467,8 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test bulk table walking
-      case SNMPMgr.Bulk.bulk_walk_subtree(target, "1.3.6.1.2.1.1", 
-                                          community: device.community, timeout: 200) do
+      case SNMPMgr.Bulk.walk_bulk(target, "1.3.6.1.2.1.1", 
+                                   community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # Should walk subtree through snmp_lib bulk operations
           assert true

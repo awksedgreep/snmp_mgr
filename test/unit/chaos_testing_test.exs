@@ -98,7 +98,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       # Should handle bulk operations under mild stress
       assert length(bulk_results) == 3
       Enum.each(bulk_results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?(({:ok, _} | {:error, _}), result)
       end)
     end
   end

@@ -476,7 +476,7 @@ defmodule SNMPMgr.MIB do
     Map.put(state, :snmp_lib_mibs, [mib_data | Map.get(state, :snmp_lib_mibs, [])])
   end
   
-  defp resolve_with_loaded_mibs(name, state) do
+  defp resolve_with_loaded_mibs(_name, state) do
     # Try to resolve using loaded MIB data
     loaded_mibs = Map.get(state, :snmp_lib_mibs, [])
     if Enum.empty?(loaded_mibs) do
