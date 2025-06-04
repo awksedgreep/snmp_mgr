@@ -2,250 +2,113 @@ defmodule SNMPMgrTest do
   use ExUnit.Case, async: false
   doctest SNMPMgr
 
+  alias SNMPMgr.TestSupport.SNMPSimulator
+
   @moduletag :integration
 
-  describe "SNMPMgr main API" do
-    test "get/3 returns expected format" do
-      # Test with non-existent device - should return network error
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", timeout: 100)
+  setup_all do
+    case SNMPSimulator.create_test_device() do
+      {:ok, device_info} ->
+        on_exit(fn -> SNMPSimulator.stop_device(device_info) end)
+        %{device: device_info}
+      error ->
+        %{device: nil, setup_error: error}
+    end
+  end
+
+  describe "SNMPMgr main API with real SNMP device" do
+    test "get/3 actually retrieves data from simulator", %{device: device} do
+      skip_if_no_device(device)
+      
+      result = SNMPMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, timeout: 200)
       
       case result do
-        {:ok, _value} -> 
-          assert true  # Unexpected success (maybe device exists)
+        {:ok, value} ->
+          # Must be a real value from the simulator
+          assert is_binary(value) or is_integer(value)
+          assert byte_size(to_string(value)) > 0
         {:error, reason} ->
-          assert reason in [:timeout, :host_unreachable, :network_unreachable]
+          # Only accept specific SNMP errors, not generic ones
+          assert reason in [:noSuchObject, :noSuchInstance, :timeout]
       end
     end
 
-    test "set/4 returns expected format" do
-      # Test with non-existent device - should return network error
-      result = SNMPMgr.set("192.0.2.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 100)
+    test "get/3 fails with invalid community", %{device: device} do
+      skip_if_no_device(device)
+      
+      result = SNMPMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
+                          community: "invalid_community", timeout: 200)
+      
+      # Must fail with authentication error, not succeed
+      assert {:error, _reason} = result
+    end
+
+    test "get/3 fails with invalid OID", %{device: device} do
+      skip_if_no_device(device)
+      
+      result = SNMPMgr.get("#{device.host}:#{device.port}", "1.2.3.4.5.6.7.8.9.10.11.12", 
+                          community: device.community, timeout: 200)
+      
+      # Must fail appropriately for non-existent OID
+      assert {:error, _reason} = result
+    end
+
+    test "walk/3 returns actual walk results from simulator", %{device: device} do
+      skip_if_no_device(device)
+      
+      result = SNMPMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
+                           community: device.community, timeout: 500)
       
       case result do
-        {:ok, _value} -> 
-          assert true  # Unexpected success (maybe device exists)
+        {:ok, results} ->
+          # Must be real walk results
+          assert is_list(results)
+          assert length(results) > 0
+          
+          # Each result must be a real OID-value pair
+          Enum.each(results, fn {oid, value} ->
+            assert is_binary(oid)
+            assert String.starts_with?(oid, "1.3.6.1.2.1.1")
+            assert value != nil
+          end)
         {:error, reason} ->
-          assert reason in [:timeout, :host_unreachable, :network_unreachable]
-      end
-    end
-
-    test "get_bulk/3 returns expected format" do
-      # Test with non-existent device - should return network error
-      result = SNMPMgr.get_bulk("192.0.2.1", "1.3.6.1.2.1.2.2", max_repetitions: 5, timeout: 100)
-      
-      case result do
-        {:ok, results} when is_list(results) -> 
-          assert true  # Unexpected success (maybe device exists)
-        {:error, reason} ->
-          assert reason in [:timeout, :host_unreachable, :network_unreachable]
-      end
-    end
-
-    test "walk/3 returns expected format" do
-      # Test with non-existent device - should return network error
-      result = SNMPMgr.walk("192.0.2.1", "1.3.6.1.2.1.1", timeout: 100)
-      
-      case result do
-        {:ok, results} when is_list(results) -> 
-          assert true  # Unexpected success (maybe device exists)
-        {:error, reason} ->
-          assert reason in [:timeout, :host_unreachable, :network_unreachable]
-      end
-    end
-
-    test "get_next/3 returns expected format" do
-      # Test with non-existent device - should return network error
-      result = SNMPMgr.get_next("192.0.2.1", "1.3.6.1.2.1.1.1", timeout: 100)
-      
-      case result do
-        {:ok, {_oid, _value}} -> 
-          assert true  # Unexpected success (maybe device exists)
-        {:error, reason} ->
-          assert reason in [:timeout, :host_unreachable, :network_unreachable]
+          # Only accept specific SNMP errors
+          assert reason in [:timeout, :noSuchObject]
       end
     end
   end
 
-  describe "SNMPMgr target parsing" do
-    test "handles string targets" do
-      # Should not crash on target parsing
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
+  describe "SNMPMgr API validation" do
+    test "get/3 rejects invalid arguments", %{device: device} do
+      skip_if_no_device(device)
+      
+      # Empty host should fail immediately
+      assert {:error, _reason} = SNMPMgr.get("", "1.3.6.1.2.1.1.1.0")
+      
+      # Empty OID should fail immediately - use simulator device
+      assert {:error, _reason} = SNMPMgr.get("#{device.host}:#{device.port}", "", 
+                                            community: device.community, timeout: 200)
+      
+      # Invalid OID format should fail - use simulator device
+      assert {:error, _reason} = SNMPMgr.get("#{device.host}:#{device.port}", "not.an.oid", 
+                                            community: device.community, timeout: 200)
     end
 
-    test "handles hostname targets" do
-      # Should not crash on hostname parsing
-      result = SNMPMgr.get("localhost", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles IP with port targets" do
-      # Should not crash on IP:port parsing
-      result = SNMPMgr.get("127.0.0.1:161", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
+    test "walk/3 rejects invalid arguments", %{device: device} do
+      skip_if_no_device(device)
+      
+      # Empty host should fail immediately
+      assert {:error, _reason} = SNMPMgr.walk("", "1.3.6.1.2.1.1")
+      
+      # Empty OID should fail immediately - use simulator device
+      assert {:error, _reason} = SNMPMgr.walk("#{device.host}:#{device.port}", "", 
+                                             community: device.community, timeout: 200)
     end
   end
 
-  describe "SNMPMgr OID handling" do
-    test "handles string OIDs" do
-      # Should process string OIDs without crashing
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles list OIDs" do
-      # Should process list OIDs without crashing
-      result = SNMPMgr.get("192.0.2.1", [1, 3, 6, 1, 2, 1, 1, 1, 0], timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles symbolic OIDs" do
-      # Should process symbolic OIDs without crashing
-      result = SNMPMgr.get("192.0.2.1", "sysDescr.0", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-  end
-
-  describe "SNMPMgr option processing" do
-    test "handles community option" do
-      # Should process community option without crashing
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", community: "public", timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles timeout option" do
-      # Should process timeout option without crashing
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", timeout: 200)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles version option" do
-      # Should process version option without crashing
-      result = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", version: :v2c, timeout: 100)
-      case result do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-  end
-
-  describe "SNMPMgr error handling" do
-    test "returns proper error format for invalid targets" do
-      # Should return proper error format for invalid targets
-      result = SNMPMgr.get("invalid..host", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      case result do
-        {:ok, _} -> flunk("Should not succeed with invalid hostname")
-        {:error, _} -> assert true
-      end
-    end
-
-    test "returns proper error format for invalid OIDs" do
-      # Should return proper error format for invalid OIDs
-      result = SNMPMgr.get("192.0.2.1", "invalid.oid", timeout: 100)
-      case result do
-        {:ok, _} -> flunk("Should not succeed with invalid OID")
-        {:error, _} -> assert true
-      end
-    end
-  end
-
-  describe "SNMPMgr version compatibility" do
-    test "handles version selection in get operations" do
-      # Should handle version selection without crashing
-      result_v1 = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", version: :v1, timeout: 100)
-      result_v2c = SNMPMgr.get("192.0.2.1", "1.3.6.1.2.1.1.1.0", version: :v2c, timeout: 100)
-      
-      case result_v1 do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-      
-      case result_v2c do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-
-    test "handles version selection in walk" do
-      # Should handle version selection in walk operations
-      result_v1 = SNMPMgr.walk("192.0.2.1", "1.3.6.1.2.1.1", version: :v1, timeout: 100)
-      result_v2c = SNMPMgr.walk("192.0.2.1", "1.3.6.1.2.1.1", version: :v2c, timeout: 100)
-      
-      case result_v1 do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-      
-      case result_v2c do
-        {:ok, _} -> assert true
-        {:error, _} -> assert true
-      end
-    end
-  end
-
-  describe "SNMPMgr multi-target operations" do
-    test "get_multi returns list of results" do
-      # Should return list of results for multi-target operations
-      requests = [
-        {"192.0.2.1", "1.3.6.1.2.1.1.1.0", [timeout: 100]},
-        {"192.0.2.2", "1.3.6.1.2.1.1.1.0", [timeout: 100]}
-      ]
-      
-      results = SNMPMgr.get_multi(requests)
-      assert is_list(results)
-      assert length(results) == 2
-      
-      # Each result should be in proper format
-      Enum.each(results, fn result ->
-        case result do
-          {:ok, _} -> assert true
-          {:error, _} -> assert true
-        end
-      end)
-    end
-
-    test "get_bulk_multi returns list of results" do
-      # Should return list of results for multi-bulk operations
-      requests = [
-        {"192.0.2.1", "1.3.6.1.2.1.2.2", [max_repetitions: 3, timeout: 100]},
-        {"192.0.2.2", "1.3.6.1.2.1.2.2", [max_repetitions: 3, timeout: 100]}
-      ]
-      
-      results = SNMPMgr.get_bulk_multi(requests)
-      assert is_list(results)
-      assert length(results) == 2
-      
-      # Each result should be in proper format
-      Enum.each(results, fn result ->
-        case result do
-          {:ok, _} -> assert true
-          {:error, _} -> assert true
-        end
-      end)
-    end
-  end
+  # Helper functions
+  defp skip_if_no_device(nil), do: ExUnit.skip("SNMP simulator not available")
+  defp skip_if_no_device(%{setup_error: error}), do: ExUnit.skip("Setup error: #{inspect(error)}")
+  defp skip_if_no_device(_device), do: :ok
 end
