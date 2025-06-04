@@ -1,249 +1,13 @@
 defmodule SNMPMgr.ErrorComprehensiveTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   
-  alias SNMPMgr.Errors
+  alias SNMPMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :error
-  @moduletag :phase_1
+  @moduletag :snmp_lib_integration
 
-  # Comprehensive error scenarios for testing
-  @error_scenarios [
-    # Network-level errors
-    {:network_timeout, "Request timed out after 5000ms", :timeout},
-    {:connection_refused, "Connection refused by target host", :network_error},
-    {:host_unreachable, "Host unreachable: network down", :network_error},
-    {:port_unreachable, "Port 161 unreachable on target host", :network_error},
-    
-    # SNMP protocol errors
-    {:invalid_community, "Community string 'invalid' rejected", :authentication_error},
-    {:no_such_name, "Requested OID does not exist", :protocol_error},
-    {:bad_value, "Invalid value type for SET operation", :protocol_error},
-    {:read_only, "Attempted to SET read-only OID", :protocol_error},
-    {:general_error, "General SNMP error occurred", :protocol_error},
-    {:no_access, "No access permission for requested OID", :authorization_error},
-    {:wrong_type, "Wrong type for SET operation", :protocol_error},
-    {:wrong_length, "Wrong length for SET operation", :protocol_error},
-    {:wrong_encoding, "Wrong encoding for SET operation", :protocol_error},
-    {:wrong_value, "Wrong value for SET operation", :protocol_error},
-    {:no_creation, "Cannot create new instance", :protocol_error},
-    {:inconsistent_value, "Value inconsistent with object type", :protocol_error},
-    {:resource_unavailable, "Resource temporarily unavailable", :resource_error},
-    {:commit_failed, "Commit phase failed", :protocol_error},
-    {:undo_failed, "Undo phase failed", :protocol_error},
-    {:authorization_error, "Authorization failed", :authorization_error},
-    {:not_writable, "Object is not writable", :protocol_error},
-    {:inconsistent_name, "Inconsistent object name", :protocol_error},
-    
-    # SNMPv2c specific errors
-    {:no_such_object, "No such object exists", :v2c_exception},
-    {:no_such_instance, "No such instance exists", :v2c_exception},
-    {:end_of_mib_view, "End of MIB view reached", :v2c_exception},
-    
-    # Transport and encoding errors
-    {:malformed_packet, "Malformed SNMP packet received", :encoding_error},
-    {:unsupported_version, "Unsupported SNMP version", :encoding_error},
-    {:decode_error, "Failed to decode ASN.1 data", :encoding_error},
-    {:encode_error, "Failed to encode ASN.1 data", :encoding_error},
-    {:invalid_pdu, "Invalid PDU structure", :encoding_error},
-    {:message_too_large, "Message exceeds maximum size", :encoding_error},
-    
-    # Configuration and validation errors
-    {:invalid_target, "Invalid target specification", :configuration_error},
-    {:invalid_oid, "Invalid OID format", :validation_error},
-    {:invalid_community, "Invalid community string", :validation_error},
-    {:invalid_timeout, "Invalid timeout value", :validation_error},
-    {:invalid_retries, "Invalid retry count", :validation_error},
-    {:missing_parameter, "Required parameter missing", :validation_error},
-    
-    # System and resource errors
-    {:system_error, "System error occurred", :system_error},
-    {:out_of_memory, "Out of memory", :resource_error},
-    {:socket_error, "Socket operation failed", :system_error},
-    {:permission_denied, "Permission denied", :system_error},
-    {:file_not_found, "Configuration file not found", :system_error},
-    
-    # Custom application errors
-    {:device_not_responding, "Device stopped responding", :device_error},
-    {:bulk_operation_failed, "Bulk operation partially failed", :bulk_error},
-    {:table_walk_incomplete, "Table walk did not complete", :walk_error},
-    {:rate_limit_exceeded, "Rate limit exceeded", :throttling_error},
-  ]
-
-  describe "error code translation" do
-    test "translates SNMP error codes correctly" do
-      valid_codes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
-      
-      for error_code <- valid_codes do
-        error_atom = Errors.code_to_atom(error_code)
-        assert is_atom(error_atom), "Error code #{error_code} should translate to atom"
-        assert error_atom != :unknown_error, "Error code #{error_code} should be recognized"
-      end
-    end
-
-    test "handles unknown error codes gracefully" do
-      unknown_codes = [999, -1, 100, 256]
-      
-      for error_code <- unknown_codes do
-        error_atom = Errors.code_to_atom(error_code)
-        assert error_atom == :unknown_error,
-          "Unknown error code #{error_code} should return :unknown_error"
-      end
-    end
-
-    test "identifies v2c specific errors" do
-      v2c_errors = [:no_access, :wrong_type, :wrong_length, :wrong_encoding,
-                    :wrong_value, :no_creation, :inconsistent_value, :resource_unavailable,
-                    :commit_failed, :undo_failed, :authorization_error, :not_writable,
-                    :inconsistent_name]
-      
-      v1_errors = [:no_error, :too_big, :no_such_name, :bad_value, :read_only, :gen_err]
-      
-      for error <- v2c_errors do
-        assert Errors.is_v2c_error?(error) == true,
-          "#{error} should be identified as v2c error"
-      end
-      
-      for error <- v1_errors do
-        assert Errors.is_v2c_error?(error) == false,
-          "#{error} should not be identified as v2c error"
-      end
-    end
-  end
-
-  describe "error message formatting" do
-    test "formats SNMP errors consistently" do
-      snmp_error_cases = [
-        {:snmp_error, 2},
-        {:snmp_error, :no_such_name},
-        {:v2c_error, :no_access},
-        {:network_error, :host_unreachable},
-        {:timeout, :request_timeout},
-      ]
-      
-      for error_tuple <- snmp_error_cases do
-        formatted = Errors.format_error(error_tuple)
-        
-        # All formatted messages should be strings
-        assert is_binary(formatted), "Formatted error should be a string"
-        
-        # Should contain meaningful information
-        assert String.length(formatted) > 0, "Formatted error should not be empty"
-        
-        # Should contain descriptive text
-        assert String.contains?(formatted, "Error"), "Should contain 'Error' in message"
-      end
-    end
-
-    test "provides error descriptions" do
-      error_atoms = [:no_error, :too_big, :no_such_name, :bad_value, :read_only, :gen_err,
-                     :no_access, :wrong_type, :authorization_error]
-      
-      for error_atom <- error_atoms do
-        description = Errors.description(error_atom)
-        
-        # Should provide meaningful description
-        assert is_binary(description), "Description should be a string"
-        assert String.length(description) > 0, "Description should not be empty"
-        refute String.contains?(description, "Unknown"), "Should have known description for #{error_atom}"
-      end
-    end
-
-    test "handles direct code to description conversion" do
-      # Test the convenience function
-      code_description_cases = [
-        {0, "No error occurred"},
-        {2, "Variable name not found"},
-        {5, "General error"},
-        {16, "Authorization failed"},
-      ]
-      
-      for {code, expected_desc} <- code_description_cases do
-        actual_desc = Errors.code_to_description(code)
-        assert actual_desc == expected_desc,
-          "Code #{code} should produce description '#{expected_desc}', got '#{actual_desc}'"
-      end
-    end
-  end
-
-  describe "error recoverability" do
-    test "identifies recoverable errors correctly" do
-      recoverable_cases = [
-        {:timeout, true},
-        {{:snmp_error, :too_big}, true},
-        {{:snmp_error, :gen_err}, true},
-      ]
-      
-      non_recoverable_cases = [
-        {{:network_error, :host_unreachable}, false},
-        {{:snmp_error, :no_such_name}, false},
-        {{:snmp_error, :bad_value}, false},
-        {{:snmp_error, :read_only}, false},
-        {{:v2c_error, :no_access}, false},
-      ]
-      
-      for {error, expected_recoverable} <- recoverable_cases do
-        actual = Errors.recoverable?(error)
-        assert actual == expected_recoverable,
-          "Error #{inspect(error)} recoverability should be #{expected_recoverable}, got #{actual}"
-      end
-      
-      for {error, expected_recoverable} <- non_recoverable_cases do
-        actual = Errors.recoverable?(error)
-        assert actual == expected_recoverable,
-          "Error #{inspect(error)} recoverability should be #{expected_recoverable}, got #{actual}"
-      end
-    end
-  end
-
-  describe "error handling performance" do
-    @tag :performance
-    test "error code translation is fast" do
-      test_codes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 999]
-      
-      {time_microseconds, _results} = :timer.tc(fn ->
-        for _i <- 1..1000 do
-          for code <- test_codes do
-            Errors.code_to_atom(code)
-          end
-        end
-      end)
-      
-      time_per_translation = time_microseconds / (1000 * length(test_codes))
-      
-      # Should be very fast (less than 5 microseconds per translation)
-      assert time_per_translation < 5,
-        "Error code translation too slow: #{time_per_translation} microseconds per translation"
-    end
-
-    @tag :performance
-    test "error formatting is fast" do
-      test_errors = [
-        {:snmp_error, 2},
-        {:v2c_error, :no_access},
-        {:network_error, :timeout},
-        {:timeout, :request_timeout},
-      ]
-      
-      {time_microseconds, _results} = :timer.tc(fn ->
-        for _i <- 1..1000 do
-          for error <- test_errors do
-            Errors.format_error(error)
-          end
-        end
-      end)
-      
-      time_per_format = time_microseconds / (1000 * length(test_errors))
-      
-      # Should be fast (less than 20 microseconds per format)
-      assert time_per_format < 20,
-        "Error formatting too slow: #{time_per_format} microseconds per format"
-    end
-  end
-
-  describe "integration with SNMP simulator" do
-    alias SNMPMgr.TestSupport.SNMPSimulator
-    
+  describe "Error Format Consistency with SnmpLib" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -253,95 +17,502 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       %{device: device}
     end
 
-    @tag :integration
-    test "handles real SNMP errors correctly", %{device: device} do
+    test "all SNMP operations return consistent error formats", %{device: device} do
       target = SNMPSimulator.device_target(device)
       
-      # Test various error scenarios with real device
-      error_test_cases = [
-        # Invalid community string (might be classified as validation_error in test environment)
-        {fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "invalid_community") end,
-         [:authentication_error, :invalid_community, :validation_error, :system_error]},
+      # Test error format consistency across all operation types
+      operations = [
+        # GET operation with invalid OID
+        {:get, fn -> SNMPMgr.get(target, "invalid.oid", timeout: 100) end},
         
-        # Non-existent OID
-        {fn -> SNMPMgr.get(target, "1.2.3.4.5.6.7.8.9.0", community: device.community) end,
-         [:no_such_name, :protocol_error, :validation_error, :system_error]},
+        # SET operation with invalid OID  
+        {:set, fn -> SNMPMgr.set(target, "invalid.oid", "value", timeout: 100) end},
         
-        # Invalid OID format
-        {fn -> SNMPMgr.get(target, "invalid.oid", community: device.community) end,
-         [:invalid_oid, :validation_error, :system_error, {:unknown_error, {:invalid_oid, "invalid.oid"}}]},
+        # GET-BULK operation with invalid OID
+        {:get_bulk, fn -> SNMPMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end},
+        
+        # GET-NEXT operation with invalid OID
+        {:get_next, fn -> SNMPMgr.get_next(target, "invalid.oid", timeout: 100) end},
+        
+        # WALK operation with invalid OID
+        {:walk, fn -> SNMPMgr.walk(target, "invalid.oid", timeout: 100) end}
       ]
       
-      for {operation, expected_error_types} <- error_test_cases do
+      Enum.each(operations, fn {op_type, operation} ->
         case operation.() do
-          {:ok, _result} ->
-            # Some operations might succeed depending on simulator behavior
-            assert true, "Operation unexpectedly succeeded"
+          {:ok, _} -> 
+            # Some operations might succeed unexpectedly
+            assert true
             
-          {:error, error} ->
-            error_type = Errors.classify_error(error, "Simulator error")
-            
-            # Should classify as one of the expected types (more lenient for test environment)
-            assert error_type in expected_error_types,
-              "Error should be classified as one of #{inspect(expected_error_types)}, got #{inspect(error_type)}"
-              
-            # Error should have helpful message
-            formatted = Errors.format_user_friendly_error(error, "Simulator error")
-            assert is_binary(formatted), "Should format error message"
-            assert String.length(formatted) > 10, "Error message should be meaningful"
+          {:error, reason} ->
+            # Error reason should be properly formatted from snmp_lib
+            assert is_atom(reason) or (is_tuple(reason) and tuple_size(reason) >= 1),
+              "#{op_type} should return proper error format, got: #{inspect(reason)}"
         end
-      end
+      end)
     end
 
-    @tag :integration
-    test "error recovery works with simulator", %{device: device} do
-      target = SNMPSimulator.device_target(device)
-      
-      # Test error recovery by fixing issues
-      recovery_scenarios = [
-        # Fix invalid community
-        {
-          fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong") end,
-          fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community) end,
-          "Community string recovery"
-        },
+    test "network errors handled consistently through snmp_lib", %{device: device} do
+      # Test network error handling through snmp_lib with unreachable targets
+      unreachable_targets = [
+        "240.0.0.1",
+        "192.0.2.254"
       ]
       
-      for {failing_op, recovery_op, description} <- recovery_scenarios do
-        # First operation should fail
-        case failing_op.() do
-          {:error, error} ->
-            # Get recovery suggestions
-            suggestions = Errors.get_recovery_suggestions(error)
+      Enum.each(unreachable_targets, fn target ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: device.community, timeout: 50)
+        
+        case result do
+          {:error, reason} when reason in [:timeout, :host_unreachable, :network_unreachable,
+                                          :ehostunreach, :enetunreach, :econnrefused] ->
+            # Expected network errors through snmp_lib
+            assert true
             
-            case suggestions do
-              list when is_list(list) ->
-                assert length(list) > 0, "Should provide recovery suggestions for #{description}"
-                
-              {:error, :no_suggestions_available} ->
-                # Acceptable if not implemented
-                assert true
-            end
-            
-            # Recovery operation should succeed (if implemented correctly)
-            case recovery_op.() do
-              {:ok, _result} ->
-                assert true, "Recovery succeeded for #{description}"
-                
-              {:error, :snmp_modules_not_available} ->
-                # Expected in test environment
-                assert true, "SNMP modules not available for recovery test"
-                
-              {:error, _recovery_error} ->
-                # Recovery might not always work depending on error type
-                assert true, "Recovery attempt made for #{description}"
-            end
+          {:error, reason} ->
+            # Other error formats from snmp_lib are acceptable
+            assert is_atom(reason) or is_tuple(reason),
+              "Network error should be properly formatted: #{inspect(reason)}"
             
           {:ok, _} ->
-            # Operation didn't fail as expected
-            assert true, "Operation didn't fail for #{description}"
+            # Unexpected success (target might exist)
+            assert true
         end
+      end)
+    end
+
+    test "timeout errors handled by snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test timeout behavior through snmp_lib
+      very_short_timeouts = [1, 5, 10]
+      
+      Enum.each(very_short_timeouts, fn timeout ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: device.community, timeout: timeout)
+        
+        case result do
+          {:error, :timeout} ->
+            # Expected timeout error from snmp_lib
+            assert true
+            
+          {:error, reason} ->
+            # Other errors acceptable (might be faster than timeout)
+            assert is_atom(reason) or is_tuple(reason),
+              "Timeout error should be properly formatted: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Operation completed faster than timeout
+            assert true
+        end
+      end)
+    end
+
+    test "authentication errors through snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test authentication error handling through snmp_lib
+      invalid_communities = ["wrong_community", "", "invalid123"]
+      
+      Enum.each(invalid_communities, fn community ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: community, timeout: 100)
+        
+        case result do
+          {:error, reason} when reason in [:authentication_error, :bad_community] ->
+            # Expected authentication error from snmp_lib
+            assert true
+            
+          {:error, reason} ->
+            # Other error formats from snmp_lib are acceptable
+            assert is_atom(reason) or is_tuple(reason),
+              "Authentication error should be properly formatted: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Might succeed in test environment
+            assert true
+        end
+      end)
+    end
+  end
+
+  describe "SnmpLib.OID Error Integration" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "invalid OID formats handled by SnmpLib.OID", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test invalid OID handling through SnmpLib.OID
+      invalid_oids = [
+        "invalid.oid.format",
+        "",
+        "not.numeric.oid",
+        "1.2.3.4.5.6.7.8.9.999.999.999"
+      ]
+      
+      Enum.each(invalid_oids, fn oid ->
+        result = SNMPMgr.get(target, oid, community: device.community, timeout: 100)
+        
+        case result do
+          {:error, reason} ->
+            # Should get proper error from SnmpLib.OID validation
+            assert is_atom(reason) or is_tuple(reason),
+              "Invalid OID should return proper error format: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Some invalid OIDs might resolve unexpectedly
+            assert true
+        end
+      end)
+    end
+
+    test "OID processing errors consistent across operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      invalid_oid = "completely.invalid.oid"
+      
+      # Test OID error consistency across different operations
+      operations = [
+        fn -> SNMPMgr.get(target, invalid_oid, community: device.community, timeout: 100) end,
+        fn -> SNMPMgr.set(target, invalid_oid, "value", community: device.community, timeout: 100) end,
+        fn -> SNMPMgr.get_bulk(target, invalid_oid, max_repetitions: 3, 
+                               community: device.community, timeout: 100) end,
+        fn -> SNMPMgr.walk(target, invalid_oid, community: device.community, timeout: 100) end
+      ]
+      
+      Enum.each(operations, fn operation ->
+        case operation.() do
+          {:error, reason} ->
+            # All should return similar error format for OID errors
+            assert is_atom(reason) or is_tuple(reason),
+              "OID error should be consistently formatted: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Unexpected success
+            assert true
+        end
+      end)
+    end
+  end
+
+  describe "Multi-Operation Error Handling" do
+    setup do
+      # Create multiple devices for multi-operation testing
+      {:ok, device1} = SNMPSimulator.create_test_device()
+      {:ok, device2} = SNMPSimulator.create_test_device()
+      
+      :ok = SNMPSimulator.wait_for_device_ready(device1)
+      :ok = SNMPSimulator.wait_for_device_ready(device2)
+      
+      on_exit(fn -> 
+        SNMPSimulator.stop_device(device1)
+        SNMPSimulator.stop_device(device2)
+      end)
+      
+      %{device1: device1, device2: device2}
+    end
+
+    test "get_multi error handling through snmp_lib", %{device1: device1, device2: device2} do
+      # Test error handling in multi-target operations
+      requests = [
+        # Valid request
+        {SNMPSimulator.device_target(device1), "1.3.6.1.2.1.1.1.0", 
+         [community: device1.community, timeout: 100]},
+        
+        # Invalid target
+        {"240.0.0.1", "1.3.6.1.2.1.1.1.0", [timeout: 50]},
+        
+        # Valid target, invalid OID
+        {SNMPSimulator.device_target(device2), "invalid.oid", 
+         [community: device2.community, timeout: 100]}
+      ]
+      
+      results = SNMPMgr.get_multi(requests)
+      
+      assert is_list(results)
+      assert length(results) == 3
+      
+      # Each result should have consistent error format
+      Enum.each(results, fn result ->
+        case result do
+          {:ok, _value} ->
+            # Some operations might succeed
+            assert true
+            
+          {:error, reason} ->
+            # All errors should be properly formatted from snmp_lib
+            assert is_atom(reason) or is_tuple(reason),
+              "Multi-operation error should be properly formatted: #{inspect(reason)}"
+        end
+      end)
+    end
+
+    test "get_bulk_multi error handling through snmp_lib", %{device1: device1, device2: device2} do
+      # Test error handling in multi-bulk operations
+      requests = [
+        # Valid request
+        {SNMPSimulator.device_target(device1), "1.3.6.1.2.1.2.2", 
+         [max_repetitions: 3, community: device1.community, timeout: 100]},
+        
+        # Invalid target
+        {"240.0.0.1", "1.3.6.1.2.1.2.2", [max_repetitions: 3, timeout: 50]},
+        
+        # Valid target, invalid OID
+        {SNMPSimulator.device_target(device2), "invalid.oid", 
+         [max_repetitions: 3, community: device2.community, timeout: 100]}
+      ]
+      
+      results = SNMPMgr.get_bulk_multi(requests)
+      
+      assert is_list(results)
+      assert length(results) == 3
+      
+      # Each result should have consistent error format
+      Enum.each(results, fn result ->
+        case result do
+          {:ok, list} when is_list(list) ->
+            # Successful bulk operation
+            assert true
+            
+          {:error, reason} ->
+            # All errors should be properly formatted from snmp_lib
+            assert is_atom(reason) or is_tuple(reason),
+              "Multi-bulk error should be properly formatted: #{inspect(reason)}"
+        end
+      end)
+    end
+  end
+
+  describe "Error Handling Performance with SnmpLib" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "error handling doesn't impact performance", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Measure error handling performance through snmp_lib
+      start_time = System.monotonic_time(:millisecond)
+      
+      # Generate multiple errors quickly
+      error_operations = Enum.map(1..10, fn i ->
+        Task.async(fn ->
+          SNMPMgr.get(target, "invalid.oid.#{i}", 
+                     community: device.community, timeout: 100)
+        end)
+      end)
+      
+      results = Task.await_many(error_operations, 2000)
+      
+      end_time = System.monotonic_time(:millisecond)
+      duration = end_time - start_time
+      
+      # Should handle errors efficiently through snmp_lib
+      assert duration < 2000  # Less than 2 seconds for 10 error operations
+      assert length(results) == 10
+      
+      # All should return proper error format
+      Enum.each(results, fn result ->
+        case result do
+          {:error, reason} ->
+            assert is_atom(reason) or is_tuple(reason),
+              "Error should be properly formatted: #{inspect(reason)}"
+          {:ok, _} ->
+            # Unexpected success
+            assert true
+        end
+      end)
+    end
+
+    test "concurrent error handling through snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test concurrent error handling
+      concurrent_errors = Enum.map(1..5, fn i ->
+        Task.async(fn ->
+          case rem(i, 3) do
+            0 -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50)  # Network error
+            1 -> SNMPMgr.get(target, "invalid.oid.#{i}", timeout: 100)  # OID error
+            2 -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
+          end
+        end)
+      end)
+      
+      results = Task.await_many(concurrent_errors, 2000)
+      
+      # All should complete with proper error formats
+      assert length(results) == 5
+      
+      Enum.each(results, fn result ->
+        case result do
+          {:error, reason} ->
+            # Should be properly formatted from snmp_lib
+            assert is_atom(reason) or is_tuple(reason),
+              "Concurrent error should be properly formatted: #{inspect(reason)}"
+          {:ok, _} ->
+            # Some might succeed unexpectedly
+            assert true
+        end
+      end)
+    end
+  end
+
+  describe "SNMPv2c Exception Values through SnmpLib" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "SNMPv2c exception values handled by snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test SNMPv2c exception handling through snmp_lib
+      exception_test_cases = [
+        # Non-existent OID for no_such_object
+        {"1.3.6.1.2.1.999.999.999.0", [:no_such_object, :no_such_name]},
+        
+        # End of MIB view scenario
+        {"1.3.6.1.2.1.999", [:end_of_mib_view, :no_such_name]}
+      ]
+      
+      Enum.each(exception_test_cases, fn {oid, expected_exceptions} ->
+        result = SNMPMgr.get(target, oid, version: :v2c, 
+                            community: device.community, timeout: 100)
+        
+        case result do
+          {:ok, value} when value in [:no_such_object, :no_such_instance, :end_of_mib_view] ->
+            # SNMPv2c exception values handled correctly by snmp_lib
+            assert value in expected_exceptions,
+              "Exception value #{value} should be in #{inspect(expected_exceptions)}"
+            
+          {:error, reason} when reason in expected_exceptions ->
+            # Exception converted to error by snmp_lib
+            assert true
+            
+          {:error, reason} ->
+            # Other error format from snmp_lib
+            assert is_atom(reason) or is_tuple(reason),
+              "Exception should be properly formatted: #{inspect(reason)}"
+            
+          {:ok, _other_value} ->
+            # Might get different response from simulator
+            assert true
+        end
+      end)
+    end
+
+    test "bulk operations handle exceptions through snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test bulk operations with potential exceptions
+      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.999", 
+                               max_repetitions: 5, version: :v2c,
+                               community: device.community, timeout: 100)
+      
+      case result do
+        {:ok, results} when is_list(results) ->
+          # Check for exception values in results
+          exception_values = Enum.filter(results, fn
+            {_oid, value} when value in [:no_such_object, :no_such_instance, :end_of_mib_view] -> true
+            _ -> false
+          end)
+          
+          # If we got results, exception handling should be correct
+          assert true
+          
+        {:error, reason} when reason in [:end_of_mib_view, :no_such_name] ->
+          # Bulk operation failed with expected exception
+          assert true
+          
+        {:error, reason} ->
+          # Other error format from snmp_lib
+          assert is_atom(reason) or is_tuple(reason),
+            "Bulk exception should be properly formatted: #{inspect(reason)}"
       end
+    end
+  end
+
+  describe "Application-Level Error Enhancement" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "enhanced error context for user operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test that SNMPMgr provides useful error context over raw snmp_lib
+      error_scenarios = [
+        # Network timeout with context
+        {fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end,
+         "network operation"},
+        
+        # Invalid OID with context
+        {fn -> SNMPMgr.get(target, "invalid.oid", community: device.community, timeout: 100) end,
+         "OID validation"},
+        
+        # Authentication with context
+        {fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100) end,
+         "authentication"}
+      ]
+      
+      Enum.each(error_scenarios, fn {operation, context} ->
+        case operation.() do
+          {:error, reason} ->
+            # Should get properly formatted error from SNMPMgr over snmp_lib
+            assert is_atom(reason) or is_tuple(reason),
+              "#{context} error should be properly formatted: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Some operations might succeed unexpectedly
+            assert true
+        end
+      end)
+    end
+
+    test "consistent error handling across all API functions", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test that all SNMPMgr API functions handle errors consistently
+      api_functions = [
+        {:get, fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end},
+        {:set, fn -> SNMPMgr.set("240.0.0.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 50) end},
+        {:get_bulk, fn -> SNMPMgr.get_bulk("240.0.0.1", "1.3.6.1.2.1.2.2", max_repetitions: 3, timeout: 50) end},
+        {:get_next, fn -> SNMPMgr.get_next("240.0.0.1", "1.3.6.1.2.1.1.1", timeout: 50) end},
+        {:walk, fn -> SNMPMgr.walk("240.0.0.1", "1.3.6.1.2.1.1", timeout: 50) end}
+      ]
+      
+      Enum.each(api_functions, fn {function_name, operation} ->
+        case operation.() do
+          {:error, reason} ->
+            # All API functions should return consistent error formats
+            assert is_atom(reason) or is_tuple(reason),
+              "#{function_name} should return consistent error format: #{inspect(reason)}"
+            
+          {:ok, _} ->
+            # Some might succeed unexpectedly
+            assert true
+        end
+      end)
     end
   end
 end

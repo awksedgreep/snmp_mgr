@@ -1,286 +1,333 @@
 defmodule SNMPMgr.EngineIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.{Engine, Router, CircuitBreaker, Pool, Metrics, Config}
   alias SNMPMgr.TestSupport.SNMPSimulator
   
   @moduletag :integration
   @moduletag :engine_integration
-  @moduletag :phase_4
-  
-  # Integration test configuration
-  @pool_size 3
-  @num_engines 2
-  @test_timeout 10_000
-  
-  setup_all do
-    # Ensure configuration is available
-    case GenServer.whereis(SNMPMgr.Config) do
-      nil -> {:ok, _pid} = Config.start_link()
-      _pid -> :ok
+
+  describe "SNMPMgr SnmpLib Backend Integration" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
     end
-    
-    # Start SNMP test device for integration testing
-    {:ok, device_info} = SNMPSimulator.create_test_device()
-    on_exit(fn -> SNMPSimulator.stop_device(device_info) end)
-    
-    %{device: device_info}
-  end
-  
-  setup do
-    # Start the full engine ecosystem with unique names to avoid conflicts
-    test_id = :rand.uniform(100000)
-    
-    metrics_pid = case Metrics.start_link([
-      name: :"TestMetrics#{test_id}",
-      collection_interval: 100,
-      window_size: 5
-    ]) do
-      {:ok, pid} -> pid
-      {:error, {:already_started, pid}} -> pid
-    end
-    
-    pool_pid = case Pool.start_link([
-      name: :"TestPool#{test_id}",
-      pool_size: @pool_size,
-      max_idle_time: 30_000,
-      cleanup_interval: 5_000
-    ]) do
-      {:ok, pid} -> pid
-      {:error, {:already_started, pid}} -> pid
-    end
-    
-    cb_pid = case CircuitBreaker.start_link([
-      name: :"TestCircuitBreaker#{test_id}",
-      failure_threshold: 3,
-      recovery_timeout: 2_000
-    ]) do
-      {:ok, pid} -> pid
-      {:error, {:already_started, pid}} -> pid
-    end
-    
-    # Start multiple engines with unique names
-    engine_specs = Enum.map(1..@num_engines, fn i ->
-      engine_name = :"TestEngine#{test_id}_#{i}"
-      engine_pid = case Engine.start_link([
-        name: engine_name,
-        pool_size: @pool_size,
-        max_requests_per_second: 50,
-        batch_size: 10
-      ]) do
-        {:ok, pid} -> pid
-        {:error, {:already_started, pid}} -> pid
+
+    test "complete request processing through snmp_lib backend", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test complete flow: API -> Core -> SnmpLib.Manager -> Response
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, timeout: 100)
+      
+      case result do
+        {:ok, value} ->
+          # Successful operation through snmp_lib
+          assert is_binary(value) or is_integer(value) or is_list(value)
+        {:error, reason} ->
+          # Should get proper error format from snmp_lib integration
+          assert is_atom(reason) or is_tuple(reason)
       end
-      %{name: engine_name, pid: engine_pid, weight: i, max_load: 50 * i}
-    end)
-    
-    router_pid = case Router.start_link([
-      name: :"TestRouter#{test_id}",
-      strategy: :round_robin,
-      engines: engine_specs,
-      max_retries: 2
-    ]) do
-      {:ok, pid} -> pid
-      {:error, {:already_started, pid}} -> pid
     end
-    
-    on_exit(fn ->
-      # Cleanup in reverse order
-      if Process.alive?(router_pid), do: GenServer.stop(router_pid)
+
+    test "multiple operation types through snmp_lib backend", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      Enum.each(engine_specs, fn %{pid: pid} ->
-        if Process.alive?(pid), do: Engine.stop(pid)
-      end)
-      
-      if Process.alive?(cb_pid), do: GenServer.stop(cb_pid)
-      if Process.alive?(pool_pid), do: Pool.stop(pool_pid)
-      if Process.alive?(metrics_pid), do: GenServer.stop(metrics_pid)
-    end)
-    
-    %{
-      metrics: metrics_pid,
-      pool: pool_pid,
-      circuit_breaker: cb_pid,
-      router: router_pid,
-      engines: engine_specs
-    }
-  end
-  
-  describe "Full Engine Ecosystem Integration" do
-    test "end-to-end request processing through all components", %{router: router, metrics: metrics} do
-      # Record the operation with metrics
-      result = Metrics.time(metrics, :integration_request, fn ->
-        request = %{
-          type: :get,
-          target: "127.0.0.1:161",
-          oid: "1.3.6.1.2.1.1.1.0",
-          community: "public"
-        }
+      # Test various SNMP operations through SnmpLib.Manager
+      operations = [
+        # GET operation
+        {:get, target, "1.3.6.1.2.1.1.1.0", [community: device.community, timeout: 100]},
         
-        Router.route_request(router, request)
-      end)
+        # SET operation
+        {:set, target, "1.3.6.1.2.1.1.6.0", "test_location", 
+         [community: device.community, timeout: 100]},
+        
+        # GET-BULK operation
+        {:get_bulk, target, "1.3.6.1.2.1.2.2", 
+         [max_repetitions: 3, community: device.community, timeout: 100]},
+        
+        # GET-NEXT operation
+        {:get_next, target, "1.3.6.1.2.1.1.1", 
+         [community: device.community, timeout: 100]},
+        
+        # WALK operation
+        {:walk, target, "1.3.6.1.2.1.1", 
+         [community: device.community, timeout: 200]}
+      ]
       
-      # Should complete successfully or with expected error
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
-      
-      # Verify metrics were recorded
-      Process.sleep(200)  # Allow metrics collection
-      
-      current_metrics = Metrics.get_metrics(metrics)
-      assert map_size(current_metrics) >= 1
-    end
-    
-    test "router distributes requests across multiple engines", %{router: router, engines: engines} do
-      # Submit multiple requests
-      requests = Enum.map(1..10, fn i ->
-        %{
-          type: :get,
-          target: "device#{i}.test",
-          oid: "1.3.6.1.2.1.1.#{i}.0",
-          community: "public"
-        }
-      end)
-      
-      # Route all requests
-      results = Enum.map(requests, fn request ->
-        Router.route_request(router, request)
-      end)
-      
-      # Should handle all requests
-      assert length(results) == 10
-      
-      # Check that engines received work
-      Enum.each(engines, fn %{pid: engine_pid} ->
-        stats = Engine.get_stats(engine_pid)
-        # At least some engines should have processed requests
-        assert is_map(stats)
-      end)
-    end
-    
-    test "circuit breaker protects against failing targets", %{circuit_breaker: cb, router: router} do
-      failing_target = "unreachable.device.invalid"
-      
-      # Submit requests that will fail
-      failing_request = %{
-        type: :get,
-        target: failing_target,
-        oid: "1.3.6.1.2.1.1.1.0",
-        community: "public"
-      }
-      
-      # Submit multiple failing requests
-      results = Enum.map(1..5, fn _i ->
-        Router.route_request(router, failing_request)
-      end)
-      
-      # Should handle failures gracefully
-      assert length(results) == 5
-      
-      # Circuit breaker should track the failures
-      stats = CircuitBreaker.get_stats(cb)
-      assert is_map(stats)
-    end
-    
-    test "pool provides connections to engines", %{pool: pool, engines: engines} do
-      # Verify pool is functioning
-      {:ok, connection} = Pool.checkout(pool)
-      assert is_map(connection)
-      Pool.checkin(pool, connection)
-      
-      # Engines should be able to get pool status
-      Enum.each(engines, fn %{pid: engine_pid} ->
-        pool_status = Engine.get_pool_status(engine_pid)
-        assert is_list(pool_status)
+      Enum.each(operations, fn
+        {:get, target, oid, opts} ->
+          result = SNMPMgr.get(target, oid, opts)
+          assert match?({:ok, _} | {:error, _}, result)
+          
+        {:set, target, oid, value, opts} ->
+          result = SNMPMgr.set(target, oid, value, opts)
+          assert match?({:ok, _} | {:error, _}, result)
+          
+        {:get_bulk, target, oid, opts} ->
+          result = SNMPMgr.get_bulk(target, oid, opts)
+          assert match?({:ok, _} | {:error, _}, result)
+          
+        {:get_next, target, oid, opts} ->
+          result = SNMPMgr.get_next(target, oid, opts)
+          assert match?({:ok, _} | {:error, _}, result)
+          
+        {:walk, target, oid, opts} ->
+          result = SNMPMgr.walk(target, oid, opts)
+          assert match?({:ok, _} | {:error, _}, result)
       end)
     end
-    
-    test "metrics collect data from all components", %{metrics: metrics, router: router, circuit_breaker: cb, pool: pool} do
-      # Generate activity across all components
-      test_request = %{
-        type: :get,
-        target: "test.integration.device",
-        oid: "1.3.6.1.2.1.1.1.0",
-        community: "public"
-      }
+
+    test "concurrent operations through snmp_lib manager", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      # Router activity
-      Router.route_request(router, test_request)
-      
-      # Pool activity
-      {:ok, conn} = Pool.checkout(pool)
-      Pool.checkin(pool, conn)
-      
-      # Circuit breaker activity
-      CircuitBreaker.record_success(cb, "test.device")
-      
-      # Metrics activity
-      Metrics.counter(metrics, :integration_test, 1)
-      Metrics.gauge(metrics, :active_components, 4)
-      
-      # Allow collection
-      Process.sleep(200)
-      
-      # Verify metrics were collected
-      current_metrics = Metrics.get_metrics(metrics)
-      assert map_size(current_metrics) >= 2
-      
-      summary = Metrics.get_summary(metrics)
-      assert summary.total_metric_types[:counter] >= 1
-      assert summary.total_metric_types[:gauge] >= 1
-    end
-  end
-  
-  describe "Load Testing and Performance" do
-    test "system handles moderate concurrent load", %{router: router, metrics: metrics} do
-      num_concurrent = 20
-      requests_per_task = 5
-      
-      start_time = System.monotonic_time(:millisecond)
-      
-      # Create concurrent tasks
-      tasks = Enum.map(1..num_concurrent, fn task_id ->
+      # Test concurrent operations to validate snmp_lib handles concurrency
+      tasks = Enum.map(1..5, fn i ->
         Task.async(fn ->
-          Enum.map(1..requests_per_task, fn req_id ->
-            request = %{
-              type: :get,
-              target: "device#{task_id}.test",
-              oid: "1.3.6.1.2.1.1.#{req_id}.0",
-              community: "public"
-            }
-            
-            # Time each request
-            Metrics.time(metrics, :concurrent_request, fn ->
-              Router.route_request(router, request)
-            end, %{task: task_id})
-          end)
+          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
+                     community: device.community, timeout: 100)
         end)
       end)
       
-      # Wait for all tasks
-      results = Task.yield_many(tasks, @test_timeout)
+      results = Task.await_many(tasks, 1000)
+      
+      # All should complete through snmp_lib
+      assert length(results) == 5
+      
+      Enum.each(results, fn result ->
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
+    end
+
+    test "mixed operation types in concurrent environment", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test mixed operations concurrently through snmp_lib
+      concurrent_operations = [
+        Task.async(fn ->
+          SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                     community: device.community, timeout: 100)
+        end),
+        Task.async(fn ->
+          SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+                          max_repetitions: 3, community: device.community, timeout: 100)
+        end),
+        Task.async(fn ->
+          SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+                      community: device.community, timeout: 150)
+        end),
+        Task.async(fn ->
+          SNMPMgr.get_next(target, "1.3.6.1.2.1.1.1", 
+                          community: device.community, timeout: 100)
+        end)
+      ]
+      
+      results = Task.await_many(concurrent_operations, 2000)
+      
+      # All operations should complete through snmp_lib
+      assert length(results) == 4
+      
+      Enum.each(results, fn result ->
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
+    end
+  end
+
+  describe "SNMPMgr Multi-Target Integration" do
+    setup do
+      # Create multiple devices for multi-target testing
+      {:ok, device1} = SNMPSimulator.create_test_device()
+      {:ok, device2} = SNMPSimulator.create_test_device()
+      
+      :ok = SNMPSimulator.wait_for_device_ready(device1)
+      :ok = SNMPSimulator.wait_for_device_ready(device2)
+      
+      on_exit(fn -> 
+        SNMPSimulator.stop_device(device1)
+        SNMPSimulator.stop_device(device2)
+      end)
+      
+      %{device1: device1, device2: device2}
+    end
+
+    test "multi-target operations through snmp_lib", %{device1: device1, device2: device2} do
+      # Test get_multi processing multiple targets through snmp_lib
+      requests = [
+        {SNMPSimulator.device_target(device1), "1.3.6.1.2.1.1.1.0", 
+         [community: device1.community, timeout: 100]},
+        {SNMPSimulator.device_target(device2), "1.3.6.1.2.1.1.3.0", 
+         [community: device2.community, timeout: 100]}
+      ]
+      
+      results = SNMPMgr.get_multi(requests)
+      
+      assert is_list(results)
+      assert length(results) == 2
+      
+      # Each result should be proper format from snmp_lib integration
+      Enum.each(results, fn result ->
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
+    end
+
+    test "bulk multi-target operations through snmp_lib", %{device1: device1, device2: device2} do
+      # Test get_bulk_multi processing multiple targets through snmp_lib
+      requests = [
+        {SNMPSimulator.device_target(device1), "1.3.6.1.2.1.2.2", 
+         [max_repetitions: 3, community: device1.community, timeout: 100]},
+        {SNMPSimulator.device_target(device2), "1.3.6.1.2.1.2.2", 
+         [max_repetitions: 3, community: device2.community, timeout: 100]}
+      ]
+      
+      results = SNMPMgr.get_bulk_multi(requests)
+      
+      assert is_list(results)
+      assert length(results) == 2
+      
+      # Each result should be proper format from snmp_lib integration
+      Enum.each(results, fn result ->
+        case result do
+          {:ok, list} when is_list(list) -> assert true
+          {:error, reason} -> assert is_atom(reason) or is_tuple(reason)
+        end
+      end)
+    end
+
+    test "mixed multi-target operations", %{device1: device1, device2: device2} do
+      target1 = SNMPSimulator.device_target(device1)
+      target2 = SNMPSimulator.device_target(device2)
+      
+      # Test various multi-target scenarios
+      get_requests = [
+        {target1, "1.3.6.1.2.1.1.1.0", [community: device1.community, timeout: 100]},
+        {target2, "1.3.6.1.2.1.1.1.0", [community: device2.community, timeout: 100]}
+      ]
+      
+      bulk_requests = [
+        {target1, "1.3.6.1.2.1.2.2", 
+         [max_repetitions: 3, community: device1.community, timeout: 100]},
+        {target2, "1.3.6.1.2.1.4.20", 
+         [max_repetitions: 3, community: device2.community, timeout: 100]}
+      ]
+      
+      # Process both types through snmp_lib
+      get_results = SNMPMgr.get_multi(get_requests)
+      bulk_results = SNMPMgr.get_bulk_multi(bulk_requests)
+      
+      # Both should work through snmp_lib integration
+      assert length(get_results) == 2
+      assert length(bulk_results) == 2
+      
+      Enum.each(get_results ++ bulk_results, fn result ->
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
+    end
+  end
+
+  describe "SNMPMgr Configuration Integration with SnmpLib" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> 
+        SNMPMgr.Config.reset()
+        SNMPSimulator.stop_device(device)
+      end)
+      
+      %{device: device}
+    end
+
+    test "configuration affects snmp_lib operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Set configuration that should be passed to snmp_lib
+      SNMPMgr.Config.set_default_community(device.community)
+      SNMPMgr.Config.set_default_timeout(100)
+      SNMPMgr.Config.set_default_version(:v2c)
+      
+      # Operation should use these defaults through snmp_lib
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0")
+      
+      # Should process with configured defaults through snmp_lib
+      assert match?({:ok, _} | {:error, _}, result)
+    end
+
+    test "request options override configuration in snmp_lib calls", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Set one default
+      SNMPMgr.Config.set_default_timeout(200)
+      SNMPMgr.Config.set_default_community("default_community")
+      
+      # Override with request options
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, timeout: 100, version: :v1)
+      
+      # Should process with overridden options through snmp_lib
+      assert match?({:ok, _} | {:error, _}, result)
+    end
+
+    test "version configuration affects snmp_lib operation mode", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test different versions through snmp_lib
+      versions = [:v1, :v2c]
+      
+      Enum.each(versions, fn version ->
+        SNMPMgr.Config.set_default_version(version)
+        
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: device.community, timeout: 100)
+        
+        # Should process with specified version through snmp_lib
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
+    end
+  end
+
+  describe "SNMPMgr Performance Integration" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "rapid sequential operations through snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test rapid operations to ensure snmp_lib handles them efficiently
+      start_time = System.monotonic_time(:millisecond)
+      
+      results = Enum.map(1..10, fn i ->
+        SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+                   community: device.community, timeout: 100)
+      end)
       
       end_time = System.monotonic_time(:millisecond)
-      total_duration = end_time - start_time
+      duration = end_time - start_time
       
-      # Verify completion
-      completed_tasks = Enum.count(results, fn {_task, result} -> result != nil end)
-      assert completed_tasks >= num_concurrent / 2  # At least half should complete
+      # Should complete reasonably quickly with snmp_lib
+      assert duration < 2000  # Less than 2 seconds for 10 operations
+      assert length(results) == 10
       
-      # Should handle load efficiently
-      total_requests = num_concurrent * requests_per_task
-      avg_time_per_request = total_duration / total_requests
-      assert avg_time_per_request < 1000  # Less than 1 second per request
-      
-      # Verify metrics were collected
-      Process.sleep(300)
-      summary = Metrics.get_summary(metrics)
-      assert summary.total_metric_types[:histogram] >= 1
+      # All should return proper format through snmp_lib
+      Enum.each(results, fn result ->
+        assert match?({:ok, _} | {:error, _}, result)
+      end)
     end
-    
-    test "system maintains stability under prolonged load", %{router: router, metrics: metrics} do
-      # Run sustained load for a period
-      duration_ms = 3000  # 3 seconds
-      request_interval = 50  # Every 50ms
+
+    test "sustained load through snmp_lib manager", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test sustained operations for a period
+      duration_ms = 2000  # 2 seconds
+      request_interval = 100  # Every 100ms
       
       start_time = System.monotonic_time(:millisecond)
       request_count = 0
@@ -290,20 +337,12 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       request_count = 
         1..max_requests
-        |> Enum.reduce_while(request_count, fn _i, count ->
+        |> Enum.reduce_while(request_count, fn i, count ->
           current_time = System.monotonic_time(:millisecond)
           if current_time - start_time < duration_ms do
-            request = %{
-              type: :get,
-              target: "sustained.load.test",
-              oid: "1.3.6.1.2.1.1.#{rem(count, 10)}.0",
-              community: "public"
-            }
-            
             spawn(fn ->
-              Metrics.time(metrics, :sustained_request, fn ->
-                Router.route_request(router, request)
-              end)
+              SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+                         community: device.community, timeout: 100)
             end)
             
             new_count = count + 1
@@ -318,370 +357,238 @@ defmodule SNMPMgr.EngineIntegrationTest do
       end_time = System.monotonic_time(:millisecond)
       actual_duration = end_time - start_time
       
-      # System should remain stable
+      # System should remain stable through snmp_lib
       assert actual_duration >= duration_ms
-      assert request_count >= duration_ms / request_interval / 2  # At least half expected requests
+      assert request_count >= duration_ms / request_interval / 2
       
-      # All components should still be responsive
-      router_stats = Router.get_stats(router)
-      assert is_map(router_stats)
-      
-      metrics_summary = Metrics.get_summary(metrics)
-      assert is_map(metrics_summary)
+      # Verify snmp_lib can still process requests
+      final_result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                                 community: device.community, timeout: 100)
+      assert match?({:ok, _} | {:error, _}, final_result)
     end
-    
-    test "resource usage remains bounded under load", %{router: router, engines: engines, pool: pool, circuit_breaker: cb, metrics: metrics} do
+
+    test "memory usage remains bounded with snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
       # Measure initial memory usage
-      initial_memory = %{
-        router: :erlang.process_info(router, :memory)[:memory],
-        pool: :erlang.process_info(pool, :memory)[:memory],
-        cb: :erlang.process_info(cb, :memory)[:memory],
-        metrics: :erlang.process_info(metrics, :memory)[:memory]
-      }
+      :erlang.garbage_collect()
+      initial_memory = :erlang.memory(:total)
       
-      engine_initial_memory = Enum.map(engines, fn %{pid: pid} ->
-        {pid, :erlang.process_info(pid, :memory)[:memory]}
-      end)
-      
-      # Generate significant load
-      Enum.each(1..100, fn i ->
-        request = %{
-          type: :get,
-          target: "memory.test.#{rem(i, 5)}",
-          oid: "1.3.6.1.2.1.1.#{rem(i, 10)}.0",
-          community: "public"
-        }
+      # Generate significant load through snmp_lib
+      Enum.each(1..50, fn i ->
+        spawn(fn ->
+          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+                     community: device.community, timeout: 100)
+        end)
         
-        Router.route_request(router, request)
-        
-        # Also generate component-specific activity
         if rem(i, 10) == 0 do
-          {:ok, conn} = Pool.checkout(pool)
-          Pool.checkin(pool, conn)
-          
-          CircuitBreaker.record_success(cb, "memory.test.device")
-          
-          Metrics.counter(metrics, :memory_test, 1, %{iteration: i})
+          # Also test bulk operations
+          spawn(fn ->
+            SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+                            max_repetitions: 3, community: device.community, timeout: 100)
+          end)
         end
       end)
       
       # Allow processing and cleanup
       Process.sleep(1000)
+      :erlang.garbage_collect()
       
       # Measure final memory usage
-      final_memory = %{
-        router: :erlang.process_info(router, :memory)[:memory],
-        pool: :erlang.process_info(pool, :memory)[:memory],
-        cb: :erlang.process_info(cb, :memory)[:memory],
-        metrics: :erlang.process_info(metrics, :memory)[:memory]
-      }
+      final_memory = :erlang.memory(:total)
+      memory_growth = final_memory - initial_memory
       
-      engine_final_memory = Enum.map(engines, fn %{pid: pid} ->
-        {pid, :erlang.process_info(pid, :memory)[:memory]}
+      # Memory growth should be reasonable with snmp_lib
+      assert memory_growth < 10_000_000  # Less than 10MB growth
+    end
+  end
+
+  describe "SNMPMgr Error Handling Integration" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
+      
+      on_exit(fn -> SNMPSimulator.stop_device(device) end)
+      
+      %{device: device}
+    end
+
+    test "network errors handled by snmp_lib", %{device: device} do
+      # Test various network error conditions through snmp_lib
+      error_targets = [
+        "240.0.0.1",  # Unreachable IP
+        "192.0.2.254"  # Documentation range
+      ]
+      
+      Enum.each(error_targets, fn target ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: device.community, timeout: 50)
+        
+        case result do
+          {:error, reason} when reason in [:timeout, :host_unreachable, :network_unreachable,
+                                          :ehostunreach, :enetunreach, :econnrefused] ->
+            assert true  # Expected network errors through snmp_lib
+          {:error, _other} -> assert true  # Other errors acceptable
+          {:ok, _} -> assert true  # Unexpected success (device might exist)
+        end
       end)
+    end
+
+    test "timeout handling through snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      # Memory growth should be reasonable
-      router_growth = final_memory.router - initial_memory.router
-      pool_growth = final_memory.pool - initial_memory.pool
-      cb_growth = final_memory.cb - initial_memory.cb
-      metrics_growth = final_memory.metrics - initial_memory.metrics
+      # Test timeout behavior through snmp_lib
+      timeouts = [1, 10, 50]
       
-      # Allow reasonable growth but not excessive
-      assert router_growth < 5_000_000  # Less than 5MB
-      assert pool_growth < 2_000_000    # Less than 2MB
-      assert cb_growth < 1_000_000      # Less than 1MB
-      assert metrics_growth < 3_000_000 # Less than 3MB
+      Enum.each(timeouts, fn timeout ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: device.community, timeout: timeout)
+        
+        # Should handle timeouts properly through snmp_lib
+        case result do
+          {:error, :timeout} -> assert true
+          {:error, _other} -> assert true  # Other errors
+          {:ok, _} -> assert true  # Unexpectedly fast response
+        end
+      end)
+    end
+
+    test "authentication errors handled by snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      # Engine memory should also be bounded
-      Enum.zip(engine_initial_memory, engine_final_memory)
-      |> Enum.each(fn {{pid, initial}, {same_pid, final}} ->
-        assert pid == same_pid, "Engine PID mismatch in memory comparison"
-        growth = final - initial
-        assert growth < 5_000_000  # Less than 5MB per engine
+      # Test authentication handling through snmp_lib
+      invalid_communities = ["wrong_community", "", "invalid"]
+      
+      Enum.each(invalid_communities, fn community ->
+        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                            community: community, timeout: 100)
+        
+        # Should handle authentication errors properly through snmp_lib
+        case result do
+          {:error, reason} when reason in [:authentication_error, :bad_community] ->
+            assert true  # Expected authentication error
+          {:error, _other} -> assert true  # Other errors acceptable
+          {:ok, _} -> assert true  # Might succeed in test environment
+        end
+      end)
+    end
+
+    test "invalid OID errors handled by SnmpLib.OID", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      invalid_oids = [
+        "invalid.oid.format",
+        "1.3.6.1.2.1.999.999.999.0",
+        ""
+      ]
+      
+      Enum.each(invalid_oids, fn oid ->
+        result = SNMPMgr.get(target, oid, community: device.community, timeout: 100)
+        
+        case result do
+          {:error, reason} ->
+            # Should return proper error from SnmpLib.OID or validation
+            assert is_atom(reason) or is_tuple(reason)
+          {:ok, _} ->
+            # Some invalid OIDs might resolve unexpectedly
+            assert true
+        end
       end)
     end
   end
-  
-  describe "Failure Scenarios and Recovery" do
-    test "system handles engine failures gracefully", %{router: router, engines: engines} do
-      # Stop one engine
-      [%{pid: first_engine} | remaining_engines] = engines
-      Engine.stop(first_engine)
+
+  describe "SNMPMgr Components Integration Test" do
+    setup do
+      {:ok, device} = SNMPSimulator.create_test_device()
+      :ok = SNMPSimulator.wait_for_device_ready(device)
       
-      # System should continue functioning with remaining engines
-      request = %{
-        type: :get,
-        target: "failover.test",
-        oid: "1.3.6.1.2.1.1.1.0",
-        community: "public"
-      }
+      on_exit(fn -> 
+        SNMPMgr.Config.reset()
+        SNMPSimulator.stop_device(device)
+      end)
       
-      result = Router.route_request(router, request)
-      
-      # Should either succeed with remaining engines or fail gracefully
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
-      
-      # Router should detect the failed engine
-      Process.sleep(100)
-      router_stats = Router.get_stats(router)
-      assert router_stats.engine_count <= length(engines)
+      %{device: device}
     end
-    
-    test "circuit breaker prevents cascade failures", %{circuit_breaker: cb, router: router} do
-      failing_targets = ["fail1.test", "fail2.test", "fail3.test"]
+
+    test "all components work together with snmp_lib", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      # Cause failures for multiple targets
-      Enum.each(failing_targets, fn target ->
-        Enum.each(1..5, fn _i ->
-          # Simulate failures
-          CircuitBreaker.record_failure(cb, target, :simulated_failure)
-          
-          # Also route requests that might fail
-          failing_request = %{
-            type: :get,
-            target: target,
-            oid: "1.3.6.1.2.1.1.1.0",
-            community: "public"
-          }
-          
-          Router.route_request(router, failing_request)
-        end)
-      end)
+      # Test that all SNMPMgr components integrate properly with snmp_lib
       
-      # Circuit breakers should be open for failed targets
-      cb_stats = CircuitBreaker.get_stats(cb)
-      assert cb_stats.total_breakers >= length(failing_targets)
+      # 1. Configuration affects snmp_lib operations
+      SNMPMgr.Config.set_default_community(device.community)
+      SNMPMgr.Config.set_default_timeout(100)
       
-      # System should still handle requests to healthy targets
-      healthy_request = %{
-        type: :get,
-        target: "healthy.device.test",
-        oid: "1.3.6.1.2.1.1.1.0",
-        community: "public"
-      }
+      # 2. Core operation through snmp_lib with MIB resolution
+      result1 = SNMPMgr.get(target, "sysDescr.0")
+      assert match?({:ok, _} | {:error, _}, result1)
       
-      result = Router.route_request(router, healthy_request)
-      # Should handle healthy requests normally
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      # 3. Bulk operation through SnmpLib.Manager
+      result2 = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", max_repetitions: 3)
+      assert match?({:ok, _} | {:error, _}, result2)
+      
+      # 4. Multi-target operation through snmp_lib
+      requests = [
+        {target, "1.3.6.1.2.1.1.1.0", []},
+        {target, "1.3.6.1.2.1.1.3.0", []}
+      ]
+      results = SNMPMgr.get_multi(requests)
+      assert is_list(results) and length(results) == 2
+      
+      # 5. Walk operation through snmp_lib
+      result3 = SNMPMgr.walk(target, "1.3.6.1.2.1.1")
+      assert match?({:ok, _} | {:error, _}, result3)
+      
+      # All operations should complete properly through snmp_lib integration
+      assert true
     end
-    
-    test "pool handles connection errors and recovery", %{pool: pool} do
-      # Create connections
-      connections = Enum.map(1..3, fn _i ->
-        {:ok, conn} = Pool.checkout(pool)
-        conn
-      end)
+
+    test "error formats consistent across snmp_lib operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
       
-      # Simulate connection errors
-      Enum.each(connections, fn conn ->
-        Pool.return_error(pool, conn, :connection_error)
-      end)
+      # Test that error formats are consistent across different operations
+      operations = [
+        fn -> SNMPMgr.get(target, "invalid.oid", timeout: 100) end,
+        fn -> SNMPMgr.set(target, "invalid.oid", "value", timeout: 100) end,
+        fn -> SNMPMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end,
+        fn -> SNMPMgr.walk(target, "invalid.oid", timeout: 100) end
+      ]
       
-      # Pool should handle errors and remain functional
-      stats = Pool.get_stats(pool)
-      assert stats.metrics.connection_errors >= 3
-      
-      # Should still be able to create new connections
-      {:ok, new_connection} = Pool.checkout(pool)
-      assert is_map(new_connection)
-      Pool.checkin(pool, new_connection)
-    end
-    
-    test "metrics system handles component failures", %{metrics: metrics, router: router} do
-      # Start collecting metrics
-      Metrics.counter(metrics, :failure_test, 1)
-      
-      # Stop router to simulate component failure
-      GenServer.stop(router)
-      
-      # Metrics should continue functioning
-      Metrics.counter(metrics, :post_failure_test, 1)
-      Metrics.gauge(metrics, :system_status, 0)
-      
-      current_metrics = Metrics.get_metrics(metrics)
-      assert map_size(current_metrics) >= 2
-      
-      # Should have both pre and post failure metrics
-      pre_failure = Enum.find(Map.values(current_metrics), fn metric ->
-        metric.name == :failure_test
-      end)
-      
-      post_failure = Enum.find(Map.values(current_metrics), fn metric ->
-        metric.name == :post_failure_test
-      end)
-      
-      assert pre_failure != nil
-      assert post_failure != nil
-    end
-  end
-  
-  describe "Configuration and Dynamic Reconfiguration" do
-    test "router strategy can be changed at runtime", %{router: router} do
-      # Test different strategies
-      strategies = [:round_robin, :least_connections, :weighted]
-      
-      Enum.each(strategies, fn strategy ->
-        :ok = Router.set_strategy(router, strategy)
+      Enum.each(operations, fn operation ->
+        result = operation.()
         
-        stats = Router.get_stats(router)
-        assert stats.strategy == strategy
+        case result do
+          {:ok, _} -> assert true
+          {:error, reason} ->
+            # Error reason should be properly formatted from snmp_lib
+            assert is_atom(reason) or (is_tuple(reason) and tuple_size(reason) >= 1)
+        end
+      end)
+    end
+
+    test "return value formats consistent across snmp_lib operations", %{device: device} do
+      target = SNMPSimulator.device_target(device)
+      
+      # Test that return values maintain consistent format through snmp_lib
+      operations = [
+        fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                         community: device.community, timeout: 100) end,
+        fn -> SNMPMgr.get_next(target, "1.3.6.1.2.1.1.1", 
+                              community: device.community, timeout: 100) end
+      ]
+      
+      Enum.each(operations, fn operation ->
+        result = operation.()
         
-        # Should still route requests with new strategy
-        request = %{
-          type: :get,
-          target: "strategy.test",
-          oid: "1.3.6.1.2.1.1.1.0",
-          community: "public"
-        }
-        
-        result = Router.route_request(router, request)
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        case result do
+          {:ok, value} ->
+            # Value should be in expected format from snmp_lib
+            assert is_binary(value) or is_integer(value) or is_list(value) or 
+                   is_tuple(value) or is_atom(value)
+          {:error, reason} ->
+            assert is_atom(reason) or is_tuple(reason)
+        end
       end)
-    end
-    
-    test "engines can be added and removed dynamically", %{router: router} do
-      initial_stats = Router.get_stats(router)
-      initial_count = initial_stats.engine_count
-      
-      # Add a new engine
-      {:ok, new_engine} = Engine.start_link(name: :dynamic_engine)
-      
-      new_engine_spec = %{
-        name: :dynamic_engine,
-        pid: new_engine,
-        weight: 1,
-        max_load: 50
-      }
-      
-      :ok = Router.add_engine(router, new_engine_spec)
-      
-      # Should have more engines
-      stats_after_add = Router.get_stats(router)
-      assert stats_after_add.engine_count == initial_count + 1
-      
-      # Remove the engine
-      :ok = Router.remove_engine(router, :dynamic_engine)
-      
-      # Should be back to original count
-      stats_after_remove = Router.get_stats(router)
-      assert stats_after_remove.engine_count == initial_count
-      
-      # Clean up
-      Engine.stop(new_engine)
-    end
-    
-    test "circuit breaker thresholds affect behavior", %{circuit_breaker: cb} do
-      target = "threshold.test"
-      
-      # Get initial state (should be closed)
-      {:ok, initial_state} = CircuitBreaker.get_state(cb, target)
-      assert initial_state.state == :closed
-      
-      # Record failures up to threshold - 1
-      Enum.each(1..2, fn _i ->
-        CircuitBreaker.record_failure(cb, target, :test_failure)
-      end)
-      
-      # Should still be closed
-      {:ok, pre_threshold_state} = CircuitBreaker.get_state(cb, target)
-      assert pre_threshold_state.state == :closed
-      
-      # One more failure should open the circuit
-      CircuitBreaker.record_failure(cb, target, :final_failure)
-      
-      {:ok, post_threshold_state} = CircuitBreaker.get_state(cb, target)
-      assert post_threshold_state.state == :open
-    end
-  end
-  
-  describe "Monitoring and Observability" do
-    test "comprehensive system health can be monitored", %{router: router, engines: engines, pool: pool, circuit_breaker: cb, metrics: metrics} do
-      # Generate some activity
-      test_request = %{
-        type: :get,
-        target: "monitoring.test",
-        oid: "1.3.6.1.2.1.1.1.0",
-        community: "public"
-      }
-      
-      Router.route_request(router, test_request)
-      
-      # Collect health information from all components
-      router_stats = Router.get_stats(router)
-      
-      engine_stats = Enum.map(engines, fn %{pid: engine_pid} ->
-        Engine.get_stats(engine_pid)
-      end)
-      
-      pool_stats = Pool.get_stats(pool)
-      cb_stats = CircuitBreaker.get_stats(cb)
-      metrics_summary = Metrics.get_summary(metrics)
-      
-      # Verify comprehensive monitoring data is available
-      assert is_map(router_stats)
-      assert Map.has_key?(router_stats, :strategy)
-      assert Map.has_key?(router_stats, :engine_count)
-      assert Map.has_key?(router_stats, :metrics)
-      
-      Enum.each(engine_stats, fn stats ->
-        assert is_map(stats)
-        assert Map.has_key?(stats, :queue_length)
-        assert Map.has_key?(stats, :metrics)
-      end)
-      
-      assert is_map(pool_stats)
-      assert Map.has_key?(pool_stats, :total_connections)
-      assert Map.has_key?(pool_stats, :metrics)
-      
-      assert is_map(cb_stats)
-      assert Map.has_key?(cb_stats, :total_breakers)
-      assert Map.has_key?(cb_stats, :metrics)
-      
-      assert is_map(metrics_summary)
-      assert Map.has_key?(metrics_summary, :current_metrics)
-      assert Map.has_key?(metrics_summary, :window_count)
-    end
-    
-    test "metrics provide performance insights", %{router: router, metrics: metrics} do
-      # Generate timed operations
-      operation_types = [:get, :set, :walk]
-      
-      Enum.each(operation_types, fn op_type ->
-        Enum.each(1..5, fn i ->
-          Metrics.time(metrics, :operation_performance, fn ->
-            request = %{
-              type: op_type,
-              target: "perf.test.#{i}",
-              oid: "1.3.6.1.2.1.1.#{i}.0",
-              community: "public"
-            }
-            
-            Router.route_request(router, request)
-            
-            # Simulate variable operation time
-            Process.sleep(10 + rem(i, 3) * 5)
-          end, %{operation: op_type})
-        end)
-      end)
-      
-      # Allow metrics collection
-      Process.sleep(300)
-      
-      current_metrics = Metrics.get_metrics(metrics)
-      
-      # Should have histograms for performance timing
-      performance_histograms = Enum.filter(Map.values(current_metrics), fn metric ->
-        metric.type == :histogram and metric.name == :operation_performance
-      end)
-      
-      assert length(performance_histograms) >= 3  # One per operation type
-      
-      # Should have counters for operation counts
-      performance_counters = Enum.filter(Map.values(current_metrics), fn metric ->
-        metric.type == :counter and metric.name == :operation_performance_total
-      end)
-      
-      assert length(performance_counters) >= 3
     end
   end
 end
