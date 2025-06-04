@@ -64,9 +64,9 @@ defmodule SNMPMgr.PerformanceTest do
     results = %{successful: 0, failed: 0, errors: []}
     
     Enum.reduce(1..iterations, results, fn _i, acc ->
-      case SNMPMgr.PDU.build_message(pdu, community, version) do
+      case SnmpLib.PDU.build_message(pdu, community, version) do
         {:ok, message} ->
-          case SNMPMgr.PDU.encode_message(message) do
+          case SnmpLib.PDU.encode_message(message) do
             {:ok, _encoded} ->
               %{acc | successful: acc.successful + 1}
             {:error, reason} ->
@@ -248,10 +248,10 @@ defmodule SNMPMgr.PerformanceTest do
     
     # Test pure Elixir
     IO.puts("Pure Elixir Implementation:")
-    case SNMPMgr.PDU.build_message(test_pdu, community, version) do
+    case SnmpLib.PDU.build_message(test_pdu, community, version) do
       {:ok, message} ->
         IO.puts("  Message built: #{inspect(message)}")
-        case SNMPMgr.PDU.encode_message(message) do
+        case SnmpLib.PDU.encode_message(message) do
           {:ok, encoded} ->
             IO.puts("  Encoded successfully: #{byte_size(encoded)} bytes")
             IO.puts("  First 20 bytes: #{inspect(binary_part(encoded, 0, min(20, byte_size(encoded))))}")

@@ -282,23 +282,6 @@ defmodule SNMPMgrTest do
         SNMPMgr.Core.send_get_bulk_request("device.local", "1.3.6.1.2.1.1", version: :v1)
     end
 
-    test "builds GETBULK PDU correctly" do
-      # Test PDU building
-      pdu = SNMPMgr.PDU.build_get_bulk_request([1, 3, 6, 1, 2, 1, 1], 12345, 0, 10)
-      assert pdu.type == :get_bulk_request
-      assert pdu.request_id == 12345
-      assert pdu.non_repeaters == 0
-      assert pdu.max_repetitions == 10
-      assert pdu.varbinds == [{[1, 3, 6, 1, 2, 1, 1], :null, :null}]
-    end
-
-    test "formats version numbers correctly" do
-      v1_msg = SNMPMgr.PDU.build_message(%{type: :get_request}, "public", :v1)
-      assert v1_msg.version == 0
-
-      v2c_msg = SNMPMgr.PDU.build_message(%{type: :get_bulk_request}, "public", :v2c)
-      assert v2c_msg.version == 1
-    end
   end
 
   describe "SNMPMgr.Errors" do

@@ -110,19 +110,19 @@ defmodule SNMPMgr.Core do
 
   defp build_get_pdu(oid_list, _opts) do
     request_id = :rand.uniform(1000000)
-    pdu = SNMPMgr.PDU.build_get_request(oid_list, request_id)
+    pdu = SnmpLib.PDU.build_get_request(oid_list, request_id)
     {:ok, pdu}
   end
 
   defp build_get_next_pdu(oid_list, _opts) do
     request_id = :rand.uniform(1000000)
-    pdu = SNMPMgr.PDU.build_get_next_request(oid_list, request_id)
+    pdu = SnmpLib.PDU.build_get_next_request(oid_list, request_id)
     {:ok, pdu}
   end
 
   defp build_set_pdu(oid_list, {type, value}, _opts) do
     request_id = :rand.uniform(1000000)
-    pdu = SNMPMgr.PDU.build_set_request(oid_list, {type, value}, request_id)
+    pdu = SnmpLib.PDU.build_set_request(oid_list, {type, value}, request_id)
     {:ok, pdu}
   end
 
@@ -130,7 +130,7 @@ defmodule SNMPMgr.Core do
     request_id = :rand.uniform(1000000)
     non_repeaters = Keyword.get(opts, :non_repeaters, 0)
     max_repetitions = Keyword.get(opts, :max_repetitions, 10)
-    pdu = SNMPMgr.PDU.build_get_bulk_request(oid_list, request_id, non_repeaters, max_repetitions)
+    pdu = SnmpLib.PDU.build_get_bulk_request(oid_list, request_id, non_repeaters, max_repetitions)
     {:ok, pdu}
   end
 
@@ -138,8 +138,8 @@ defmodule SNMPMgr.Core do
     community = Keyword.get(opts, :community, @default_community)
     version = Keyword.get(opts, :version, :v1)
     try do
-      message = SNMPMgr.PDU.build_message(pdu, community, version)
-      SNMPMgr.PDU.encode_message(message)
+      message = SnmpLib.PDU.build_message(pdu, community, version)
+      SnmpLib.PDU.encode_message(message)
     rescue
       e in ArgumentError -> {:error, {:invalid_parameters, e.message}}
     end
@@ -190,7 +190,7 @@ defmodule SNMPMgr.Core do
   end
 
   defp decode_get_response(response) do
-    case SNMPMgr.PDU.decode_message(response) do
+    case SnmpLib.PDU.decode_message(response) do
       # Handle the actual PDU decoder response format
       {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
@@ -226,7 +226,7 @@ defmodule SNMPMgr.Core do
   end
 
   defp decode_get_next_response(response) do
-    case SNMPMgr.PDU.decode_message(response) do
+    case SnmpLib.PDU.decode_message(response) do
       # Handle the actual PDU decoder response format
       {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
@@ -268,7 +268,7 @@ defmodule SNMPMgr.Core do
   end
 
   defp decode_set_response(response) do
-    case SNMPMgr.PDU.decode_message(response) do
+    case SnmpLib.PDU.decode_message(response) do
       # Handle the actual PDU decoder response format
       {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
@@ -304,7 +304,7 @@ defmodule SNMPMgr.Core do
   end
 
   defp decode_get_bulk_response(response) do
-    case SNMPMgr.PDU.decode_message(response) do
+    case SnmpLib.PDU.decode_message(response) do
       {:ok, %{pdu: %{type: :get_response, varbinds: varbinds, error_status: error_status}}} ->
         case error_status do
           0 ->

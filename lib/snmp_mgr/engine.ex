@@ -463,14 +463,14 @@ defmodule SNMPMgr.Engine do
     try do
       case request.type do
         :get ->
-          pdu = SNMPMgr.PDU.build_get_request(request.oid, request.request_id)
-          message = SNMPMgr.PDU.build_message(pdu, request.community || "public", :v2c)
-          SNMPMgr.PDU.encode_message(message)
+          pdu = SnmpLib.PDU.build_get_request(request.oid, request.request_id)
+          message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
+          SnmpLib.PDU.encode_message(message)
         :get_bulk ->
           max_rep = Map.get(request, :max_repetitions, 10)
-          pdu = SNMPMgr.PDU.build_get_bulk_request(request.oid, request.request_id, 0, max_rep)
-          message = SNMPMgr.PDU.build_message(pdu, request.community || "public", :v2c)
-          SNMPMgr.PDU.encode_message(message)
+          pdu = SnmpLib.PDU.build_get_bulk_request(request.oid, request.request_id, 0, max_rep)
+          message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
+          SnmpLib.PDU.encode_message(message)
         _ ->
           {:error, {:unsupported_request_type, request.type}}
       end
@@ -493,7 +493,7 @@ defmodule SNMPMgr.Engine do
   end
   
   defp handle_udp_response(state, socket, _ip, _port, data) do
-    case SNMPMgr.PDU.decode_message(data) do
+    case SnmpLib.PDU.decode_message(data) do
       {:ok, message} ->
         handle_snmp_response(state, socket, message)
       {:error, reason} ->
