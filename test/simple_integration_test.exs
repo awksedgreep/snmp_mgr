@@ -88,7 +88,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
                           community: "integration_test", timeout: 100)
       
       # Should return proper format regardless of community
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "version option integration" do
@@ -99,8 +99,8 @@ defmodule SNMPMgr.SimpleIntegrationTest do
                                version: :v2c, timeout: 100)
       
       # Both should return proper format through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result_v1)
-      assert match?({:ok, _} | {:error, _}, result_v2c)
+      assert match?({:ok, _}, result_v1) or match?({:error, _}, result_v1)
+      assert match?({:ok, _}, result_v2c) or match?({:error, _}, result_v2c)
     end
   end
 
@@ -108,31 +108,31 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     test "string targets processed correctly" do
       # String IP addresses should work through snmp_lib
       result = SNMPMgr.get("127.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "hostname targets processed correctly" do
       # Hostnames should be resolved through snmp_lib
       result = SNMPMgr.get("localhost", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "string OIDs processed through SnmpLib.OID" do
       # String OIDs should be processed by SnmpLib.OID
       result = SNMPMgr.get("192.0.2.99", "1.3.6.1.2.1.1.1.0", timeout: 100)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "list OIDs processed through SnmpLib.OID" do
       # List OIDs should be processed by SnmpLib.OID
       result = SNMPMgr.get("192.0.2.99", [1, 3, 6, 1, 2, 1, 1, 1, 0], timeout: 100)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "symbolic OIDs processed correctly" do
       # Symbolic OIDs should work through MIB integration
       result = SNMPMgr.get("192.0.2.99", "sysDescr.0", timeout: 100)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
   end
 
@@ -151,7 +151,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
       
       # Each result should be proper format
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -168,7 +168,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
       
       # Each result should be proper format
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
   end
@@ -205,14 +205,14 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     test "uses default configuration from Config module" do
       # Should use default configuration when no options provided
       result = SNMPMgr.get("192.0.2.99", "1.3.6.1.2.1.1.1.0")
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "overrides configuration with request options" do
       # Request options should override default configuration
       result = SNMPMgr.get("192.0.2.99", "1.3.6.1.2.1.1.1.0", 
                           community: "override", timeout: 150, version: :v2c)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "configuration merging works correctly" do

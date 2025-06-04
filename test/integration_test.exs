@@ -163,7 +163,7 @@ defmodule SNMPMgr.IntegrationTest do
       result = SNMPMgr.get("192.0.2.99", "1.3.6.1.2.1.1.1.0")
       
       # Should process with configured defaults through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
       
       # Reset to defaults
       SNMPMgr.Config.reset()
@@ -178,7 +178,7 @@ defmodule SNMPMgr.IntegrationTest do
                           community: "override", timeout: 100, version: :v1)
       
       # Should process with overridden options through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
       
       SNMPMgr.Config.reset()
     end
@@ -213,7 +213,7 @@ defmodule SNMPMgr.IntegrationTest do
       Enum.each(oid_formats, fn oid ->
         result = SNMPMgr.get("192.0.2.99", oid, timeout: 100)
         # Should process OID through SnmpLib.OID and return proper format
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -228,7 +228,7 @@ defmodule SNMPMgr.IntegrationTest do
       Enum.each(list_oids, fn oid ->
         result = SNMPMgr.get("192.0.2.99", oid, timeout: 100)
         # Should process list OID through SnmpLib.OID
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -243,7 +243,7 @@ defmodule SNMPMgr.IntegrationTest do
       Enum.each(symbolic_oids, fn oid ->
         result = SNMPMgr.get("192.0.2.99", oid, timeout: 100)
         # Should process symbolic OID through MIB -> SnmpLib.OID chain
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -330,7 +330,7 @@ defmodule SNMPMgr.IntegrationTest do
                             community: community, timeout: 100)
         
         # Should handle various community strings properly
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
   end
@@ -342,7 +342,7 @@ defmodule SNMPMgr.IntegrationTest do
                           version: :v1, community: "public", timeout: 200)
       
       # Should process v1 requests through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "SNMPv2c operations through snmp_lib" do
@@ -351,7 +351,7 @@ defmodule SNMPMgr.IntegrationTest do
                           version: :v2c, community: "public", timeout: 200)
       
       # Should process v2c requests through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "bulk operations require v2c" do
@@ -360,7 +360,7 @@ defmodule SNMPMgr.IntegrationTest do
                                    version: :v2c, max_repetitions: 3, timeout: 200)
       
       # Should handle v2c bulk through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result_v2c)
+      assert match?({:ok, _}, result_v2c) or match?({:error, _}, result_v2c)
     end
 
     test "walk adapts to version" do
@@ -371,8 +371,8 @@ defmodule SNMPMgr.IntegrationTest do
                                version: :v2c, community: "public", timeout: 300)
       
       # Both should work through appropriate snmp_lib mechanisms
-      assert match?({:ok, _} | {:error, _}, result_v1)
-      assert match?({:ok, _} | {:error, _}, result_v2c)
+      assert match?({:ok, _}, result_v1) or match?({:error, _}, result_v1)
+      assert match?({:ok, _}, result_v2c) or match?({:error, _}, result_v2c)
     end
   end
 
@@ -392,7 +392,7 @@ defmodule SNMPMgr.IntegrationTest do
       assert length(results) == 5
       
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -414,7 +414,7 @@ defmodule SNMPMgr.IntegrationTest do
       
       # All should return proper format through snmp_lib
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -450,11 +450,11 @@ defmodule SNMPMgr.IntegrationTest do
       
       # 2. Core operation with MIB resolution
       result1 = SNMPMgr.get("192.0.2.99", "sysDescr.0")
-      assert match?({:ok, _} | {:error, _}, result1)
+      assert match?({:ok, _}, result1) or match?({:error, _}, result1)
       
       # 3. Bulk operation
       result2 = SNMPMgr.get_bulk("192.0.2.99", "1.3.6.1.2.1.2.2", max_repetitions: 3)
-      assert match?({:ok, _} | {:error, _}, result2)
+      assert match?({:ok, _}, result2) or match?({:error, _}, result2)
       
       # 4. Multi-target operation
       requests = [
@@ -466,7 +466,7 @@ defmodule SNMPMgr.IntegrationTest do
       
       # 5. Walk operation
       result3 = SNMPMgr.walk("192.0.2.99", "1.3.6.1.2.1.1")
-      assert match?({:ok, _} | {:error, _}, result3)
+      assert match?({:ok, _}, result3) or match?({:error, _}, result3)
       
       # Reset configuration
       SNMPMgr.Config.reset()
