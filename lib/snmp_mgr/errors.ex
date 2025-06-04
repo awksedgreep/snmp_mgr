@@ -57,6 +57,8 @@ defmodule SNMPMgr.Errors do
 
   @doc """
   Translates an SNMP error code to an atom.
+  
+  Uses SnmpLib.Error for validation and standardization of RFC-compliant error codes.
 
   ## Examples
 
@@ -70,7 +72,11 @@ defmodule SNMPMgr.Errors do
       :unknown_error
   """
   def code_to_atom(error_code) when is_integer(error_code) do
-    Map.get(@error_codes, error_code, :unknown_error)
+    # Use SnmpLib.Error for validation and RFC compliance, fall back to our mapping
+    case SnmpLib.Error.valid_error_status?(error_code) do
+      true -> SnmpLib.Error.error_atom(error_code)
+      false -> Map.get(@error_codes, error_code, :unknown_error)
+    end
   end
 
   @doc """
@@ -212,6 +218,127 @@ defmodule SNMPMgr.Errors do
   def recoverable?({:snmp_error, :too_big}), do: true
   def recoverable?({:snmp_error, :gen_err}), do: true
   def recoverable?(_), do: false
+
+  @doc """
+  Enhanced error analysis using SnmpLib.Error for SNMP protocol errors.
+  
+  Provides detailed error information including severity and RFC compliance
+  for SNMP protocol errors while preserving our comprehensive network error handling.
+  
+  ## Examples
+  
+      iex> SNMPMgr.Errors.analyze_error({:snmp_error, 2})
+      %{
+        type: :snmp_protocol,
+        atom: :no_such_name,
+        code: 2,
+        severity: :error,
+        retriable: false,
+        category: :user_error,
+        description: "Variable name not found"
+      }
+      
+      iex> SNMPMgr.Errors.analyze_error(:timeout)
+      %{
+        type: :network,
+        atom: :timeout,
+        retriable: true,
+        category: :transient_error,
+        description: "Operation timed out"
+      }
+  """
+  def analyze_error(error) do
+    case error do
+      # SNMP protocol errors - use SnmpLib.Error for detailed analysis
+      {:snmp_error, code} when is_integer(code) ->
+        case SnmpLib.Error.valid_error_status?(code) do
+          true ->
+            atom = SnmpLib.Error.error_atom(code)
+            %{
+              type: :snmp_protocol,
+              atom: atom,
+              code: code,
+              severity: SnmpLib.Error.error_severity(atom),
+              retriable: SnmpLib.Error.retriable_error?(atom),
+              rfc_compliant: true,
+              category: classify_snmp_error(atom),
+              description: description(atom)
+            }
+          false ->
+            %{
+              type: :snmp_protocol,
+              atom: code_to_atom(code),
+              code: code,
+              retriable: false,
+              rfc_compliant: false,
+              category: :unknown_error,
+              description: "Unknown SNMP error code"
+            }
+        end
+      
+      {:snmp_error, atom} when is_atom(atom) ->
+        %{
+          type: :snmp_protocol,
+          atom: atom,
+          code: SnmpLib.Error.error_code(atom),
+          severity: SnmpLib.Error.error_severity(atom),
+          retriable: SnmpLib.Error.retriable_error?(atom),
+          rfc_compliant: true,
+          category: classify_snmp_error(atom),
+          description: description(atom)
+        }
+      
+      # Network errors - our superior handling
+      error_atom when error_atom in [:timeout, :host_unreachable, :network_unreachable, :connection_refused] ->
+        %{
+          type: :network,
+          atom: error_atom,
+          retriable: recoverable?(error_atom),
+          category: classify_network_error(error_atom),
+          description: get_network_error_description(error_atom)
+        }
+      
+      # Other errors
+      _ ->
+        {category, subcategory} = classify_error(error)
+        %{
+          type: :other,
+          atom: error,
+          retriable: recoverable?(error),
+          category: category,
+          subcategory: subcategory,
+          description: format_error(error)
+        }
+    end
+  end
+  
+  defp classify_snmp_error(atom) do
+    case atom do
+      atom when atom in [:no_such_name, :bad_value, :wrong_type, :wrong_value] -> :user_error
+      atom when atom in [:read_only, :not_writable, :no_access, :authorization_error] -> :security_error  
+      atom when atom in [:too_big, :resource_unavailable] -> :resource_error
+      atom when atom in [:gen_err, :commit_failed, :undo_failed] -> :device_error
+      _ -> :protocol_error
+    end
+  end
+  
+  defp classify_network_error(atom) do
+    case atom do
+      :timeout -> :transient_error
+      :host_unreachable -> :configuration_error
+      :network_unreachable -> :configuration_error
+      :connection_refused -> :service_error
+    end
+  end
+  
+  defp get_network_error_description(atom) do
+    case atom do
+      :timeout -> "Operation timed out"
+      :host_unreachable -> "Host is unreachable"
+      :network_unreachable -> "Network is unreachable"
+      :connection_refused -> "Connection refused by target"
+    end
+  end
 
   # Private functions
 

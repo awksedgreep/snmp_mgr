@@ -217,7 +217,7 @@ defmodule SNMPMgr.Bulk do
     in_scope_results = 
       results
       |> Enum.filter(fn {oid_string, _value} ->
-        case SNMPMgr.OID.string_to_list(oid_string) do
+        case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
           _ -> false
         end
@@ -225,7 +225,7 @@ defmodule SNMPMgr.Bulk do
     
     next_oid = case List.last(results) do
       {oid_string, _value} ->
-        case SNMPMgr.OID.string_to_list(oid_string) do
+        case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> oid_list
           _ -> nil
         end
@@ -255,7 +255,7 @@ defmodule SNMPMgr.Bulk do
   end
 
   defp resolve_oid(oid) when is_binary(oid) do
-    case SNMPMgr.OID.string_to_list(oid) do
+    case SnmpLib.OID.string_to_list(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try as symbolic name

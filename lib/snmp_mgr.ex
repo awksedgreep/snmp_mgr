@@ -530,7 +530,7 @@ defmodule SNMPMgr do
 
   # Private helper function
   defp resolve_oid_if_needed(oid) when is_binary(oid) do
-    case SNMPMgr.OID.string_to_list(oid) do
+    case SnmpLib.OID.string_to_list(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try resolving as symbolic name

@@ -37,7 +37,7 @@ defmodule SNMPMgr.Table do
       table_data = 
         oid_value_pairs
         |> Enum.map(fn {oid_string, value} ->
-          case SNMPMgr.OID.string_to_list(oid_string) do
+          case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} ->
               if List.starts_with?(oid_list, table_oid) and length(oid_list) > table_oid_length + 2 do
                 # Extract: table_oid + [1] + column + index_parts
@@ -76,7 +76,7 @@ defmodule SNMPMgr.Table do
   end
 
   def to_table(oid_value_pairs, table_oid) when is_binary(table_oid) do
-    case SNMPMgr.OID.string_to_list(table_oid) do
+    case SnmpLib.OID.string_to_list(table_oid) do
       {:ok, oid_list} -> to_table(oid_value_pairs, oid_list)
       error -> error
     end
@@ -131,7 +131,7 @@ defmodule SNMPMgr.Table do
       rows = 
         oid_value_pairs
         |> Enum.map(fn {oid_string, value} ->
-          case SNMPMgr.OID.string_to_list(oid_string) do
+          case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 3 ->
               # Extract column and index from the end of the OID
               # Format: ...table.1.column.index
@@ -169,7 +169,7 @@ defmodule SNMPMgr.Table do
       indexes = 
         oid_value_pairs
         |> Enum.map(fn {oid_string, _value} ->
-          case SNMPMgr.OID.string_to_list(oid_string) do
+          case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 1 ->
               List.last(oid_list)
             _ -> nil
@@ -203,7 +203,7 @@ defmodule SNMPMgr.Table do
       columns = 
         oid_value_pairs
         |> Enum.map(fn {oid_string, _value} ->
-          case SNMPMgr.OID.string_to_list(oid_string) do
+          case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 2 ->
               # Get second-to-last element (column number)
               oid_list |> Enum.reverse() |> Enum.at(1)

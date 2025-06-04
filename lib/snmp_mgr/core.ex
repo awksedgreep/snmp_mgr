@@ -196,18 +196,12 @@ defmodule SNMPMgr.Core do
     end
   end
 
-  defp parse_oid(oid) when is_binary(oid) do
-    case SNMPMgr.OID.string_to_list(oid) do
+  defp parse_oid(oid) do
+    # Use SnmpLib.OID.normalize which handles both string and list inputs
+    # and provides comprehensive validation and normalization
+    case SnmpLib.OID.normalize(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
-      error -> error
+      {:error, reason} -> {:error, reason}
     end
-  end
-  
-  defp parse_oid(oid) when is_list(oid) do
-    {:ok, oid}
-  end
-  
-  defp parse_oid(_oid) do
-    {:error, :invalid_oid_format}
   end
 end

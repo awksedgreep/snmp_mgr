@@ -71,7 +71,7 @@ defmodule SNMPMgr.TableWalkingTest do
               oids = Enum.map(walk_data, fn {oid, _value} ->
                 case oid do
                   str when is_binary(str) ->
-                    case SNMPMgr.OID.string_to_list(str) do
+                    case SnmpLib.OID.string_to_list(str) do
                       {:ok, list} -> list
                       _ -> []
                     end
@@ -117,14 +117,14 @@ defmodule SNMPMgr.TableWalkingTest do
               for {oid, value} <- table_data do
                 oid_list = case oid do
                   str when is_binary(str) ->
-                    case SNMPMgr.OID.string_to_list(str) do
+                    case SnmpLib.OID.string_to_list(str) do
                       {:ok, list} -> list
                       _ -> []
                     end
                   list when is_list(list) -> list
                 end
                 
-                table_prefix = case SNMPMgr.OID.string_to_list(table_oid) do
+                table_prefix = case SnmpLib.OID.string_to_list(table_oid) do
                   {:ok, list} -> list
                   _ -> []
                 end
@@ -199,7 +199,7 @@ defmodule SNMPMgr.TableWalkingTest do
           {:ok, walk_data} ->
             if length(walk_data) > 0 do
               # Verify all results start with or are beyond the root OID
-              root_list = case SNMPMgr.OID.string_to_list(root_oid) do
+              root_list = case SnmpLib.OID.string_to_list(root_oid) do
                 {:ok, list} -> list
                 _ -> []
               end
@@ -207,7 +207,7 @@ defmodule SNMPMgr.TableWalkingTest do
               for {oid, _value} <- walk_data do
                 oid_list = case oid do
                   str when is_binary(str) ->
-                    case SNMPMgr.OID.string_to_list(str) do
+                    case SnmpLib.OID.string_to_list(str) do
                       {:ok, list} -> list
                       _ -> []
                     end
@@ -364,7 +364,7 @@ defmodule SNMPMgr.TableWalkingTest do
                 # Check that OID includes column number
                 oid_list = case oid do
                   str when is_binary(str) ->
-                    case SNMPMgr.OID.string_to_list(str) do
+                    case SnmpLib.OID.string_to_list(str) do
                       {:ok, list} -> list
                       _ -> []
                     end

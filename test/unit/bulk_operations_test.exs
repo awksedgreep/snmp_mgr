@@ -237,7 +237,7 @@ defmodule SNMPMgr.BulkOperationsTest do
           oids = Enum.map(results, fn {oid, _value} ->
             case oid do
               str when is_binary(str) ->
-                case SNMPMgr.OID.string_to_list(str) do
+                case SnmpLib.OID.string_to_list(str) do
                   {:ok, list} -> list
                   _ -> []
                 end
@@ -276,7 +276,7 @@ defmodule SNMPMgr.BulkOperationsTest do
             acc ->
               oid_list = case result_oid do
                 str when is_binary(str) ->
-                  case SNMPMgr.OID.string_to_list(str) do
+                  case SnmpLib.OID.string_to_list(str) do
                     {:ok, list} -> list
                     _ -> []
                   end
@@ -321,7 +321,7 @@ defmodule SNMPMgr.BulkOperationsTest do
         case SNMPMgr.get_bulk(target, table_oid, [max_repetitions: 50, community: device.community, timeout: 200]) do
           {:ok, results} ->
             # All results should be within the table
-            table_prefix = case SNMPMgr.OID.string_to_list(table_oid) do
+            table_prefix = case SnmpLib.OID.string_to_list(table_oid) do
               {:ok, list} -> list
               _ -> []
             end
@@ -329,7 +329,7 @@ defmodule SNMPMgr.BulkOperationsTest do
             for {result_oid, _value} <- results do
               result_list = case result_oid do
                 str when is_binary(str) ->
-                  case SNMPMgr.OID.string_to_list(str) do
+                  case SnmpLib.OID.string_to_list(str) do
                     {:ok, list} -> list
                     _ -> []
                   end

@@ -182,7 +182,7 @@ defmodule SNMPMgr.Stream do
 
       # Only fetch interface names (column 2)
       filter_fn = fn {oid, _value} ->
-        case SNMPMgr.OID.string_to_list(oid) do
+        case SnmpLib.OID.string_to_list(oid) do
           {:ok, oid_list} -> List.last(oid_list, 2) |> hd() == 2
           _ -> false
         end
@@ -444,7 +444,7 @@ defmodule SNMPMgr.Stream do
     in_scope_results = 
       results
       |> Enum.filter(fn {oid_string, _value} ->
-        case SNMPMgr.OID.string_to_list(oid_string) do
+        case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
           _ -> false
         end
@@ -452,7 +452,7 @@ defmodule SNMPMgr.Stream do
     
     next_oid = case List.last(results) do
       {oid_string, _value} ->
-        case SNMPMgr.OID.string_to_list(oid_string) do
+        case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> oid_list
           _ -> nil
         end
@@ -465,7 +465,7 @@ defmodule SNMPMgr.Stream do
   defp process_table_results(results, _table_oid, _columns) do
     # Process results into table entries
     # This is a simplified version - real implementation would be more sophisticated
-    {results, List.last(results) |> elem(0) |> SNMPMgr.OID.string_to_list() |> elem(1)}
+    {results, List.last(results) |> elem(0) |> SnmpLib.OID.string_to_list() |> elem(1)}
   end
 
   defp update_table_buffer(buffer, entries) do
@@ -542,7 +542,7 @@ defmodule SNMPMgr.Stream do
   defp execute_stream_operation(_, _, _, _), do: {:error, :unsupported_operation}
 
   defp resolve_oid(oid) when is_binary(oid) do
-    case SNMPMgr.OID.string_to_list(oid) do
+    case SnmpLib.OID.string_to_list(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         case SNMPMgr.MIB.resolve(oid) do

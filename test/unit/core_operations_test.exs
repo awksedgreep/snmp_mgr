@@ -281,7 +281,7 @@ defmodule SNMPMgr.CoreOperationsTest do
             # Verify progression
             starting_list = case starting_oid do
               str when is_binary(str) ->
-                case SNMPMgr.OID.string_to_list(str) do
+                case SnmpLib.OID.string_to_list(str) do
                   {:ok, list} -> list
                   _ -> []
                 end
@@ -290,7 +290,7 @@ defmodule SNMPMgr.CoreOperationsTest do
             
             next_list = case next_oid do
               str when is_binary(str) ->
-                case SNMPMgr.OID.string_to_list(str) do
+                case SnmpLib.OID.string_to_list(str) do
                   {:ok, list} -> list
                   _ -> []
                 end

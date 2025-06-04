@@ -98,7 +98,7 @@ defmodule SNMPMgr.Walk do
   defp walk_from_oid(target, current_oid, root_oid, acc, remaining, opts) when remaining > 0 do
     case SNMPMgr.Core.send_get_next_request(target, current_oid, opts) do
       {:ok, {next_oid_string, value}} ->
-        case SNMPMgr.OID.string_to_list(next_oid_string) do
+        case SnmpLib.OID.string_to_list(next_oid_string) do
           {:ok, next_oid} ->
             if still_in_scope?(next_oid, root_oid) do
               new_acc = [{next_oid_string, value} | acc]
@@ -135,7 +135,7 @@ defmodule SNMPMgr.Walk do
   end
 
   defp resolve_oid(oid) when is_binary(oid) do
-    case SNMPMgr.OID.string_to_list(oid) do
+    case SnmpLib.OID.string_to_list(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try as symbolic name

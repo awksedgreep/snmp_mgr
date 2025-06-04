@@ -91,34 +91,37 @@ defmodule SNMPMgrTest do
     end
   end
 
-  describe "SNMPMgr.OID" do
+  describe "SnmpLib.OID Integration" do
     test "converts OID string to list" do
       oid_string = "1.3.6.1.2.1.1.1.0"
-      assert {:ok, [1, 3, 6, 1, 2, 1, 1, 1, 0]} = SNMPMgr.OID.string_to_list(oid_string)
+      assert {:ok, [1, 3, 6, 1, 2, 1, 1, 1, 0]} = SnmpLib.OID.string_to_list(oid_string)
     end
 
     test "converts OID list to string" do
       oid_list = [1, 3, 6, 1, 2, 1, 1, 1, 0]
-      assert "1.3.6.1.2.1.1.1.0" = SNMPMgr.OID.list_to_string(oid_list)
+      assert "1.3.6.1.2.1.1.1.0" = SnmpLib.OID.list_to_string(oid_list)
     end
 
     test "validates OID conversion roundtrip" do
       oid_list = [1, 3, 6, 1, 2, 1, 1, 1, 0]
-      oid_string = SNMPMgr.OID.list_to_string(oid_list)
+      oid_string = SnmpLib.OID.list_to_string(oid_list)
       assert "1.3.6.1.2.1.1.1.0" = oid_string
-      assert {:ok, ^oid_list} = SNMPMgr.OID.string_to_list(oid_string)
+      assert {:ok, ^oid_list} = SnmpLib.OID.string_to_list(oid_string)
     end
 
     test "rejects invalid OID strings" do
-      assert {:error, :invalid_oid} = SNMPMgr.OID.string_to_list("invalid.oid")
-      assert {:error, :invalid_oid} = SNMPMgr.OID.string_to_list("1.2.abc.4")
+      assert {:error, _reason} = SnmpLib.OID.string_to_list("invalid.oid")
+      assert {:error, _reason} = SnmpLib.OID.string_to_list("1.2.abc.4")
     end
 
     test "validates OID format" do
-      assert SNMPMgr.OID.valid?("1.3.6.1.2.1.1.1.0")
-      assert SNMPMgr.OID.valid?([1, 3, 6, 1, 2, 1, 1, 1, 0])
-      refute SNMPMgr.OID.valid?("invalid")
-      refute SNMPMgr.OID.valid?([1, 2, "abc"])
+      assert {:ok, _} = SnmpLib.OID.string_to_list("1.3.6.1.2.1.1.1.0")
+      assert "1.3.6.1.2.1.1.1.0" = SnmpLib.OID.list_to_string([1, 3, 6, 1, 2, 1, 1, 1, 0])
+      assert {:error, _} = SnmpLib.OID.string_to_list("invalid")
+      # Test that invalid list gives error when converted
+      assert_raise FunctionClauseError, fn ->
+        SnmpLib.OID.list_to_string([1, 2, "abc"])
+      end
     end
   end
 
