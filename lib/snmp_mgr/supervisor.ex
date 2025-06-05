@@ -19,7 +19,7 @@ defmodule SNMPMgr.Supervisor do
     # Configuration
     engine_config = Keyword.get(opts, :engine, [])
     router_config = Keyword.get(opts, :router, [])
-    pool_config = Keyword.get(opts, :pool, [])
+    _pool_config = Keyword.get(opts, :pool, [])
     circuit_breaker_config = Keyword.get(opts, :circuit_breaker, [])
     metrics_config = Keyword.get(opts, :metrics, [])
     
@@ -30,8 +30,8 @@ defmodule SNMPMgr.Supervisor do
       # Circuit breaker
       {SNMPMgr.CircuitBreaker, circuit_breaker_config},
       
-      # Connection pool
-      {SNMPMgr.Pool, pool_config},
+      # Connection pool (temporarily disabled - not yet implemented)
+      # {SNMPMgr.Pool, pool_config},
       
       # Main engines (can have multiple)
       Supervisor.child_spec({SNMPMgr.Engine, Keyword.put(engine_config, :name, :engine_1)}, id: :engine_1),

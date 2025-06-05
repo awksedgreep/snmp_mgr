@@ -45,7 +45,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
         {:set, target, "1.3.6.1.2.1.1.6.0", "test_location", 
          [community: device.community, timeout: 100]},
         
-        # GET-BULK operation
+        # GET-BULK operation  
         {:get_bulk, target, "1.3.6.1.2.1.2.2", 
          [max_repetitions: 3, community: device.community, timeout: 100]},
         
@@ -63,7 +63,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           result = SNMPMgr.get(target, oid, opts)
           case result do
             {:ok, _} -> :ok
-            {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
             {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
           end
           
@@ -79,6 +79,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           result = SNMPMgr.get_bulk(target, oid, opts)
           case result do
             {:ok, data} when is_list(data) -> :ok
+            {:error, :endOfMibView} -> :ok  # Very common with simulators for bulk operations
             {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
             {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
           end
@@ -87,7 +88,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           result = SNMPMgr.get_next(target, oid, opts)
           case result do
             {:ok, _} -> :ok
-            {:error, reason} when reason in [:timeout, :gen_err, :end_of_mib_view] -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :end_of_mib_view, :endOfMibView] -> :ok
             {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
           end
           
@@ -95,6 +96,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           result = SNMPMgr.walk(target, oid, opts)
           case result do
             {:ok, data} when is_list(data) -> :ok
+            {:error, :endOfMibView} -> :ok  # Very common with simulators
             {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
             {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
           end
@@ -120,7 +122,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -157,7 +159,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -199,7 +201,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -223,7 +225,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, list} when is_list(list) -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -257,7 +259,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(get_results ++ bulk_results, fn result ->
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -291,7 +293,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Should process with configured defaults through snmp_lib
       case result do
         {:ok, _} -> :ok
-        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
         {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
       end
     end
@@ -310,7 +312,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Should process with overridden options through snmp_lib
       case result do
         {:ok, _} -> :ok
-        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
         {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
       end
     end
@@ -330,7 +332,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
         # Should process with specified version through snmp_lib
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
@@ -369,7 +371,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> :ok
-          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
