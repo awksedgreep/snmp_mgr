@@ -1,4 +1,4 @@
-# SNMPMgr Test Update Plan - snmp_lib Migration
+# SnmpMgr Test Update Plan - snmp_lib Migration
 
 ## Overview
 
@@ -106,7 +106,7 @@ These test specific modules or edge cases.
 18. **test/unit/types_comprehensive_test.exs** ✅ COMPLETED
     - Status: Replaced with focused application-level type testing
     - Focus: Type inference, encoding/decoding, integration with snmp_lib SET operations
-    - Notes: Tests only SNMPMgr.Types functionality (convenience features), not low-level protocol handling
+    - Notes: Tests only SnmpMgr.Types functionality (convenience features), not low-level protocol handling
 
 19. **test/unit/pool_comprehensive_test.exs** ✅ NOT NEEDED
     - Status: No separate file needed - Connection pooling fully delegated to snmp_lib
@@ -147,7 +147,7 @@ These are edge case or compliance tests.
     - Notes: BER encoding functionality integrated and tested through existing snmp_lib operation tests
 
 26. **test/unit/snmpv2c_exception_values_test.exs** ⚠️ MINOR ISSUES (9/12 tests pass)
-    - Status: Replaced with focused SNMPMgr.Types exception value testing
+    - Status: Replaced with focused SnmpMgr.Types exception value testing
     - Focus: Type conversion for noSuchObject→:no_such_object, noSuchInstance→:no_such_instance, endOfMibView→:end_of_mib_view
     - Notes: Tests application-level convenience functions (decode_value/1, infer_type/1) and integration with SNMP operations
     - Issues: Function arity mismatches in API calls, some decode_value nil cases
@@ -183,9 +183,9 @@ These are edge case or compliance tests.
 
 ### Test Replacement Principles
 
-1. **Focus on Integration**: Test how SNMPMgr integrates with snmp_lib, not snmp_lib internals
+1. **Focus on Integration**: Test how SnmpMgr integrates with snmp_lib, not snmp_lib internals
 2. **Use SNMPSimulator**: All tests should use local simulator with 200ms max timeouts per @testing_rules
-3. **Test Application Value**: Test the value-add SNMPMgr provides over raw snmp_lib
+3. **Test Application Value**: Test the value-add SnmpMgr provides over raw snmp_lib
 4. **Maintain Coverage**: Ensure we don't lose important test coverage during replacement
 5. **User-Focused**: Tests should validate user-facing functionality and error handling
 6. **Follow @testing_rules**: Use SNMPSimulator.create_test_device() and device.community, keep timeouts ≤200ms

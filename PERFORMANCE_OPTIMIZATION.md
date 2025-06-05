@@ -1,8 +1,8 @@
-# SNMPMgr Performance Optimization Analysis
+# SnmpMgr Performance Optimization Analysis
 
 ## Overview
 
-This document details the performance optimization work done on the SNMPMgr pure Elixir PDU encoding implementation to achieve competitive performance with Erlang's native SNMP library.
+This document details the performance optimization work done on the SnmpMgr pure Elixir PDU encoding implementation to achieve competitive performance with Erlang's native SNMP library.
 
 ## Performance Test Results
 
@@ -143,7 +143,7 @@ The optimized implementation uses a dual-path approach:
 
 ## Performance Testing Infrastructure
 
-A performance test module (`SNMPMgr.PerformanceTest`) was created to:
+A performance test module (`SnmpMgr.PerformanceTest`) was created to:
 - Compare pure Elixir vs Erlang SNMP implementations
 - Run configurable iteration counts (default: 10,000 operations)
 - Provide detailed timing and throughput metrics
@@ -153,10 +153,10 @@ A performance test module (`SNMPMgr.PerformanceTest`) was created to:
 
 ```elixir
 # Run the full comparison (10,000 iterations)
-SNMPMgr.PerformanceTest.run_comparison()
+SnmpMgr.PerformanceTest.run_comparison()
 
 # Verify both implementations work correctly
-SNMPMgr.PerformanceTest.verify_implementations()
+SnmpMgr.PerformanceTest.verify_implementations()
 ```
 
 ## Future Considerations
@@ -175,7 +175,7 @@ SNMPMgr.PerformanceTest.verify_implementations()
 The optimized implementation should be verified against the full test suite to ensure:
 - All existing functionality works correctly
 - No regressions in edge cases
-- Compatibility with the broader SNMPMgr ecosystem
+- Compatibility with the broader SnmpMgr ecosystem
 
 ## Conclusion
 

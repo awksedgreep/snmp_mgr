@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Router do
+defmodule SnmpMgr.Router do
   @moduledoc """
   Intelligent request routing and load balancing for SNMP requests.
   
@@ -36,7 +36,7 @@ defmodule SNMPMgr.Router do
   
   ## Examples
   
-      {:ok, router} = SNMPMgr.Router.start_link(
+      {:ok, router} = SnmpMgr.Router.start_link(
         strategy: :least_connections,
         engines: [
           %{name: :engine1, weight: 2, max_load: 100},
@@ -65,7 +65,7 @@ defmodule SNMPMgr.Router do
         oid: "sysDescr.0"
       }
       
-      {:ok, result} = SNMPMgr.Router.route_request(router, request)
+      {:ok, result} = SnmpMgr.Router.route_request(router, request)
   """
   def route_request(router, request, opts \\ []) do
     GenServer.call(router, {:route_request, request, opts})
@@ -86,7 +86,7 @@ defmodule SNMPMgr.Router do
         %{type: :get, target: "device2", oid: "sysUpTime.0"}
       ]
       
-      {:ok, results} = SNMPMgr.Router.route_batch(router, requests)
+      {:ok, results} = SnmpMgr.Router.route_batch(router, requests)
   """
   def route_batch(router, requests, opts \\ []) do
     GenServer.call(router, {:route_batch, requests, opts})
@@ -201,7 +201,7 @@ defmodule SNMPMgr.Router do
       Process.send_after(self(), :health_check, health_check_interval)
     end
     
-    Logger.info("SNMPMgr Router started with strategy=#{strategy}, engines=#{length(engines)}")
+    Logger.info("SnmpMgr Router started with strategy=#{strategy}, engines=#{length(engines)}")
     
     {:ok, state}
   end
@@ -614,7 +614,7 @@ defmodule SNMPMgr.Router do
       name -> name
     end
     
-    case SNMPMgr.Engine.submit_request(engine_identifier, request, opts) do
+    case SnmpMgr.Engine.submit_request(engine_identifier, request, opts) do
       {:ok, result} ->
         end_time = System.monotonic_time(:millisecond)
         response_time = end_time - start_time
@@ -646,7 +646,7 @@ defmodule SNMPMgr.Router do
             name -> name
           end
           
-          case SNMPMgr.Engine.submit_batch(engine_identifier, requests, opts) do
+          case SnmpMgr.Engine.submit_batch(engine_identifier, requests, opts) do
             {:ok, results} -> {:ok, engine.name, results}
             {:error, reason} -> {:error, engine.name, reason}
           end

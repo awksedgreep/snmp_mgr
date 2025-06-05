@@ -1,4 +1,4 @@
-# SNMPMgr to SnmpLib Migration Plan
+# SnmpMgr to SnmpLib Migration Plan
 
 ## Overview
 Systematic migration from custom SNMP implementation to the standardized `snmp_lib` library (v0.2.0).
@@ -19,8 +19,8 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: ~~`lib/snmp_mgr/pdu.ex` with custom ASN.1 BER encoding~~ **REMOVED**
 - **Target**: Use `SnmpLib.PDU` for all PDU operations ✅
 - **Tasks**:
-  - ~~Create adapter layer `SNMPMgr.PDU.Adapter`~~ **NOT NEEDED - direct replacement**
-  - ✅ Replaced all `SNMPMgr.PDU` calls with `SnmpLib.PDU` calls
+  - ~~Create adapter layer `SnmpMgr.PDU.Adapter`~~ **NOT NEEDED - direct replacement**
+  - ✅ Replaced all `SnmpMgr.PDU` calls with `SnmpLib.PDU` calls
   - ✅ Updated `lib/snmp_mgr/core.ex` to use `SnmpLib.PDU`
   - ✅ Updated `lib/snmp_mgr/engine.ex` to use `SnmpLib.PDU`
   - ✅ Updated `lib/snmp_mgr/performance_test.ex` to use `SnmpLib.PDU`
@@ -35,7 +35,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
   - ✅ Updated `send_set_request/4` to use `SnmpLib.Manager.set/4`
   - ✅ Updated `send_get_bulk_request/3` to use `SnmpLib.Manager.get_bulk/3`
   - ✅ Updated `send_get_next_request/3` to use `SnmpLib.Manager.get_bulk/3` (with max_repetitions=1)
-  - ✅ Added option mapping between SNMPMgr and SnmpLib formats
+  - ✅ Added option mapping between SnmpMgr and SnmpLib formats
   - ✅ Added error mapping from `SnmpLib` to existing error format
   - ✅ Removed ~230 lines of custom UDP/PDU handling code
   - ✅ Preserved all public function signatures for backward compatibility
@@ -44,7 +44,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: `lib/snmp_mgr/oid.ex` custom OID handling  
 - **Target**: Leverage `SnmpLib.OID` for enhanced OID operations
 - **Completed Tasks**:
-  - ✅ Replaced all SNMPMgr.OID calls with SnmpLib.OID calls across 8 library files
+  - ✅ Replaced all SnmpMgr.OID calls with SnmpLib.OID calls across 8 library files
   - ✅ Updated test files to use SnmpLib.OID.string_to_list and list_to_string
   - ✅ Removed custom OID module entirely (lib/snmp_mgr/oid.ex)
   - ✅ Updated main test file to test SnmpLib.OID integration instead
@@ -94,7 +94,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: ~~Basic UDP transport~~ **MIGRATED**
 - **Target**: `SnmpLib.Transport` with multiple transport options ✅
 - **Completed Tasks**:
-  - ✅ Removed custom SNMPMgr.Transport module entirely (replaced by SnmpLib.Manager's integrated transport)
+  - ✅ Removed custom SnmpMgr.Transport module entirely (replaced by SnmpLib.Manager's integrated transport)
   - ✅ SnmpLib.Manager now handles SnmpLib.Transport.UDP automatically in core operations
   - ✅ Added future support for SnmpLib.Transport.TCP through SnmpLib.Manager
   - ✅ SnmpLib.Manager provides integrated connection pooling via SnmpLib.Pool
@@ -110,7 +110,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: ~~`lib/snmp_mgr/pool.ex` custom pooling~~ **REMOVED**
 - **Target**: `SnmpLib.Pool` with advanced features ✅
 - **Completed Tasks**:
-  - ✅ Removed custom SNMPMgr.Pool implementation entirely (~500 lines)
+  - ✅ Removed custom SnmpMgr.Pool implementation entirely (~500 lines)
   - ✅ SnmpLib.Manager provides integrated connection pooling via SnmpLib.Pool
   - ✅ Connection lifecycle management handled automatically by SnmpLib.Pool
   - ✅ Health checking for pooled connections built into SnmpLib.Pool
@@ -123,7 +123,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: `lib/snmp_mgr/bulk.ex` leveraging SnmpLib.Manager ✅
 - **Target**: Already optimized through SnmpLib.Manager integration ✅
 - **Analysis Results**:
-  - ✅ SNMPMgr.Bulk already uses SnmpLib.Manager.get_bulk/3 via Core module
+  - ✅ SnmpMgr.Bulk already uses SnmpLib.Manager.get_bulk/3 via Core module
   - ✅ Intelligent batch sizing already implemented (min(), max_repetitions parameter)
   - ✅ Bulk operation retry logic provided by SnmpLib.Manager automatically
   - ✅ Memory optimization through streaming approaches (bulk_walk_table/subtree)
@@ -135,7 +135,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: `lib/snmp_mgr/walk.ex` leveraging SnmpLib.Manager ✅
 - **Target**: Already optimized through SnmpLib.Manager integration ✅
 - **Analysis Results**:
-  - ✅ SNMPMgr.Walk already uses SnmpLib.Manager via Core module
+  - ✅ SnmpMgr.Walk already uses SnmpLib.Manager via Core module
   - ✅ Adaptive bulk sizing implemented (chooses GETNEXT vs GETBULK based on version)
   - ✅ Concurrent walking available through existing multi-target operations
   - ✅ Walk progress monitoring via remaining count parameter
@@ -152,7 +152,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: `lib/snmp_mgr/metrics.ex` application-level metrics ✅ **KEPT**
 - **Target**: Application metrics beyond SnmpLib.Manager ✅
 - **Analysis Results**:
-  - ✅ SNMPMgr.Metrics provides application-level monitoring (request latency, success rates, throughput)
+  - ✅ SnmpMgr.Metrics provides application-level monitoring (request latency, success rates, throughput)
   - ✅ Comprehensive metrics collection, aggregation, and reporting (~537 lines)
   - ✅ Real-time metrics with windowing, retention, and subscriber notifications
   - ✅ Business logic metrics beyond what SnmpLib.Manager provides
@@ -165,7 +165,7 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 - **Current**: `lib/snmp_mgr/config.ex` application-level configuration ✅ **KEPT**
 - **Target**: Application configuration beyond SnmpLib.Manager ✅
 - **Analysis Results**:
-  - ✅ SNMPMgr.Config provides application-wide defaults and runtime configuration
+  - ✅ SnmpMgr.Config provides application-wide defaults and runtime configuration
   - ✅ Configuration merging with per-request overrides for business logic
   - ✅ Application environment integration and fallback mechanisms
   - ✅ Hot configuration reloading via GenServer already implemented
@@ -216,10 +216,10 @@ This migration will improve reliability, maintainability, and RFC compliance whi
 
 #### 5.3 Backward Compatibility Validation ✅ COMPLETED
 - **Compatibility Results**:
-  - ✅ **API Compatibility**: All existing APIs (SNMPMgr.get, .set, .get_bulk, .walk, etc.) working unchanged
-  - ✅ **Error Handling**: Error message formats preserved with enhanced error mapping via SNMPMgr.Errors
+  - ✅ **API Compatibility**: All existing APIs (SnmpMgr.get, .set, .get_bulk, .walk, etc.) working unchanged
+  - ✅ **Error Handling**: Error message formats preserved with enhanced error mapping via SnmpMgr.Errors
   - ✅ **Migration Path**: Zero breaking changes - existing code works without modification
-  - ✅ **Configuration**: Existing configuration patterns maintained through SNMPMgr.Config
+  - ✅ **Configuration**: Existing configuration patterns maintained through SnmpMgr.Config
   - ✅ **Testing**: All application-level tests pass, demonstrating seamless integration
 
 **Key Achievement**: Migration is transparent to existing applications - no code changes required for consumers.
@@ -320,16 +320,16 @@ lib/snmp_mgr/
 | **Total** | **5 modules** | **~2253 lines** | **Full snmp_lib integration** |
 
 ### Modules Preserved (Application-Level Value-Add)
-- **SNMPMgr.Bulk** (~270 lines) - Application bulk operation patterns
-- **SNMPMgr.Walk** (~150 lines) - Application walking patterns  
-- **SNMPMgr.Metrics** (~537 lines) - Application performance monitoring
-- **SNMPMgr.Config** (~318 lines) - Application configuration management
-- **SNMPMgr.Errors** (~653 lines) - Enhanced error handling with SnmpLib.Error
-- **SNMPMgr.MIB** (~680 lines) - Enhanced MIB handling with SnmpLib.MIB
+- **SnmpMgr.Bulk** (~270 lines) - Application bulk operation patterns
+- **SnmpMgr.Walk** (~150 lines) - Application walking patterns  
+- **SnmpMgr.Metrics** (~537 lines) - Application performance monitoring
+- **SnmpMgr.Config** (~318 lines) - Application configuration management
+- **SnmpMgr.Errors** (~653 lines) - Enhanced error handling with SnmpLib.Error
+- **SnmpMgr.MIB** (~680 lines) - Enhanced MIB handling with SnmpLib.MIB
 
 ### Architecture After Migration
 ```
-SNMPMgr (Application Layer)
+SnmpMgr (Application Layer)
 ├── Business Logic (Bulk, Walk, AdaptiveWalk, etc.)
 ├── Application Services (Metrics, Config, Errors)
 ├── Integration Layer (Core, Engine, Router, etc.)

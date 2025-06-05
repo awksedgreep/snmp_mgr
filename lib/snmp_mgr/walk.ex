@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Walk do
+defmodule SnmpMgr.Walk do
   @moduledoc """
   SNMP walk operations using iterative GETNEXT requests.
   
@@ -22,7 +22,7 @@ defmodule SNMPMgr.Walk do
 
   ## Examples
 
-      iex> SNMPMgr.Walk.walk("192.168.1.1", [1, 3, 6, 1, 2, 1, 1])
+      iex> SnmpMgr.Walk.walk("192.168.1.1", [1, 3, 6, 1, 2, 1, 1])
       {:ok, [
         {"1.3.6.1.2.1.1.1.0", "System description"},
         {"1.3.6.1.2.1.1.2.0", "1.3.6.1.4.1.9.1.1"},
@@ -35,7 +35,7 @@ defmodule SNMPMgr.Walk do
     case version do
       :v2c -> 
         # Use bulk walk for better performance
-        SNMPMgr.Bulk.walk_bulk(target, root_oid, opts)
+        SnmpMgr.Bulk.walk_bulk(target, root_oid, opts)
       _ ->
         # Fall back to traditional GETNEXT walk
         max_repetitions = Keyword.get(opts, :max_repetitions, @default_max_repetitions)
@@ -66,7 +66,7 @@ defmodule SNMPMgr.Walk do
     case version do
       :v2c ->
         # Use bulk table walk for better performance
-        SNMPMgr.Bulk.get_table_bulk(target, table_oid, opts)
+        SnmpMgr.Bulk.get_table_bulk(target, table_oid, opts)
       _ ->
         # Fall back to traditional GETNEXT walk
         case resolve_oid(table_oid) do
@@ -96,7 +96,7 @@ defmodule SNMPMgr.Walk do
   # Private functions
 
   defp walk_from_oid(target, current_oid, root_oid, acc, remaining, opts) when remaining > 0 do
-    case SNMPMgr.Core.send_get_next_request(target, current_oid, opts) do
+    case SnmpMgr.Core.send_get_next_request(target, current_oid, opts) do
       {:ok, {next_oid_string, value}} ->
         case SnmpLib.OID.string_to_list(next_oid_string) do
           {:ok, next_oid} ->
@@ -139,7 +139,7 @@ defmodule SNMPMgr.Walk do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try as symbolic name
-        case SNMPMgr.MIB.resolve(oid) do
+        case SnmpMgr.MIB.resolve(oid) do
           {:ok, resolved_oid} -> {:ok, resolved_oid}
           error -> error
         end

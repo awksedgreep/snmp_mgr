@@ -1,4 +1,4 @@
-defmodule SNMPMgr.CircuitBreaker do
+defmodule SnmpMgr.CircuitBreaker do
   @moduledoc """
   Circuit breaker pattern implementation for SNMP device failure protection.
   
@@ -36,7 +36,7 @@ defmodule SNMPMgr.CircuitBreaker do
   
   ## Examples
   
-      {:ok, cb} = SNMPMgr.CircuitBreaker.start_link(
+      {:ok, cb} = SnmpMgr.CircuitBreaker.start_link(
         failure_threshold: 10,
         recovery_timeout: 60_000
       )
@@ -57,8 +57,8 @@ defmodule SNMPMgr.CircuitBreaker do
   
   ## Examples
   
-      result = SNMPMgr.CircuitBreaker.call(cb, "192.168.1.1", fn ->
-        SNMPMgr.get("192.168.1.1", "sysDescr.0")
+      result = SnmpMgr.CircuitBreaker.call(cb, "192.168.1.1", fn ->
+        SnmpMgr.get("192.168.1.1", "sysDescr.0")
       end, 5000)
   """
   def call(cb, target, fun, timeout \\ 5000) do
@@ -198,7 +198,7 @@ defmodule SNMPMgr.CircuitBreaker do
       metrics: initialize_metrics()
     }
     
-    Logger.info("SNMPMgr CircuitBreaker started")
+    Logger.info("SnmpMgr CircuitBreaker started")
     
     {:ok, state}
   end

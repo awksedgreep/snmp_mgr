@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Engine do
+defmodule SnmpMgr.Engine do
   @moduledoc """
   High-performance streaming PDU engine with request routing and connection pooling.
   
@@ -43,7 +43,7 @@ defmodule SNMPMgr.Engine do
   
   ## Examples
   
-      {:ok, engine} = SNMPMgr.Engine.start_link(
+      {:ok, engine} = SnmpMgr.Engine.start_link(
         pool_size: 20,
         max_rps: 200,
         batch_size: 100
@@ -71,7 +71,7 @@ defmodule SNMPMgr.Engine do
         community: "public"
       }
       
-      {:ok, ref} = SNMPMgr.Engine.submit_request(engine, request)
+      {:ok, ref} = SnmpMgr.Engine.submit_request(engine, request)
   """
   def submit_request(engine, request, opts \\ []) do
     GenServer.call(engine, {:submit_request, request, opts})
@@ -92,7 +92,7 @@ defmodule SNMPMgr.Engine do
         %{type: :get, target: "device2", oid: "sysDescr.0"}
       ]
       
-      {:ok, batch_ref} = SNMPMgr.Engine.submit_batch(engine, requests)
+      {:ok, batch_ref} = SnmpMgr.Engine.submit_batch(engine, requests)
   """
   def submit_batch(engine, requests, opts \\ []) do
     GenServer.call(engine, {:submit_batch, requests, opts})
@@ -144,7 +144,7 @@ defmodule SNMPMgr.Engine do
       routes: %{}
     }
     
-    Logger.info("SNMPMgr Engine started with pool_size=#{pool_size}, max_rps=#{max_rps}")
+    Logger.info("SnmpMgr Engine started with pool_size=#{pool_size}, max_rps=#{max_rps}")
     
     {:ok, state}
   end
@@ -439,7 +439,7 @@ defmodule SNMPMgr.Engine do
   end
   
   defp send_snmp_request(socket, request) do
-    # This is a simplified version - real implementation would use SNMPMgr.Core
+    # This is a simplified version - real implementation would use SnmpMgr.Core
     target = resolve_target(request.target)
     
     case build_snmp_message(request) do
@@ -480,7 +480,7 @@ defmodule SNMPMgr.Engine do
   end
   
   defp resolve_target(target) when is_binary(target) do
-    case SNMPMgr.Target.parse(target) do
+    case SnmpMgr.Target.parse(target) do
       {:ok, parsed} -> parsed
       {:error, _} -> %{host: target, port: 161}
     end

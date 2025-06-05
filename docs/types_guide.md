@@ -1,6 +1,6 @@
-# SNMPMgr.Types Module Guide
+# SnmpMgr.Types Module Guide
 
-The `SNMPMgr.Types` module handles SNMP data type encoding and decoding, providing automatic type inference and explicit type specification for SNMP values.
+The `SnmpMgr.Types` module handles SNMP data type encoding and decoding, providing automatic type inference and explicit type specification for SNMP values.
 
 ## Overview
 
@@ -47,47 +47,47 @@ encode_value(value, opts \\ [])
 
 ```elixir
 # String values
-{:ok, {:string, "Hello"}} = SNMPMgr.Types.encode_value("Hello")
+{:ok, {:string, "Hello"}} = SnmpMgr.Types.encode_value("Hello")
 
 # Integer values  
-{:ok, {:integer, 42}} = SNMPMgr.Types.encode_value(42)
+{:ok, {:integer, 42}} = SnmpMgr.Types.encode_value(42)
 
 # Large integers become counters
-{:ok, {:counter, 123456789}} = SNMPMgr.Types.encode_value(123456789)
+{:ok, {:counter, 123456789}} = SnmpMgr.Types.encode_value(123456789)
 
 # OID as list
-{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SNMPMgr.Types.encode_value([1,3,6,1,2,1,1,1])
+{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SnmpMgr.Types.encode_value([1,3,6,1,2,1,1,1])
 
 # OID as string
-{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SNMPMgr.Types.encode_value("1.3.6.1.2.1.1.1")
+{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SnmpMgr.Types.encode_value("1.3.6.1.2.1.1.1")
 
 # Null value
-{:ok, {:null, :null}} = SNMPMgr.Types.encode_value(:null)
+{:ok, {:null, :null}} = SnmpMgr.Types.encode_value(:null)
 
 # Binary data
-{:ok, {:opaque, <<1,2,3>>}} = SNMPMgr.Types.encode_value(<<1,2,3>>)
+{:ok, {:opaque, <<1,2,3>>}} = SnmpMgr.Types.encode_value(<<1,2,3>>)
 ```
 
 #### Explicit Type Specification
 
 ```elixir
 # Force string type
-{:ok, {:string, "42"}} = SNMPMgr.Types.encode_value("42", type: :string)
+{:ok, {:string, "42"}} = SnmpMgr.Types.encode_value("42", type: :string)
 
 # Force integer type
-{:ok, {:integer, 42}} = SNMPMgr.Types.encode_value(42, type: :integer)
+{:ok, {:integer, 42}} = SnmpMgr.Types.encode_value(42, type: :integer)
 
 # Force IP address type
-{:ok, {:ipAddress, {192,168,1,1}}} = SNMPMgr.Types.encode_value("192.168.1.1", type: :ipAddress)
+{:ok, {:ipAddress, {192,168,1,1}}} = SnmpMgr.Types.encode_value("192.168.1.1", type: :ipAddress)
 
 # Force gauge type
-{:ok, {:gauge, 75}} = SNMPMgr.Types.encode_value(75, type: :gauge)
+{:ok, {:gauge, 75}} = SnmpMgr.Types.encode_value(75, type: :gauge)
 
 # Force counter type
-{:ok, {:counter, 1000}} = SNMPMgr.Types.encode_value(1000, type: :counter)
+{:ok, {:counter, 1000}} = SnmpMgr.Types.encode_value(1000, type: :counter)
 
 # Force timeticks type
-{:ok, {:timeticks, 12345}} = SNMPMgr.Types.encode_value(12345, type: :timeticks)
+{:ok, {:timeticks, 12345}} = SnmpMgr.Types.encode_value(12345, type: :timeticks)
 ```
 
 ## Value Decoding
@@ -104,32 +104,32 @@ decode_value(snmp_value)
 
 ```elixir
 # String decoding
-"Hello" = SNMPMgr.Types.decode_value({:string, "Hello"})
+"Hello" = SnmpMgr.Types.decode_value({:string, "Hello"})
 
 # Integer decoding
-42 = SNMPMgr.Types.decode_value({:integer, 42})
+42 = SnmpMgr.Types.decode_value({:integer, 42})
 
 # OID decoding (returns string format)
-"1.3.6.1.2.1.1.1" = SNMPMgr.Types.decode_value({:oid, [1,3,6,1,2,1,1,1]})
+"1.3.6.1.2.1.1.1" = SnmpMgr.Types.decode_value({:oid, [1,3,6,1,2,1,1,1]})
 
 # IP address decoding (returns string format)
-"192.168.1.1" = SNMPMgr.Types.decode_value({:ipAddress, {192,168,1,1}})
+"192.168.1.1" = SnmpMgr.Types.decode_value({:ipAddress, {192,168,1,1}})
 
 # Counter decoding
-123456 = SNMPMgr.Types.decode_value({:counter, 123456})
+123456 = SnmpMgr.Types.decode_value({:counter, 123456})
 
 # Gauge decoding
-75 = SNMPMgr.Types.decode_value({:gauge, 75})
+75 = SnmpMgr.Types.decode_value({:gauge, 75})
 
 # Timeticks decoding (returns formatted string)
-uptime_str = SNMPMgr.Types.decode_value({:timeticks, 12345})
+uptime_str = SnmpMgr.Types.decode_value({:timeticks, 12345})
 # "2 minutes, 3.45 seconds"
 
 # Null decoding
-:null = SNMPMgr.Types.decode_value({:null, :null})
+:null = SnmpMgr.Types.decode_value({:null, :null})
 
 # Opaque decoding
-<<1,2,3>> = SNMPMgr.Types.decode_value({:opaque, <<1,2,3>>})
+<<1,2,3>> = SnmpMgr.Types.decode_value({:opaque, <<1,2,3>>})
 ```
 
 ## Working with Specific Types
@@ -138,14 +138,14 @@ uptime_str = SNMPMgr.Types.decode_value({:timeticks, 12345})
 
 ```elixir
 # Encoding IP addresses
-{:ok, {:ipAddress, {192,168,1,1}}} = SNMPMgr.Types.encode_value("192.168.1.1", type: :ipAddress)
-{:ok, {:ipAddress, {10,0,0,1}}} = SNMPMgr.Types.encode_value({10,0,0,1}, type: :ipAddress)
+{:ok, {:ipAddress, {192,168,1,1}}} = SnmpMgr.Types.encode_value("192.168.1.1", type: :ipAddress)
+{:ok, {:ipAddress, {10,0,0,1}}} = SnmpMgr.Types.encode_value({10,0,0,1}, type: :ipAddress)
 
 # Decoding IP addresses
-"192.168.1.1" = SNMPMgr.Types.decode_value({:ipAddress, {192,168,1,1}})
+"192.168.1.1" = SnmpMgr.Types.decode_value({:ipAddress, {192,168,1,1}})
 
 # Using in SNMP operations
-{:ok, _} = SNMPMgr.set("device", "ipAdEntAddr.1", "192.168.1.100", 
+{:ok, _} = SnmpMgr.set("device", "ipAdEntAddr.1", "192.168.1.100", 
                       type: :ipAddress, community: "private")
 ```
 
@@ -153,14 +153,14 @@ uptime_str = SNMPMgr.Types.decode_value({:timeticks, 12345})
 
 ```elixir
 # Various OID formats
-{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SNMPMgr.Types.encode_value("1.3.6.1.2.1.1.1")
-{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SNMPMgr.Types.encode_value([1,3,6,1,2,1,1,1])
+{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SnmpMgr.Types.encode_value("1.3.6.1.2.1.1.1")
+{:ok, {:oid, [1,3,6,1,2,1,1,1]}} = SnmpMgr.Types.encode_value([1,3,6,1,2,1,1,1])
 
 # Decoding OIDs
-"1.3.6.1.2.1.1.1" = SNMPMgr.Types.decode_value({:oid, [1,3,6,1,2,1,1,1]})
+"1.3.6.1.2.1.1.1" = SnmpMgr.Types.decode_value({:oid, [1,3,6,1,2,1,1,1]})
 
 # Using in SNMP operations  
-{:ok, _} = SNMPMgr.set("device", "sysObjectID.0", "1.3.6.1.4.1.9.1.1", 
+{:ok, _} = SnmpMgr.set("device", "sysObjectID.0", "1.3.6.1.4.1.9.1.1", 
                       type: :oid, community: "private")
 ```
 
@@ -168,16 +168,16 @@ uptime_str = SNMPMgr.Types.decode_value({:timeticks, 12345})
 
 ```elixir
 # Counters (monotonically increasing)
-{:ok, {:counter, 1000000}} = SNMPMgr.Types.encode_value(1000000, type: :counter)
+{:ok, {:counter, 1000000}} = SnmpMgr.Types.encode_value(1000000, type: :counter)
 
 # Gauges (can increase or decrease)
-{:ok, {:gauge, 75}} = SNMPMgr.Types.encode_value(75, type: :gauge)
+{:ok, {:gauge, 75}} = SnmpMgr.Types.encode_value(75, type: :gauge)
 
 # 64-bit counters (SNMP v2c)
-{:ok, {:counter64, 9876543210}} = SNMPMgr.Types.encode_value(9876543210, type: :counter64)
+{:ok, {:counter64, 9876543210}} = SnmpMgr.Types.encode_value(9876543210, type: :counter64)
 
 # Usage example
-{:ok, _} = SNMPMgr.set("device", "customCounter.0", 1000000, 
+{:ok, _} = SnmpMgr.set("device", "customCounter.0", 1000000, 
                       type: :counter, community: "private")
 ```
 
@@ -185,15 +185,15 @@ uptime_str = SNMPMgr.Types.decode_value({:timeticks, 12345})
 
 ```elixir
 # Timeticks represent time in hundredths of seconds
-{:ok, {:timeticks, 12345}} = SNMPMgr.Types.encode_value(12345, type: :timeticks)
+{:ok, {:timeticks, 12345}} = SnmpMgr.Types.encode_value(12345, type: :timeticks)
 
 # Decoding provides formatted time string
-uptime = SNMPMgr.Types.decode_value({:timeticks, 12345})
+uptime = SnmpMgr.Types.decode_value({:timeticks, 12345})
 # "2 minutes, 3.45 seconds"
 
 # Working with system uptime
-{:ok, uptime_ticks} = SNMPMgr.get("device", "sysUpTime.0")
-formatted_uptime = SNMPMgr.Types.decode_value({:timeticks, uptime_ticks})
+{:ok, uptime_ticks} = SnmpMgr.get("device", "sysUpTime.0")
+formatted_uptime = SnmpMgr.Types.decode_value({:timeticks, uptime_ticks})
 ```
 
 ## Type Detection and Validation
@@ -203,12 +203,12 @@ formatted_uptime = SNMPMgr.Types.decode_value({:timeticks, uptime_ticks})
 Automatically detects the appropriate SNMP type for a value.
 
 ```elixir
-:string = SNMPMgr.Types.detect_type("Hello")
-:integer = SNMPMgr.Types.detect_type(42)
-:oid = SNMPMgr.Types.detect_type([1,3,6,1,2,1,1,1])
-:oid = SNMPMgr.Types.detect_type("1.3.6.1.2.1.1.1")
-:null = SNMPMgr.Types.detect_type(:null)
-:opaque = SNMPMgr.Types.detect_type(<<1,2,3>>)
+:string = SnmpMgr.Types.detect_type("Hello")
+:integer = SnmpMgr.Types.detect_type(42)
+:oid = SnmpMgr.Types.detect_type([1,3,6,1,2,1,1,1])
+:oid = SnmpMgr.Types.detect_type("1.3.6.1.2.1.1.1")
+:null = SnmpMgr.Types.detect_type(:null)
+:opaque = SnmpMgr.Types.detect_type(<<1,2,3>>)
 ```
 
 ### `validate_type/2`
@@ -216,10 +216,10 @@ Automatically detects the appropriate SNMP type for a value.
 Validates that a value is compatible with a specific SNMP type.
 
 ```elixir
-:ok = SNMPMgr.Types.validate_type("Hello", :string)
-:ok = SNMPMgr.Types.validate_type(42, :integer)
-{:error, :invalid_type} = SNMPMgr.Types.validate_type("Hello", :integer)
-{:error, :invalid_format} = SNMPMgr.Types.validate_type("invalid.ip", :ipAddress)
+:ok = SnmpMgr.Types.validate_type("Hello", :string)
+:ok = SnmpMgr.Types.validate_type(42, :integer)
+{:error, :invalid_type} = SnmpMgr.Types.validate_type("Hello", :integer)
+{:error, :invalid_format} = SnmpMgr.Types.validate_type("invalid.ip", :ipAddress)
 ```
 
 ## Advanced Features
@@ -235,7 +235,7 @@ defmodule CustomTypeHandler do
     |> Enum.map(&String.to_integer(&1, 16))
     |> :erlang.list_to_binary()
     
-    SNMPMgr.Types.encode_value(mac_bytes, type: :string)
+    SnmpMgr.Types.encode_value(mac_bytes, type: :string)
   end
 
   def decode_mac_address({:string, mac_bytes}) do
@@ -251,9 +251,9 @@ end
 
 # Usage
 {:ok, encoded} = CustomTypeHandler.encode_mac_address("aa:bb:cc:dd:ee:ff")
-{:ok, _} = SNMPMgr.set("device", "ifPhysAddress.1", encoded, community: "private")
+{:ok, _} = SnmpMgr.set("device", "ifPhysAddress.1", encoded, community: "private")
 
-{:ok, raw_mac} = SNMPMgr.get("device", "ifPhysAddress.1", community: "public")
+{:ok, raw_mac} = SnmpMgr.get("device", "ifPhysAddress.1", community: "public")
 mac_address = CustomTypeHandler.decode_mac_address(raw_mac)
 ```
 
@@ -268,7 +268,7 @@ defmodule BulkTypeProcessor do
         :status -> format_status(raw_value)
         :speed -> format_speed(raw_value)
         :description -> format_description(raw_value)
-        _ -> SNMPMgr.Types.decode_value(raw_value)
+        _ -> SnmpMgr.Types.decode_value(raw_value)
       end
       
       {oid, processed_value}
@@ -301,9 +301,9 @@ end
 ```elixir
 defmodule SafeSNMPSet do
   def safe_set(device, oid, value, type, opts \\ []) do
-    case SNMPMgr.Types.validate_type(value, type) do
+    case SnmpMgr.Types.validate_type(value, type) do
       :ok ->
-        SNMPMgr.set(device, oid, value, [type: type] ++ opts)
+        SnmpMgr.set(device, oid, value, [type: type] ++ opts)
       {:error, reason} ->
         {:error, {:invalid_type, reason}}
     end
@@ -328,10 +328,10 @@ end
 ```elixir
 defmodule NetworkStatsCollector do
   def collect_interface_stats(device_ip) do
-    with {:ok, descriptions} <- SNMPMgr.walk(device_ip, "ifDescr"),
-         {:ok, in_octets} <- SNMPMgr.walk(device_ip, "ifInOctets"),
-         {:ok, out_octets} <- SNMPMgr.walk(device_ip, "ifOutOctets"),
-         {:ok, speeds} <- SNMPMgr.walk(device_ip, "ifSpeed") do
+    with {:ok, descriptions} <- SnmpMgr.walk(device_ip, "ifDescr"),
+         {:ok, in_octets} <- SnmpMgr.walk(device_ip, "ifInOctets"),
+         {:ok, out_octets} <- SnmpMgr.walk(device_ip, "ifOutOctets"),
+         {:ok, speeds} <- SnmpMgr.walk(device_ip, "ifSpeed") do
       
       processed_stats = process_interface_stats(descriptions, in_octets, out_octets, speeds)
       {:ok, processed_stats}
@@ -376,7 +376,7 @@ defmodule CompanyTypes do
       nil -> 
         {:error, {:unknown_field, field_name}}
       type -> 
-        SNMPMgr.Types.encode_value(value, type: type)
+        SnmpMgr.Types.encode_value(value, type: type)
     end
   end
 
@@ -384,7 +384,7 @@ defmodule CompanyTypes do
     case encode_company_value(field_name, value) do
       {:ok, encoded_value} ->
         oid = build_company_oid(field_name)
-        SNMPMgr.set(device, oid, encoded_value, opts)
+        SnmpMgr.set(device, oid, encoded_value, opts)
       error ->
         error
     end
@@ -412,7 +412,7 @@ end
 ### Type Validation Errors
 
 ```elixir
-case SNMPMgr.Types.encode_value("invalid.ip.address", type: :ipAddress) do
+case SnmpMgr.Types.encode_value("invalid.ip.address", type: :ipAddress) do
   {:ok, encoded} -> 
     use_encoded_value(encoded)
   {:error, :invalid_ip_format} -> 
@@ -425,7 +425,7 @@ end
 ### Decoding Errors
 
 ```elixir
-case SNMPMgr.Types.decode_value({:unknown_type, value}) do
+case SnmpMgr.Types.decode_value({:unknown_type, value}) do
   decoded_value when is_binary(decoded_value) or is_integer(decoded_value) ->
     decoded_value
   {:error, reason} ->
@@ -440,11 +440,11 @@ end
 
 ```elixir
 # Preferred - explicit and clear
-{:ok, _} = SNMPMgr.set("device", "sysContact.0", "admin@company.com", 
+{:ok, _} = SnmpMgr.set("device", "sysContact.0", "admin@company.com", 
                       type: :string, community: "private")
 
 # Avoid - relies on type inference
-{:ok, _} = SNMPMgr.set("device", "sysContact.0", "admin@company.com", 
+{:ok, _} = SnmpMgr.set("device", "sysContact.0", "admin@company.com", 
                       community: "private")
 ```
 
@@ -452,8 +452,8 @@ end
 
 ```elixir
 def safe_snmp_set(device, oid, value, type, opts) do
-  with :ok <- SNMPMgr.Types.validate_type(value, type),
-       {:ok, result} <- SNMPMgr.set(device, oid, value, [type: type] ++ opts) do
+  with :ok <- SnmpMgr.Types.validate_type(value, type),
+       {:ok, result} <- SnmpMgr.set(device, oid, value, [type: type] ++ opts) do
     {:ok, result}
   else
     {:error, :invalid_type} -> {:error, {:validation_failed, value, type}}

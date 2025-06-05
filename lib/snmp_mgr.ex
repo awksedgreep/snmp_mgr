@@ -1,4 +1,4 @@
-defmodule SNMPMgr do
+defmodule SnmpMgr do
   @moduledoc """
   Lightweight SNMP client library for Elixir.
   
@@ -17,15 +17,15 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, value} = SNMPMgr.get("device.local:161", "sysDescr.0", community: "public")
+      {:ok, value} = SnmpMgr.get("device.local:161", "sysDescr.0", community: "public")
       # "Linux server 5.4.0-42-generic #46-Ubuntu SMP Fri Jul 10 00:24:02 UTC 2020 x86_64"
 
-      {:ok, uptime} = SNMPMgr.get("router.local", "sysUpTime.0")
+      {:ok, uptime} = SnmpMgr.get("router.local", "sysUpTime.0")
       # {:timeticks, 123456789}  # System uptime in hundredths of seconds
   """
   def get(target, oid, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Core.send_get_request(target, oid, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Core.send_get_request(target, oid, merged_opts)
   end
 
   @doc """
@@ -39,15 +39,15 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, {next_oid, value}} = SNMPMgr.get_next("switch.local", "1.3.6.1.2.1.1")
+      {:ok, {next_oid, value}} = SnmpMgr.get_next("switch.local", "1.3.6.1.2.1.1")
       # {"1.3.6.1.2.1.1.1.0", "Cisco IOS Software, C2960 Software"}
 
-      {:ok, {oid, val}} = SNMPMgr.get_next("device.local", "sysDescr")
+      {:ok, {oid, val}} = SnmpMgr.get_next("device.local", "sysDescr")
       # {"1.3.6.1.2.1.1.1.0", "Linux hostname 5.4.0 #1 SMP"}
   """
   def get_next(target, oid, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Core.send_get_next_request(target, oid, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Core.send_get_next_request(target, oid, merged_opts)
   end
 
   @doc """
@@ -62,16 +62,16 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, :ok} = SNMPMgr.set("device.local", "sysLocation.0", "Server Room A")
+      {:ok, :ok} = SnmpMgr.set("device.local", "sysLocation.0", "Server Room A")
       # :ok
 
-      {:ok, :ok} = SNMPMgr.set("switch.local", "sysContact.0", "admin@company.com", 
+      {:ok, :ok} = SnmpMgr.set("switch.local", "sysContact.0", "admin@company.com", 
         community: "private", timeout: 3000)
       # :ok
   """
   def set(target, oid, value, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Core.send_set_request(target, oid, value, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Core.send_set_request(target, oid, value, merged_opts)
   end
 
   @doc """
@@ -83,7 +83,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      ref = SNMPMgr.get_async("device.local", "sysDescr.0")
+      ref = SnmpMgr.get_async("device.local", "sysDescr.0")
       receive do
         {^ref, {:ok, description}} -> description
         {^ref, {:error, reason}} -> {:error, reason}
@@ -93,8 +93,8 @@ defmodule SNMPMgr do
       # "Linux server 5.4.0-42-generic"
   """
   def get_async(target, oid, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Core.send_get_request_async(target, oid, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Core.send_get_request_async(target, oid, merged_opts)
   end
 
   @doc """
@@ -111,7 +111,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, results} = SNMPMgr.get_bulk("switch.local", "ifTable", max_repetitions: 10)
+      {:ok, results} = SnmpMgr.get_bulk("switch.local", "ifTable", max_repetitions: 10)
       # [
       #   {"1.3.6.1.2.1.2.2.1.1.1", 1},                    # ifIndex.1
       #   {"1.3.6.1.2.1.2.2.1.2.1", "FastEthernet0/1"},    # ifDescr.1
@@ -131,9 +131,9 @@ defmodule SNMPMgr do
         merged_opts = 
           opts
           |> Keyword.put(:version, :v2c)
-          |> (&SNMPMgr.Config.merge_opts/1).()
+          |> (&SnmpMgr.Config.merge_opts/1).()
         
-        SNMPMgr.Core.send_get_bulk_request(target, oid, merged_opts)
+        SnmpMgr.Core.send_get_bulk_request(target, oid, merged_opts)
     end
   end
 
@@ -153,9 +153,9 @@ defmodule SNMPMgr do
         merged_opts = 
           opts
           |> Keyword.put(:version, :v2c)
-          |> (&SNMPMgr.Config.merge_opts/1).()
+          |> (&SnmpMgr.Config.merge_opts/1).()
         
-        SNMPMgr.Core.send_get_bulk_request_async(target, oid, merged_opts)
+        SnmpMgr.Core.send_get_bulk_request_async(target, oid, merged_opts)
     end
   end
 
@@ -173,7 +173,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, results} = SNMPMgr.walk("device.local", "1.3.6.1.2.1.1")
+      {:ok, results} = SnmpMgr.walk("device.local", "1.3.6.1.2.1.1")
       # [
       #   {"1.3.6.1.2.1.1.1.0", "Linux hostname 5.4.0-42-generic"},  # sysDescr
       #   {"1.3.6.1.2.1.1.2.0", [1,3,6,1,4,1,8072,3,2,10]},         # sysObjectID
@@ -184,7 +184,7 @@ defmodule SNMPMgr do
       # ]
   """
   def walk(target, root_oid, opts \\ []) do
-    SNMPMgr.Walk.walk(target, root_oid, opts)
+    SnmpMgr.Walk.walk(target, root_oid, opts)
   end
 
   @doc """
@@ -198,7 +198,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, entries} = SNMPMgr.walk_table("switch.local", "ifTable")
+      {:ok, entries} = SnmpMgr.walk_table("switch.local", "ifTable")
       # [
       #   {"1.3.6.1.2.1.2.2.1.1.1", 1},
       #   {"1.3.6.1.2.1.2.2.1.2.1", "GigabitEthernet0/1"},
@@ -208,7 +208,7 @@ defmodule SNMPMgr do
       # ]
   """
   def walk_table(target, table_oid, opts \\ []) do
-    SNMPMgr.Walk.walk_table(target, table_oid, opts)
+    SnmpMgr.Walk.walk_table(target, table_oid, opts)
   end
 
   @doc """
@@ -222,7 +222,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, table} = SNMPMgr.get_table("switch.local", "ifTable")
+      {:ok, table} = SnmpMgr.get_table("switch.local", "ifTable")
       # %{
       #   columns: ["ifIndex", "ifDescr", "ifType", "ifMtu", "ifSpeed", "ifOperStatus"],
       #   rows: [
@@ -237,7 +237,7 @@ defmodule SNMPMgr do
     case resolve_oid_if_needed(table_oid) do
       {:ok, resolved_oid} ->
         case walk_table(target, resolved_oid, opts) do
-          {:ok, entries} -> SNMPMgr.Table.to_table(entries, resolved_oid)
+          {:ok, entries} -> SnmpMgr.Table.to_table(entries, resolved_oid)
           error -> error
         end
       error -> error
@@ -259,7 +259,7 @@ defmodule SNMPMgr do
         column_oid = if is_integer(column) do
           resolved_table_oid ++ [1, column]
         else
-          case SNMPMgr.MIB.resolve(column) do
+          case SnmpMgr.MIB.resolve(column) do
             {:ok, oid} -> oid
             error -> error
           end
@@ -279,12 +279,12 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Network operations will fail on unreachable hosts
-      iex> SNMPMgr.get_multi([{"device1", [1,3,6,1,2,1,1,1,0]}, {"device2", [1,3,6,1,2,1,1,3,0]}])
+      iex> SnmpMgr.get_multi([{"device1", [1,3,6,1,2,1,1,1,0]}, {"device2", [1,3,6,1,2,1,1,3,0]}])
       [{:error, {:network_error, :hostname_resolution_failed}}, {:error, {:network_error, :hostname_resolution_failed}}]
   """
   def get_multi(targets_and_oids, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Multi.get_multi(targets_and_oids, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Multi.get_multi(targets_and_oids, merged_opts)
   end
 
   @doc """
@@ -298,9 +298,9 @@ defmodule SNMPMgr do
     merged_opts = 
       opts
       |> Keyword.put(:version, :v2c)
-      |> (&SNMPMgr.Config.merge_opts/1).()
+      |> (&SnmpMgr.Config.merge_opts/1).()
     
-    SNMPMgr.Multi.get_bulk_multi(targets_and_oids, merged_opts)
+    SnmpMgr.Multi.get_bulk_multi(targets_and_oids, merged_opts)
   end
 
   @doc """
@@ -311,8 +311,8 @@ defmodule SNMPMgr do
   - `opts` - Options applied to all requests
   """
   def walk_multi(targets_and_oids, opts \\ []) do
-    merged_opts = SNMPMgr.Config.merge_opts(opts)
-    SNMPMgr.Multi.walk_multi(targets_and_oids, merged_opts)
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Multi.walk_multi(targets_and_oids, merged_opts)
   end
 
   @doc """
@@ -329,7 +329,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: This function makes actual network calls and is not suitable for doctests
-      {:ok, results} = SNMPMgr.adaptive_walk("switch.local", "ifTable")
+      {:ok, results} = SnmpMgr.adaptive_walk("switch.local", "ifTable")
       # Returns optimally retrieved interface table data:
       # [
       #   {"1.3.6.1.2.1.2.2.1.1.1", 1},           # ifIndex.1
@@ -341,7 +341,7 @@ defmodule SNMPMgr do
       # ]
   """
   def adaptive_walk(target, root_oid, opts \\ []) do
-    SNMPMgr.AdaptiveWalk.bulk_walk(target, root_oid, opts)
+    SnmpMgr.AdaptiveWalk.bulk_walk(target, root_oid, opts)
   end
 
   @doc """
@@ -355,11 +355,11 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.walk_stream("192.0.2.1", "ifTable")
+      stream = SnmpMgr.walk_stream("192.0.2.1", "ifTable")
       # Process stream lazily...
   """
   def walk_stream(target, root_oid, opts \\ []) do
-    SNMPMgr.Stream.walk_stream(target, root_oid, opts)
+    SnmpMgr.Stream.walk_stream(target, root_oid, opts)
   end
 
   @doc """
@@ -373,11 +373,11 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.table_stream("192.0.2.1", "ifTable")
+      stream = SnmpMgr.table_stream("192.0.2.1", "ifTable")
       # Process table stream...
   """
   def table_stream(target, table_oid, opts \\ []) do
-    SNMPMgr.Stream.table_stream(target, table_oid, opts)
+    SnmpMgr.Stream.table_stream(target, table_oid, opts)
   end
 
   @doc """
@@ -389,12 +389,12 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, table} = SNMPMgr.get_table("192.0.2.1", "ifTable")
-      {:ok, analysis} = SNMPMgr.analyze_table(table)
+      {:ok, table} = SnmpMgr.get_table("192.0.2.1", "ifTable")
+      {:ok, analysis} = SnmpMgr.analyze_table(table)
       IO.inspect(analysis.completeness)  # Shows data completeness ratio
   """
   def analyze_table(table_data, opts \\ []) do
-    SNMPMgr.Table.analyze(table_data, opts)
+    SnmpMgr.Table.analyze(table_data, opts)
   end
 
   @doc """
@@ -407,11 +407,11 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, results} = SNMPMgr.benchmark_device("192.0.2.1", "ifTable")
+      {:ok, results} = SnmpMgr.benchmark_device("192.0.2.1", "ifTable")
       optimal_size = results.optimal_bulk_size
   """
   def benchmark_device(target, test_oid, opts \\ []) do
-    SNMPMgr.AdaptiveWalk.benchmark_device(target, test_oid, opts)
+    SnmpMgr.AdaptiveWalk.benchmark_device(target, test_oid, opts)
   end
 
   @doc """
@@ -429,7 +429,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, _pid} = SNMPMgr.start_engine(
+      {:ok, _pid} = SnmpMgr.start_engine(
         engine: [pool_size: 20, max_rps: 500],
         router: [strategy: :least_connections],
         pool: [pool_size: 50],
@@ -437,7 +437,7 @@ defmodule SNMPMgr do
       )
   """
   def start_engine(opts \\ []) do
-    SNMPMgr.Supervisor.start_link(opts)
+    SnmpMgr.Supervisor.start_link(opts)
   end
 
   @doc """
@@ -459,11 +459,11 @@ defmodule SNMPMgr do
         community: "public"
       }
       
-      {:ok, result} = SNMPMgr.engine_request(request)
+      {:ok, result} = SnmpMgr.engine_request(request)
   """
   def engine_request(request, opts \\ []) do
-    router = Keyword.get(opts, :router, SNMPMgr.Router)
-    SNMPMgr.Router.route_request(router, request, opts)
+    router = Keyword.get(opts, :router, SnmpMgr.Router)
+    SnmpMgr.Router.route_request(router, request, opts)
   end
 
   @doc """
@@ -480,11 +480,11 @@ defmodule SNMPMgr do
         %{type: :get, target: "device2", oid: "sysUpTime.0"}
       ]
       
-      {:ok, results} = SNMPMgr.engine_batch(requests)
+      {:ok, results} = SnmpMgr.engine_batch(requests)
   """
   def engine_batch(requests, opts \\ []) do
-    router = Keyword.get(opts, :router, SNMPMgr.Router)
-    SNMPMgr.Router.route_batch(router, requests, opts)
+    router = Keyword.get(opts, :router, SnmpMgr.Router)
+    SnmpMgr.Router.route_batch(router, requests, opts)
   end
 
   @doc """
@@ -495,7 +495,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, stats} = SNMPMgr.get_engine_stats()
+      {:ok, stats} = SnmpMgr.get_engine_stats()
       IO.inspect(stats.router.requests_routed)
       IO.inspect(stats.metrics.current_metrics)
   """
@@ -505,7 +505,7 @@ defmodule SNMPMgr do
     stats = %{}
     
     stats = if :router in components do
-      Map.put(stats, :router, SNMPMgr.Router.get_stats(SNMPMgr.Router))
+      Map.put(stats, :router, SnmpMgr.Router.get_stats(SnmpMgr.Router))
     else
       stats
     end
@@ -519,13 +519,13 @@ defmodule SNMPMgr do
     end
     
     stats = if :circuit_breaker in components do
-      Map.put(stats, :circuit_breaker, SNMPMgr.CircuitBreaker.get_stats(SNMPMgr.CircuitBreaker))
+      Map.put(stats, :circuit_breaker, SnmpMgr.CircuitBreaker.get_stats(SnmpMgr.CircuitBreaker))
     else
       stats
     end
     
     stats = if :metrics in components do
-      Map.put(stats, :metrics, SNMPMgr.Metrics.get_summary(SNMPMgr.Metrics))
+      Map.put(stats, :metrics, SnmpMgr.Metrics.get_summary(SnmpMgr.Metrics))
     else
       stats
     end
@@ -543,14 +543,14 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      result = SNMPMgr.with_circuit_breaker("192.0.2.1", fn ->
-        SNMPMgr.get("192.0.2.1", "sysDescr.0")
+      result = SnmpMgr.with_circuit_breaker("192.0.2.1", fn ->
+        SnmpMgr.get("192.0.2.1", "sysDescr.0")
       end)
   """
   def with_circuit_breaker(target, fun, opts \\ []) do
-    circuit_breaker = Keyword.get(opts, :circuit_breaker, SNMPMgr.CircuitBreaker)
+    circuit_breaker = Keyword.get(opts, :circuit_breaker, SnmpMgr.CircuitBreaker)
     timeout = Keyword.get(opts, :timeout, 5000)
-    SNMPMgr.CircuitBreaker.call(circuit_breaker, target, fun, timeout)
+    SnmpMgr.CircuitBreaker.call(circuit_breaker, target, fun, timeout)
   end
 
   @doc """
@@ -564,16 +564,16 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      SNMPMgr.record_metric(:counter, :custom_requests, 1, %{device: "switch1"})
-      SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk"})
+      SnmpMgr.record_metric(:counter, :custom_requests, 1, %{device: "switch1"})
+      SnmpMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk"})
   """
   def record_metric(metric_type, metric_name, value, tags \\ %{}) do
-    metrics = SNMPMgr.Metrics
+    metrics = SnmpMgr.Metrics
     
     case metric_type do
-      :counter -> SNMPMgr.Metrics.counter(metrics, metric_name, value, tags)
-      :gauge -> SNMPMgr.Metrics.gauge(metrics, metric_name, value, tags)
-      :histogram -> SNMPMgr.Metrics.histogram(metrics, metric_name, value, tags)
+      :counter -> SnmpMgr.Metrics.counter(metrics, metric_name, value, tags)
+      :gauge -> SnmpMgr.Metrics.gauge(metrics, metric_name, value, tags)
+      :histogram -> SnmpMgr.Metrics.histogram(metrics, metric_name, value, tags)
     end
   end
 
@@ -583,7 +583,7 @@ defmodule SNMPMgr do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try resolving as symbolic name
-        SNMPMgr.MIB.resolve(oid)
+        SnmpMgr.MIB.resolve(oid)
     end
   end
   defp resolve_oid_if_needed(oid) when is_list(oid), do: {:ok, oid}

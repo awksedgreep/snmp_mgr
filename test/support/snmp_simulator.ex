@@ -1,9 +1,9 @@
-defmodule SNMPMgr.TestSupport.SNMPSimulator do
+defmodule SnmpMgr.TestSupport.SNMPSimulator do
   @moduledoc """
   Test support module for setting up SNMP simulators using snmp_sim_ex.
   
   This module provides utilities to create realistic SNMP devices for testing
-  SNMPMgr functionality with actual SNMP responses.
+  SnmpMgr functionality with actual SNMP responses.
   """
   
   alias SNMPSimEx.Device
@@ -203,7 +203,7 @@ defmodule SNMPMgr.TestSupport.SNMPSimulator do
   end
   
   @doc """
-  Gets device target string for SNMPMgr operations.
+  Gets device target string for SnmpMgr operations.
   """
   def device_target(%{host: host, port: port}) do
     "#{host}:#{port}"

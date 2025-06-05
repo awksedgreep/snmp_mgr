@@ -1,10 +1,10 @@
-# SNMPMgr Module Guide
+# SnmpMgr Module Guide
 
-The `SNMPMgr` module is the main entry point for all SNMP operations. It provides a simple, stateless interface for performing SNMP GET, SET, GETNEXT, GETBULK, and WALK operations.
+The `SnmpMgr` module is the main entry point for all SNMP operations. It provides a simple, stateless interface for performing SNMP GET, SET, GETNEXT, GETBULK, and WALK operations.
 
 ## Overview
 
-All functions in this module are stateless and can be called directly without any setup or configuration (though global configuration is available through `SNMPMgr.Config`).
+All functions in this module are stateless and can be called directly without any setup or configuration (though global configuration is available through `SnmpMgr.Config`).
 
 ## Core Operations
 
@@ -31,15 +31,15 @@ get(target, oid, opts \\ [])
 
 ```elixir
 # Basic GET request
-{:ok, description} = SNMPMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0", 
+{:ok, description} = SnmpMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0", 
                                 community: "public")
 
 # Using symbolic names
-{:ok, uptime} = SNMPMgr.get("router.local", "sysUpTime.0", 
+{:ok, uptime} = SnmpMgr.get("router.local", "sysUpTime.0", 
                            community: "public", timeout: 5000)
 
 # With custom options
-{:ok, contact} = SNMPMgr.get("switch.local", "sysContact.0",
+{:ok, contact} = SnmpMgr.get("switch.local", "sysContact.0",
                             community: "private", 
                             version: :v2c,
                             timeout: 3000,
@@ -62,11 +62,11 @@ get_next(target, oid, opts \\ [])
 
 ```elixir
 # Get next OID in system group
-{:ok, {next_oid, value}} = SNMPMgr.get_next("192.168.1.1", "1.3.6.1.2.1.1", 
+{:ok, {next_oid, value}} = SnmpMgr.get_next("192.168.1.1", "1.3.6.1.2.1.1", 
                                            community: "public")
 
 # Starting from a symbolic name
-{:ok, {oid, val}} = SNMPMgr.get_next("device.local", "sysDescr",
+{:ok, {oid, val}} = SnmpMgr.get_next("device.local", "sysDescr",
                                     community: "public")
 ```
 
@@ -92,12 +92,12 @@ get_bulk(target, oid, opts \\ [])
 
 ```elixir
 # Get multiple interface descriptions efficiently
-{:ok, interfaces} = SNMPMgr.get_bulk("192.168.1.1", "ifDescr", 
+{:ok, interfaces} = SnmpMgr.get_bulk("192.168.1.1", "ifDescr", 
                                     max_repetitions: 20,
                                     community: "public")
 
 # Bulk request with custom settings
-{:ok, data} = SNMPMgr.get_bulk("switch.local", "1.3.6.1.2.1.2.2",
+{:ok, data} = SnmpMgr.get_bulk("switch.local", "1.3.6.1.2.1.2.2",
                               max_repetitions: 50,
                               non_repeaters: 0,
                               community: "public",
@@ -125,16 +125,16 @@ set(target, oid, value, opts \\ [])
 
 ```elixir
 # Set system contact
-{:ok, _} = SNMPMgr.set("192.168.1.1", "sysContact.0", "admin@company.com",
+{:ok, _} = SnmpMgr.set("192.168.1.1", "sysContact.0", "admin@company.com",
                       community: "private")
 
 # Set with explicit type
-{:ok, _} = SNMPMgr.set("device.local", "1.3.6.1.2.1.1.6.0", "Server Room A",
+{:ok, _} = SnmpMgr.set("device.local", "1.3.6.1.2.1.1.6.0", "Server Room A",
                       community: "private", 
                       type: :string)
 
 # Set integer value
-{:ok, _} = SNMPMgr.set("192.168.1.1", "customOID.0", 42,
+{:ok, _} = SnmpMgr.set("192.168.1.1", "customOID.0", 42,
                       community: "private")
 ```
 
@@ -156,11 +156,11 @@ walk(target, oid, opts \\ [])
 
 ```elixir
 # Walk entire system group
-{:ok, system_info} = SNMPMgr.walk("192.168.1.1", "1.3.6.1.2.1.1", 
+{:ok, system_info} = SnmpMgr.walk("192.168.1.1", "1.3.6.1.2.1.1", 
                                  community: "public")
 
 # Walk interface table
-{:ok, interfaces} = SNMPMgr.walk("switch.local", "ifTable",
+{:ok, interfaces} = SnmpMgr.walk("switch.local", "ifTable",
                                 community: "public", 
                                 timeout: 15000)
 
@@ -196,7 +196,7 @@ requests = [
   {"192.168.1.3", "sysUpTime.0", [community: "public"]}
 ]
 
-results = SNMPMgr.get_multi(requests)
+results = SnmpMgr.get_multi(requests)
 
 # Process results
 Enum.zip(requests, results)
@@ -225,7 +225,7 @@ bulk_requests = [
   {"192.168.1.2", "ifDescr", [max_repetitions: 10, community: "public"]}
 ]
 
-results = SNMPMgr.get_bulk_multi(bulk_requests)
+results = SnmpMgr.get_bulk_multi(bulk_requests)
 ```
 
 ## Advanced Features
@@ -244,11 +244,11 @@ get_table(target, table_oid, opts \\ [])
 
 ```elixir
 # Get interface table
-{:ok, if_table} = SNMPMgr.get_table("192.168.1.1", "ifTable",
+{:ok, if_table} = SnmpMgr.get_table("192.168.1.1", "ifTable",
                                    community: "public")
 
 # Get ARP table  
-{:ok, arp_table} = SNMPMgr.get_table("router.local", "ipNetToMediaTable",
+{:ok, arp_table} = SnmpMgr.get_table("router.local", "ipNetToMediaTable",
                                     community: "public")
 ```
 
@@ -267,7 +267,7 @@ stream(target, oid, opts \\ [])
 ```elixir
 # Stream large routing table
 "192.168.1.1"
-|> SNMPMgr.stream("ipRouteTable", community: "public")
+|> SnmpMgr.stream("ipRouteTable", community: "public")
 |> Enum.take(100)  # Process first 100 entries
 |> Enum.each(fn {oid, value} ->
   IO.puts("Route: #{oid} = #{value}")
@@ -328,7 +328,7 @@ end)
 
 ```elixir
 # Basic error handling
-case SNMPMgr.get("device", "oid") do
+case SnmpMgr.get("device", "oid") do
   {:ok, value} -> process_value(value)
   {:error, :timeout} -> retry_or_log_timeout()
   {:error, :noSuchObject} -> handle_missing_object()
@@ -336,8 +336,8 @@ case SNMPMgr.get("device", "oid") do
 end
 
 # With error logging
-with {:ok, desc} <- SNMPMgr.get(target, "sysDescr.0", community: "public"),
-     {:ok, name} <- SNMPMgr.get(target, "sysName.0", community: "public") do
+with {:ok, desc} <- SnmpMgr.get(target, "sysDescr.0", community: "public"),
+     {:ok, name} <- SnmpMgr.get(target, "sysName.0", community: "public") do
   {:ok, %{description: desc, name: name}}
 else
   {:error, reason} -> 
@@ -360,18 +360,18 @@ end
 
 ```elixir
 # Prefer bulk operations for multiple values
-{:ok, results} = SNMPMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
+{:ok, results} = SnmpMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
 
 # Use appropriate timeouts
-{:ok, value} = SNMPMgr.get("device", "oid", timeout: 2000)  # Fast network
-{:ok, value} = SNMPMgr.get("device", "oid", timeout: 10000) # Slow network
+{:ok, value} = SnmpMgr.get("device", "oid", timeout: 2000)  # Fast network
+{:ok, value} = SnmpMgr.get("device", "oid", timeout: 10000) # Slow network
 
 # Limit bulk operations
-{:ok, results} = SNMPMgr.get_bulk("device", "largeTable", max_repetitions: 50)
+{:ok, results} = SnmpMgr.get_bulk("device", "largeTable", max_repetitions: 50)
 
 # Use concurrent operations for multiple devices
 requests = build_requests(devices)
-results = SNMPMgr.get_multi(requests)
+results = SnmpMgr.get_multi(requests)
 ```
 
 ## Integration Examples
@@ -392,7 +392,7 @@ defmodule DeviceMonitor do
   end
   
   def handle_info(:poll, %{device: device} = state) do
-    case SNMPMgr.get(device, "sysUpTime.0", community: "public") do
+    case SnmpMgr.get(device, "sysUpTime.0", community: "public") do
       {:ok, uptime} -> 
         handle_uptime_change(state.last_uptime, uptime)
         schedule_poll()
@@ -422,7 +422,7 @@ defmodule NetworkScanner do
   end
   
   defp discover_device(ip) do
-    case SNMPMgr.get(ip, "sysDescr.0", community: "public", timeout: 2000) do
+    case SnmpMgr.get(ip, "sysDescr.0", community: "public", timeout: 2000) do
       {:ok, description} -> 
         %{ip: ip, reachable: true, description: description}
       {:error, _} -> 

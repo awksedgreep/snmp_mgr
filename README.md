@@ -1,4 +1,4 @@
-# SNMPMgr
+# SnmpMgr
 
 A lightweight SNMP client library for Elixir that provides simple, stateless SNMP operations without requiring heavyweight management processes or configurations.
 
@@ -15,29 +15,29 @@ end
 
 ```elixir
 # Basic operations
-{:ok, description} = SNMPMgr.get("192.168.1.1", "sysDescr.0", community: "public")
-{:ok, interfaces} = SNMPMgr.walk("switch.local", "ifTable", community: "public")
-{:ok, bulk_data} = SNMPMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
+{:ok, description} = SnmpMgr.get("192.168.1.1", "sysDescr.0", community: "public")
+{:ok, interfaces} = SnmpMgr.walk("switch.local", "ifTable", community: "public")
+{:ok, bulk_data} = SnmpMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
 
 # Set global defaults
-SNMPMgr.Config.set_default_community("monitoring")
-SNMPMgr.Config.set_default_timeout(5000)
+SnmpMgr.Config.set_default_community("monitoring")
+SnmpMgr.Config.set_default_timeout(5000)
 
 # Now use simplified calls
-{:ok, uptime} = SNMPMgr.get("router.local", "sysUpTime.0")
+{:ok, uptime} = SnmpMgr.get("router.local", "sysUpTime.0")
 ```
 
 ## Documentation
 
 ### User Guides
 
-Start here for comprehensive guides on using SNMPMgr:
+Start here for comprehensive guides on using SnmpMgr:
 
 - **[Getting Started Guide](docs/getting_started.md)** - Installation, basic usage, and common patterns
 
 #### Core Modules
 
-- **[SNMPMgr Guide](docs/snmp_mgr_guide.md)** - Main API module for all SNMP operations (GET, SET, WALK, BULK)
+- **[SnmpMgr Guide](docs/snmp_mgr_guide.md)** - Main API module for all SNMP operations (GET, SET, WALK, BULK)
 - **[Config Guide](docs/config_guide.md)** - Configuration management and global defaults
 - **[Types Guide](docs/types_guide.md)** - SNMP data type handling and conversion
 
@@ -66,26 +66,26 @@ Start here for comprehensive guides on using SNMPMgr:
 
 ```elixir
 # GET operation
-{:ok, value} = SNMPMgr.get("device", "sysDescr.0")
+{:ok, value} = SnmpMgr.get("device", "sysDescr.0")
 
 # SET operation  
-{:ok, _} = SNMPMgr.set("device", "sysContact.0", "admin@company.com")
+{:ok, _} = SnmpMgr.set("device", "sysContact.0", "admin@company.com")
 
 # GET-NEXT operation
-{:ok, {next_oid, value}} = SNMPMgr.get_next("device", "sysDescr")
+{:ok, {next_oid, value}} = SnmpMgr.get_next("device", "sysDescr")
 
 # WALK operation (tree traversal)
-{:ok, results} = SNMPMgr.walk("device", "system")
+{:ok, results} = SnmpMgr.walk("device", "system")
 ```
 
 ### Bulk Operations (SNMPv2c)
 
 ```elixir
 # GETBULK operation
-{:ok, results} = SNMPMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
+{:ok, results} = SnmpMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
 
 # Bulk table retrieval
-{:ok, table_data} = SNMPMgr.get_bulk("switch", "ifTable", max_repetitions: 50)
+{:ok, table_data} = SnmpMgr.get_bulk("switch", "ifTable", max_repetitions: 50)
 ```
 
 ### Multi-Target Operations
@@ -98,40 +98,40 @@ requests = [
   {"device3", "sysUpTime.0"}
 ]
 
-results = SNMPMgr.Multi.get_multi(requests, community: "public")
+results = SnmpMgr.Multi.get_multi(requests, community: "public")
 ```
 
 ### Table Processing
 
 ```elixir
 # Get and process SNMP tables
-{:ok, table_data} = SNMPMgr.walk("switch", "ifTable")
-{:ok, structured_table} = SNMPMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
+{:ok, table_data} = SnmpMgr.walk("switch", "ifTable")
+{:ok, structured_table} = SnmpMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
 
 # Convert to records with named fields
 column_map = %{2 => :description, 3 => :type, 5 => :speed}
-{:ok, interfaces} = SNMPMgr.Table.to_records(structured_table, column_map)
+{:ok, interfaces} = SnmpMgr.Table.to_records(structured_table, column_map)
 ```
 
 ## Configuration
 
 ```elixir
 # Set global defaults
-SNMPMgr.Config.set_default_community("monitoring")
-SNMPMgr.Config.set_default_timeout(10_000)
-SNMPMgr.Config.set_default_version(:v2c)
+SnmpMgr.Config.set_default_community("monitoring")
+SnmpMgr.Config.set_default_timeout(10_000)
+SnmpMgr.Config.set_default_version(:v2c)
 
 # Add MIB search paths
-SNMPMgr.Config.add_mib_path("/opt/vendor_mibs")
+SnmpMgr.Config.add_mib_path("/opt/vendor_mibs")
 
 # Load custom MIBs
-{:ok, objects} = SNMPMgr.MIB.load_mib("VENDOR-SYSTEM-MIB")
+{:ok, objects} = SnmpMgr.MIB.load_mib("VENDOR-SYSTEM-MIB")
 ```
 
 ## Error Handling
 
 ```elixir
-case SNMPMgr.get("device", "sysDescr.0") do
+case SnmpMgr.get("device", "sysDescr.0") do
   {:ok, description} -> 
     IO.puts("Device: #{description}")
   {:error, :timeout} -> 
@@ -211,40 +211,40 @@ For questions, issues, or feature requests:
 
 #### Enhanced Architecture
 
-- **`SNMPMgr`** - Main API with symbolic name support and table operations
-- **`SNMPMgr.Core`** - Core SNMP operations with configuration integration
-- **`SNMPMgr.MIB`** - MIB compilation and symbolic name resolution (GenServer)
-- **`SNMPMgr.Config`** - Global configuration management (GenServer)
-- **`SNMPMgr.Walk`** - SNMP tree walking operations
-- **`SNMPMgr.Table`** - Table data processing and analysis
-- **`SNMPMgr.Target`** - Target parsing and hostname resolution
-- **`SNMPMgr.Types`** - SNMP data type encoding/decoding
-- **`SNMPMgr.OID`** - OID string/list conversion utilities
-- **`SNMPMgr.PDU`** - SNMP PDU encoding/decoding
+- **`SnmpMgr`** - Main API with symbolic name support and table operations
+- **`SnmpMgr.Core`** - Core SNMP operations with configuration integration
+- **`SnmpMgr.MIB`** - MIB compilation and symbolic name resolution (GenServer)
+- **`SnmpMgr.Config`** - Global configuration management (GenServer)
+- **`SnmpMgr.Walk`** - SNMP tree walking operations
+- **`SnmpMgr.Table`** - Table data processing and analysis
+- **`SnmpMgr.Target`** - Target parsing and hostname resolution
+- **`SnmpMgr.Types`** - SNMP data type encoding/decoding
+- **`SnmpMgr.OID`** - OID string/list conversion utilities
+- **`SnmpMgr.PDU`** - SNMP PDU encoding/decoding
 
 #### Enhanced Usage
 
 ```elixir
 # Symbolic name usage
-SNMPMgr.get("192.168.1.1", "sysDescr.0")
-SNMPMgr.get("router.local", "sysUpTime.0")
+SnmpMgr.get("192.168.1.1", "sysDescr.0")
+SnmpMgr.get("router.local", "sysUpTime.0")
 
 # Configuration management
-SNMPMgr.Config.set_default_community("private")
-SNMPMgr.Config.set_default_timeout(10_000)
+SnmpMgr.Config.set_default_community("private")
+SnmpMgr.Config.set_default_timeout(10_000)
 
 # Table operations
-SNMPMgr.get_table("switch.local", "ifTable")
-SNMPMgr.walk_table("device.local", [1, 3, 6, 1, 2, 1, 2, 2])
+SnmpMgr.get_table("switch.local", "ifTable")
+SnmpMgr.walk_table("device.local", [1, 3, 6, 1, 2, 1, 2, 2])
 
 # Tree walking
-SNMPMgr.walk("router.local", "system")
-SNMPMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
+SnmpMgr.walk("router.local", "system")
+SnmpMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
 
 # Table data processing
-{:ok, pairs} = SNMPMgr.walk_table("switch.local", "ifTable")
-{:ok, table} = SNMPMgr.Table.to_table(pairs, "ifTable")
-{:ok, rows} = SNMPMgr.Table.to_rows(pairs)
+{:ok, pairs} = SnmpMgr.walk_table("switch.local", "ifTable")
+{:ok, table} = SnmpMgr.Table.to_table(pairs, "ifTable")
+{:ok, rows} = SnmpMgr.Table.to_rows(pairs)
 ```
 
 #### Phase 2 Limitations
@@ -271,38 +271,38 @@ SNMPMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
 
 #### Enhanced Architecture
 
-- **`SNMPMgr.Bulk`** - Advanced bulk operations with GETBULK
-- **`SNMPMgr.Multi`** - Concurrent multi-target operations  
-- **`SNMPMgr.Errors`** - Version-specific error handling and recovery
-- **`SNMPMgr.Walk`** - Intelligent version-based walk operations
-- **Enhanced `SNMPMgr.Core`** - SNMPv2c PDU support and GETBULK
-- **Enhanced `SNMPMgr.Types`** - v2c exception value handling
+- **`SnmpMgr.Bulk`** - Advanced bulk operations with GETBULK
+- **`SnmpMgr.Multi`** - Concurrent multi-target operations  
+- **`SnmpMgr.Errors`** - Version-specific error handling and recovery
+- **`SnmpMgr.Walk`** - Intelligent version-based walk operations
+- **Enhanced `SnmpMgr.Core`** - SNMPv2c PDU support and GETBULK
+- **Enhanced `SnmpMgr.Types`** - v2c exception value handling
 
 #### Advanced Usage
 
 ```elixir
 # SNMPv2c GETBULK operations
-SNMPMgr.get_bulk("switch.local", "ifTable", max_repetitions: 20)
-SNMPMgr.get_bulk_async("device.local", "system", max_repetitions: 10)
+SnmpMgr.get_bulk("switch.local", "ifTable", max_repetitions: 20)
+SnmpMgr.get_bulk_async("device.local", "system", max_repetitions: 10)
 
 # Intelligent version-based operations
-SNMPMgr.walk("device.local", "system", version: :v2c)  # Uses GETBULK
-SNMPMgr.walk("device.local", "system", version: :v1)   # Uses GETNEXT
+SnmpMgr.walk("device.local", "system", version: :v2c)  # Uses GETBULK
+SnmpMgr.walk("device.local", "system", version: :v1)   # Uses GETNEXT
 
 # Advanced bulk operations
-SNMPMgr.Bulk.get_table_bulk("switch.local", "ifTable", max_entries: 1000)
-SNMPMgr.Bulk.walk_bulk("router.local", "ipRouteTable", max_repetitions: 50)
+SnmpMgr.Bulk.get_table_bulk("switch.local", "ifTable", max_entries: 1000)
+SnmpMgr.Bulk.walk_bulk("router.local", "ipRouteTable", max_repetitions: 50)
 
 # Multi-target concurrent operations
 targets = [{"sw1", "ifTable"}, {"sw2", "ifTable"}, {"rtr1", "ipRouteTable"}]
-SNMPMgr.get_bulk_multi(targets, max_repetitions: 20)
-SNMPMgr.walk_multi(targets, version: :v2c, max_concurrent: 5)
+SnmpMgr.get_bulk_multi(targets, max_repetitions: 20)
+SnmpMgr.walk_multi(targets, version: :v2c, max_concurrent: 5)
 
 # Error handling and recovery
-case SNMPMgr.get_bulk("device", "table") do
+case SnmpMgr.get_bulk("device", "table") do
   {:ok, results} -> process_results(results)
   {:error, error} -> 
-    if SNMPMgr.Errors.recoverable?(error) do
+    if SnmpMgr.Errors.recoverable?(error) do
       retry_operation()
     else
       handle_permanent_error(error)
@@ -312,7 +312,7 @@ end
 # Device monitoring
 targets = [{"device1", "sysUpTime.0"}, {"device2", "ifInOctets.1"}]
 callback = fn change -> IO.inspect(change) end
-{:ok, monitor} = SNMPMgr.Multi.monitor(targets, callback, interval: 30_000)
+{:ok, monitor} = SnmpMgr.Multi.monitor(targets, callback, interval: 30_000)
 ```
 
 #### Performance Improvements
@@ -343,34 +343,34 @@ callback = fn change -> IO.inspect(change) end
 
 #### Enhanced Architecture
 
-- **`SNMPMgr.AdaptiveWalk`** - Intelligent bulk walking with parameter adaptation
-- **`SNMPMgr.Stream`** - Memory-efficient streaming operations for large datasets
-- **Enhanced `SNMPMgr.Table`** - Advanced table analysis and processing utilities
-- **Enhanced `SNMPMgr`** - New adaptive and streaming API functions
+- **`SnmpMgr.AdaptiveWalk`** - Intelligent bulk walking with parameter adaptation
+- **`SnmpMgr.Stream`** - Memory-efficient streaming operations for large datasets
+- **Enhanced `SnmpMgr.Table`** - Advanced table analysis and processing utilities
+- **Enhanced `SnmpMgr`** - New adaptive and streaming API functions
 
 #### Advanced Usage
 
 ```elixir
 # Adaptive bulk walking with automatic parameter tuning
-{:ok, results} = SNMPMgr.adaptive_walk("switch.local", "ifTable")
+{:ok, results} = SnmpMgr.adaptive_walk("switch.local", "ifTable")
 
 # Memory-efficient streaming for large datasets
 "device.local"
-|> SNMPMgr.walk_stream("ipRouteTable")
+|> SnmpMgr.walk_stream("ipRouteTable")
 |> Stream.filter(fn {_oid, value} -> interesting?(value) end)
 |> Stream.each(&process_route/1)
 |> Stream.run()
 
 # Advanced table processing
-{:ok, table} = SNMPMgr.get_table("switch.local", "ifTable")
-{:ok, analysis} = SNMPMgr.analyze_table(table)
+{:ok, table} = SnmpMgr.get_table("switch.local", "ifTable")
+{:ok, analysis} = SnmpMgr.analyze_table(table)
 IO.inspect(analysis.completeness)  # Data completeness ratio
 
-{:ok, stats} = SNMPMgr.Table.column_stats(table, [3, 5])
-{:ok, filtered} = SNMPMgr.Table.filter_by_column(table, 8, fn status -> status == 1 end)
+{:ok, stats} = SnmpMgr.Table.column_stats(table, [3, 5])
+{:ok, filtered} = SnmpMgr.Table.filter_by_column(table, 8, fn status -> status == 1 end)
 
 # Device performance benchmarking
-{:ok, benchmark} = SNMPMgr.benchmark_device("switch.local", "ifTable")
+{:ok, benchmark} = SnmpMgr.benchmark_device("switch.local", "ifTable")
 optimal_size = benchmark.optimal_bulk_size
 ```
 
@@ -398,18 +398,18 @@ optimal_size = benchmark.optimal_bulk_size
 
 #### Enhanced Architecture
 
-- **`SNMPMgr.Engine`** - High-performance streaming PDU engine with request queuing
-- **`SNMPMgr.Router`** - Intelligent request routing with multiple load balancing strategies
-- **`SNMPMgr.Pool`** - UDP connection pool with automatic lifecycle management
-- **`SNMPMgr.CircuitBreaker`** - Circuit breaker pattern for device failure protection
-- **`SNMPMgr.Metrics`** - Comprehensive metrics collection and real-time monitoring
-- **`SNMPMgr.Supervisor`** - Coordinated supervision of all infrastructure components
+- **`SnmpMgr.Engine`** - High-performance streaming PDU engine with request queuing
+- **`SnmpMgr.Router`** - Intelligent request routing with multiple load balancing strategies
+- **`SnmpMgr.Pool`** - UDP connection pool with automatic lifecycle management
+- **`SnmpMgr.CircuitBreaker`** - Circuit breaker pattern for device failure protection
+- **`SnmpMgr.Metrics`** - Comprehensive metrics collection and real-time monitoring
+- **`SnmpMgr.Supervisor`** - Coordinated supervision of all infrastructure components
 
 #### Enterprise Usage
 
 ```elixir
 # Start the complete streaming infrastructure
-{:ok, _pid} = SNMPMgr.start_engine(
+{:ok, _pid} = SnmpMgr.start_engine(
   engine: [pool_size: 50, max_rps: 1000, batch_size: 100],
   router: [strategy: :least_connections],
   pool: [pool_size: 100, max_idle_time: 300_000],
@@ -426,7 +426,7 @@ request = %{
   max_repetitions: 50
 }
 
-{:ok, result} = SNMPMgr.engine_request(request)
+{:ok, result} = SnmpMgr.engine_request(request)
 
 # Batch processing for maximum throughput
 requests = [
@@ -435,27 +435,27 @@ requests = [
   %{type: :get_bulk, target: "router-01", oid: "ipRouteTable", max_repetitions: 100}
 ]
 
-{:ok, results} = SNMPMgr.engine_batch(requests)
+{:ok, results} = SnmpMgr.engine_batch(requests)
 
 # Circuit breaker protection for unreliable devices
-result = SNMPMgr.with_circuit_breaker("unreliable-device", fn ->
-  SNMPMgr.get("unreliable-device", "sysUpTime.0")
+result = SnmpMgr.with_circuit_breaker("unreliable-device", fn ->
+  SnmpMgr.get("unreliable-device", "sysUpTime.0")
 end, timeout: 10_000)
 
 # Real-time metrics and monitoring
-{:ok, stats} = SNMPMgr.get_engine_stats()
+{:ok, stats} = SnmpMgr.get_engine_stats()
 IO.inspect(stats.router.requests_routed)
 IO.inspect(stats.pool.total_connections)  
 IO.inspect(stats.circuit_breaker.breaker_states)
 IO.inspect(stats.metrics.current_metrics)
 
 # Custom metrics collection
-SNMPMgr.record_metric(:counter, :custom_operations, 1, %{device_type: "switch"})
-SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"})
+SnmpMgr.record_metric(:counter, :custom_operations, 1, %{device_type: "switch"})
+SnmpMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"})
 
 # Memory-efficient streaming for massive datasets
 "core-router"
-|> SNMPMgr.walk_stream("bgpPeerTable")
+|> SnmpMgr.walk_stream("bgpPeerTable")
 |> Stream.filter(fn {_oid, value} -> important_peer?(value) end)
 |> Stream.chunk_every(1000)
 |> Stream.each(&process_peer_batch/1)
@@ -482,7 +482,7 @@ SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"
 
 ### Architecture Overview
 
-SNMPMgr now provides a complete enterprise-grade SNMP infrastructure:
+SnmpMgr now provides a complete enterprise-grade SNMP infrastructure:
 
 1. **Phase 1-2**: Foundation with MIB support and table processing
 2. **Phase 3**: SNMPv2c with bulk operations and multi-target support  

@@ -1,6 +1,6 @@
-# Getting Started with SNMPMgr
+# Getting Started with SnmpMgr
 
-SNMPMgr is a lightweight, stateless SNMP client library for Elixir that provides simple and efficient SNMP operations without requiring heavyweight management processes.
+SnmpMgr is a lightweight, stateless SNMP client library for Elixir that provides simple and efficient SNMP operations without requiring heavyweight management processes.
 
 ## Installation
 
@@ -26,26 +26,26 @@ mix deps.get
 
 ```elixir
 # Fetch system description from a device
-{:ok, value} = SNMPMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0", 
+{:ok, value} = SnmpMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0", 
                           community: "public", timeout: 5000)
 IO.puts("System Description: #{value}")
 ```
 
 ### Using Symbolic Names
 
-SNMPMgr includes built-in MIB support for common objects:
+SnmpMgr includes built-in MIB support for common objects:
 
 ```elixir
 # Using symbolic MIB names instead of numeric OIDs
-{:ok, uptime} = SNMPMgr.get("192.168.1.1", "sysUpTime.0", community: "public")
-{:ok, name} = SNMPMgr.get("192.168.1.1", "sysName.0", community: "public")
+{:ok, uptime} = SnmpMgr.get("192.168.1.1", "sysUpTime.0", community: "public")
+{:ok, name} = SnmpMgr.get("192.168.1.1", "sysName.0", community: "public")
 ```
 
 ### Walking SNMP Tables
 
 ```elixir
 # Walk the system group to get all system information
-{:ok, results} = SNMPMgr.walk("192.168.1.1", "1.3.6.1.2.1.1", 
+{:ok, results} = SnmpMgr.walk("192.168.1.1", "1.3.6.1.2.1.1", 
                              community: "public", timeout: 10000)
 
 Enum.each(results, fn {oid, value} ->
@@ -59,7 +59,7 @@ For more efficient retrieval of multiple values:
 
 ```elixir
 # Get multiple values efficiently with GET-BULK
-{:ok, results} = SNMPMgr.get_bulk("192.168.1.1", "1.3.6.1.2.1.2.2", 
+{:ok, results} = SnmpMgr.get_bulk("192.168.1.1", "1.3.6.1.2.1.2.2", 
                                  max_repetitions: 10, community: "public")
 ```
 
@@ -67,7 +67,7 @@ For more efficient retrieval of multiple values:
 
 ```elixir
 # Set system contact information
-{:ok, _} = SNMPMgr.set("192.168.1.1", "sysContact.0", "admin@company.com",
+{:ok, _} = SnmpMgr.set("192.168.1.1", "sysContact.0", "admin@company.com",
                       community: "private")
 ```
 
@@ -79,15 +79,15 @@ You can set global defaults that apply to all operations:
 
 ```elixir
 # Start the configuration service
-{:ok, _pid} = SNMPMgr.Config.start_link()
+{:ok, _pid} = SnmpMgr.Config.start_link()
 
 # Set global defaults
-SNMPMgr.Config.set_default_community("public")
-SNMPMgr.Config.set_default_timeout(5000)
-SNMPMgr.Config.set_default_version(:v2c)
+SnmpMgr.Config.set_default_community("public")
+SnmpMgr.Config.set_default_timeout(5000)
+SnmpMgr.Config.set_default_version(:v2c)
 
 # Now you can omit these options in calls
-{:ok, value} = SNMPMgr.get("192.168.1.1", "sysDescr.0")
+{:ok, value} = SnmpMgr.get("192.168.1.1", "sysDescr.0")
 ```
 
 ### Per-Request Configuration
@@ -95,7 +95,7 @@ SNMPMgr.Config.set_default_version(:v2c)
 You can override defaults on a per-request basis:
 
 ```elixir
-{:ok, value} = SNMPMgr.get("192.168.1.1", "sysDescr.0", 
+{:ok, value} = SnmpMgr.get("192.168.1.1", "sysDescr.0", 
                           community: "special", 
                           timeout: 10000,
                           version: :v1)
@@ -103,24 +103,24 @@ You can override defaults on a per-request basis:
 
 ## SNMP Versions
 
-SNMPMgr supports SNMP versions 1 and 2c:
+SnmpMgr supports SNMP versions 1 and 2c:
 
 ```elixir
 # SNMP v1
-{:ok, value} = SNMPMgr.get("device.local", "sysDescr.0", 
+{:ok, value} = SnmpMgr.get("device.local", "sysDescr.0", 
                           version: :v1, community: "public")
 
 # SNMP v2c (default, supports bulk operations)
-{:ok, results} = SNMPMgr.get_bulk("device.local", "ifTable", 
+{:ok, results} = SnmpMgr.get_bulk("device.local", "ifTable", 
                                  version: :v2c, max_repetitions: 5)
 ```
 
 ## Error Handling
 
-SNMPMgr provides clear error responses:
+SnmpMgr provides clear error responses:
 
 ```elixir
-case SNMPMgr.get("192.168.1.1", "invalid.oid", community: "public") do
+case SnmpMgr.get("192.168.1.1", "invalid.oid", community: "public") do
   {:ok, value} -> 
     IO.puts("Success: #{value}")
   {:error, :timeout} -> 
@@ -140,7 +140,7 @@ end
 devices = ["192.168.1.1", "192.168.1.2", "192.168.1.3"]
 
 device_info = Enum.map(devices, fn ip ->
-  case SNMPMgr.get(ip, "sysDescr.0", community: "public", timeout: 2000) do
+  case SnmpMgr.get(ip, "sysDescr.0", community: "public", timeout: 2000) do
     {:ok, desc} -> {ip, desc}
     {:error, _} -> {ip, "unreachable"}
   end
@@ -151,10 +151,10 @@ end)
 
 ```elixir
 # Get interface table
-{:ok, interfaces} = SNMPMgr.walk("192.168.1.1", "ifDescr", community: "public")
+{:ok, interfaces} = SnmpMgr.walk("192.168.1.1", "ifDescr", community: "public")
 
 # Get interface statistics
-{:ok, stats} = SNMPMgr.walk("192.168.1.1", "ifInOctets", community: "public")
+{:ok, stats} = SnmpMgr.walk("192.168.1.1", "ifInOctets", community: "public")
 ```
 
 ### Multi-Target Operations
@@ -167,32 +167,32 @@ requests = [
   {"192.168.1.3", "sysUpTime.0", [community: "public"]}
 ]
 
-results = SNMPMgr.get_multi(requests)
+results = SnmpMgr.get_multi(requests)
 ```
 
 ## Target Formats
 
-SNMPMgr accepts various target formats:
+SnmpMgr accepts various target formats:
 
 ```elixir
 # IP address with default port (161)
-SNMPMgr.get("192.168.1.1", "sysDescr.0")
+SnmpMgr.get("192.168.1.1", "sysDescr.0")
 
 # IP address with custom port
-SNMPMgr.get("192.168.1.1:1161", "sysDescr.0")
+SnmpMgr.get("192.168.1.1:1161", "sysDescr.0")
 
 # Hostname
-SNMPMgr.get("router.local", "sysDescr.0")
+SnmpMgr.get("router.local", "sysDescr.0")
 
 # Hostname with port
-SNMPMgr.get("switch.company.com:161", "sysDescr.0")
+SnmpMgr.get("switch.company.com:161", "sysDescr.0")
 ```
 
 ## MIB Support
 
 ### Built-in MIBs
 
-SNMPMgr includes built-in support for standard MIB objects:
+SnmpMgr includes built-in support for standard MIB objects:
 
 - **System Group**: `sysDescr`, `sysUpTime`, `sysContact`, `sysName`, `sysLocation`
 - **Interfaces Group**: `ifNumber`, `ifDescr`, `ifType`, `ifSpeed`, `ifInOctets`, `ifOutOctets`
@@ -205,10 +205,10 @@ SNMPMgr includes built-in support for standard MIB objects:
 
 ```elixir
 # Add custom MIB paths
-SNMPMgr.Config.add_mib_path("/path/to/custom/mibs")
+SnmpMgr.Config.add_mib_path("/path/to/custom/mibs")
 
 # Load a specific MIB file
-{:ok, _} = SNMPMgr.MIB.load_mib("CUSTOM-MIB")
+{:ok, _} = SnmpMgr.MIB.load_mib("CUSTOM-MIB")
 ```
 
 ## Best Practices
@@ -221,7 +221,7 @@ SNMPMgr.Config.add_mib_path("/path/to/custom/mibs")
 
 ## Next Steps
 
-- Read the [SNMPMgr Module Guide](snmp_mgr_guide.md) for detailed API documentation
+- Read the [SnmpMgr Module Guide](snmp_mgr_guide.md) for detailed API documentation
 - Explore [Configuration Guide](config_guide.md) for advanced configuration options
 - Check out [MIB Guide](mib_guide.md) for working with MIB files
 - See [Types Guide](types_guide.md) for SNMP data type handling
@@ -243,22 +243,22 @@ SNMPMgr.Config.add_mib_path("/path/to/custom/mibs")
 
 **Timeout errors**: Increase timeout value or check network connectivity
 ```elixir
-SNMPMgr.get("device", "sysDescr.0", timeout: 10000)
+SnmpMgr.get("device", "sysDescr.0", timeout: 10000)
 ```
 
 **Authentication errors**: Verify community string
 ```elixir
-SNMPMgr.get("device", "sysDescr.0", community: "correct_community")
+SnmpMgr.get("device", "sysDescr.0", community: "correct_community")
 ```
 
 **No such object**: Verify OID exists on target device
 ```elixir
 # Use walk to explore available OIDs
-{:ok, available} = SNMPMgr.walk("device", "1.3.6.1.2.1.1")
+{:ok, available} = SnmpMgr.walk("device", "1.3.6.1.2.1.1")
 ```
 
 **Port issues**: Ensure SNMP is enabled on target device and port 161 is accessible
 ```elixir
 # Test with custom port if needed
-SNMPMgr.get("device:1161", "sysDescr.0")
+SnmpMgr.get("device:1161", "sysDescr.0")
 ```

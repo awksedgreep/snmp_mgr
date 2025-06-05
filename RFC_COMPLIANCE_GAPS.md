@@ -6,7 +6,7 @@ This document identifies gaps between our current SNMP implementation and RFC sp
 **Created**: December 2024  
 **Updated**: December 2024 (After Phase 4 Completion)  
 **Based on**: RFC 1157, RFC 1905, RFC 3416, X.690 BER specifications  
-**Current Implementation**: SNMPMgr with 4x performance optimized PDU encoding
+**Current Implementation**: SnmpMgr with 4x performance optimized PDU encoding
 
 ## Executive Summary
 

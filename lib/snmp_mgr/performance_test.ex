@@ -1,4 +1,4 @@
-defmodule SNMPMgr.PerformanceTest do
+defmodule SnmpMgr.PerformanceTest do
   @moduledoc """
   Temporary performance test to compare Erlang vs pure Elixir PDU encoding.
   

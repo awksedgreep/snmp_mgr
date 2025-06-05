@@ -1,6 +1,6 @@
-# SNMPMgr.Table Module Guide
+# SnmpMgr.Table Module Guide
 
-The `SNMPMgr.Table` module provides utilities for processing SNMP table data, converting flat OID/value lists into structured table representations and performing table analysis operations.
+The `SnmpMgr.Table` module provides utilities for processing SNMP table data, converting flat OID/value lists into structured table representations and performing table analysis operations.
 
 ## Overview
 
@@ -43,7 +43,7 @@ pairs = [
 ]
 
 # Convert to structured table
-{:ok, table} = SNMPMgr.Table.to_table(pairs, [1, 3, 6, 1, 2, 1, 2, 2])
+{:ok, table} = SnmpMgr.Table.to_table(pairs, [1, 3, 6, 1, 2, 1, 2, 2])
 
 # Result structure:
 # %{
@@ -83,7 +83,7 @@ column_map = %{
 }
 
 # Convert to records
-{:ok, interfaces} = SNMPMgr.Table.to_records(table, column_map)
+{:ok, interfaces} = SnmpMgr.Table.to_records(table, column_map)
 
 # Result:
 # [
@@ -111,15 +111,15 @@ get_column(table, column_number, opts \\ [])
 
 ```elixir
 # Get all interface descriptions
-{:ok, descriptions} = SNMPMgr.Table.get_column(table, 2)
+{:ok, descriptions} = SnmpMgr.Table.get_column(table, 2)
 # %{1 => "eth0", 2 => "eth1"}
 
 # Get as list with indexes
-{:ok, desc_list} = SNMPMgr.Table.get_column(table, 2, format: :list)
+{:ok, desc_list} = SnmpMgr.Table.get_column(table, 2, format: :list)
 # [{1, "eth0"}, {2, "eth1"}]
 
 # Get just values
-{:ok, values} = SNMPMgr.Table.get_column(table, 2, format: :values)
+{:ok, values} = SnmpMgr.Table.get_column(table, 2, format: :values)
 # ["eth0", "eth1"]
 ```
 
@@ -135,13 +135,13 @@ filter_rows(table, column, criteria)
 
 ```elixir
 # Filter interfaces by type (Ethernet = 6)
-{:ok, ethernet_interfaces} = SNMPMgr.Table.filter_rows(table, 3, 6)
+{:ok, ethernet_interfaces} = SnmpMgr.Table.filter_rows(table, 3, 6)
 
 # Filter by operational status (up = 1)
-{:ok, active_interfaces} = SNMPMgr.Table.filter_rows(table, 9, 1)
+{:ok, active_interfaces} = SnmpMgr.Table.filter_rows(table, 9, 1)
 
 # Filter with custom function
-{:ok, gigabit_interfaces} = SNMPMgr.Table.filter_rows(table, 5, fn speed ->
+{:ok, gigabit_interfaces} = SnmpMgr.Table.filter_rows(table, 5, fn speed ->
   speed >= 1000000000
 end)
 ```
@@ -160,15 +160,15 @@ join_tables(table1, table2, join_type \\ :inner)
 
 ```elixir
 # Get interface descriptions and statistics separately
-{:ok, if_info} = SNMPMgr.walk("device", "ifDescr")
-{:ok, if_stats} = SNMPMgr.walk("device", "ifInOctets") 
+{:ok, if_info} = SnmpMgr.walk("device", "ifDescr")
+{:ok, if_stats} = SnmpMgr.walk("device", "ifInOctets") 
 
 # Convert to tables
-{:ok, info_table} = SNMPMgr.Table.to_table(if_info, [1,3,6,1,2,1,2,2,1,2])
-{:ok, stats_table} = SNMPMgr.Table.to_table(if_stats, [1,3,6,1,2,1,2,2,1,10])
+{:ok, info_table} = SnmpMgr.Table.to_table(if_info, [1,3,6,1,2,1,2,2,1,2])
+{:ok, stats_table} = SnmpMgr.Table.to_table(if_stats, [1,3,6,1,2,1,2,2,1,10])
 
 # Join tables
-{:ok, combined} = SNMPMgr.Table.join_tables(info_table, stats_table)
+{:ok, combined} = SnmpMgr.Table.join_tables(info_table, stats_table)
 
 # Result contains both interface info and statistics
 combined[1]  # %{2 => "eth0", 10 => 123456789}  # Description and InOctets
@@ -186,16 +186,16 @@ aggregate_column(table, column, operation)
 
 ```elixir
 # Sum all input octets
-{:ok, total_input} = SNMPMgr.Table.aggregate_column(stats_table, 10, :sum)
+{:ok, total_input} = SnmpMgr.Table.aggregate_column(stats_table, 10, :sum)
 
 # Get average interface speed
-{:ok, avg_speed} = SNMPMgr.Table.aggregate_column(table, 5, :avg)
+{:ok, avg_speed} = SnmpMgr.Table.aggregate_column(table, 5, :avg)
 
 # Find maximum interface index
-{:ok, max_index} = SNMPMgr.Table.aggregate_column(table, :index, :max)
+{:ok, max_index} = SnmpMgr.Table.aggregate_column(table, :index, :max)
 
 # Count operational interfaces
-{:ok, oper_count} = SNMPMgr.Table.aggregate_column(table, 9, {:count, 1})
+{:ok, oper_count} = SnmpMgr.Table.aggregate_column(table, 9, {:count, 1})
 ```
 
 ### `sort_table/3`
@@ -210,13 +210,13 @@ sort_table(table, column, direction \\ :asc)
 
 ```elixir
 # Sort by interface speed (ascending)
-{:ok, sorted_by_speed} = SNMPMgr.Table.sort_table(table, 5, :asc)
+{:ok, sorted_by_speed} = SnmpMgr.Table.sort_table(table, 5, :asc)
 
 # Sort by description (descending)
-{:ok, sorted_by_desc} = SNMPMgr.Table.sort_table(table, 2, :desc)
+{:ok, sorted_by_desc} = SnmpMgr.Table.sort_table(table, 2, :desc)
 
 # Sort by multiple columns
-{:ok, multi_sorted} = SNMPMgr.Table.sort_table(table, [
+{:ok, multi_sorted} = SnmpMgr.Table.sort_table(table, [
   {3, :asc},    # Type first
   {5, :desc}    # Then speed descending
 ])
@@ -229,8 +229,8 @@ sort_table(table, column, direction \\ :asc)
 ```elixir
 defmodule InterfaceAnalyzer do
   def analyze_interfaces(device_ip, community \\ "public") do
-    with {:ok, if_data} <- SNMPMgr.walk(device_ip, "ifTable", community: community),
-         {:ok, table} <- SNMPMgr.Table.to_table(if_data, [1,3,6,1,2,1,2,2]) do
+    with {:ok, if_data} <- SnmpMgr.walk(device_ip, "ifTable", community: community),
+         {:ok, table} <- SnmpMgr.Table.to_table(if_data, [1,3,6,1,2,1,2,2]) do
       
       # Define interface table columns
       column_map = %{
@@ -244,7 +244,7 @@ defmodule InterfaceAnalyzer do
       }
       
       # Convert to records
-      {:ok, interfaces} = SNMPMgr.Table.to_records(table, column_map)
+      {:ok, interfaces} = SnmpMgr.Table.to_records(table, column_map)
       
       # Analyze the data
       analysis = %{
@@ -297,8 +297,8 @@ end
 ```elixir
 defmodule RoutingTableProcessor do
   def process_routing_table(device_ip, community \\ "public") do
-    with {:ok, route_data} <- SNMPMgr.walk(device_ip, "ipRouteTable", community: community),
-         {:ok, table} <- SNMPMgr.Table.to_table(route_data, [1,3,6,1,2,1,4,21]) do
+    with {:ok, route_data} <- SnmpMgr.walk(device_ip, "ipRouteTable", community: community),
+         {:ok, table} <- SnmpMgr.Table.to_table(route_data, [1,3,6,1,2,1,4,21]) do
       
       # Define routing table columns
       column_map = %{
@@ -310,7 +310,7 @@ defmodule RoutingTableProcessor do
         9 => :protocol
       }
       
-      {:ok, routes} = SNMPMgr.Table.to_records(table, column_map)
+      {:ok, routes} = SnmpMgr.Table.to_records(table, column_map)
       
       # Process and categorize routes
       processed_routes = Enum.map(routes, fn route ->
@@ -349,8 +349,8 @@ end
 ```elixir
 defmodule ARPTableAnalyzer do
   def analyze_arp_table(device_ip, community \\ "public") do
-    with {:ok, arp_data} <- SNMPMgr.walk(device_ip, "ipNetToMediaTable", community: community),
-         {:ok, table} <- SNMPMgr.Table.to_table(arp_data, [1,3,6,1,2,1,4,22]) do
+    with {:ok, arp_data} <- SnmpMgr.walk(device_ip, "ipNetToMediaTable", community: community),
+         {:ok, table} <- SnmpMgr.Table.to_table(arp_data, [1,3,6,1,2,1,4,22]) do
       
       column_map = %{
         1 => :if_index,
@@ -359,7 +359,7 @@ defmodule ARPTableAnalyzer do
         4 => :type
       }
       
-      {:ok, arp_entries} = SNMPMgr.Table.to_records(table, column_map)
+      {:ok, arp_entries} = SnmpMgr.Table.to_records(table, column_map)
       
       # Process ARP entries
       processed_entries = Enum.map(arp_entries, fn entry ->
@@ -424,14 +424,14 @@ defmodule MultiDeviceTableAnalysis do
       {device.ip, "ifTable", [community: device.community]}
     end)
     
-    results = SNMPMgr.Multi.walk_multi(requests)
+    results = SnmpMgr.Multi.walk_multi(requests)
     
     # Process each device's table
     device_tables = Enum.zip(devices, results)
     |> Enum.map(fn {device, result} ->
       case result do
         {:ok, table_data} ->
-          {:ok, table} = SNMPMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
+          {:ok, table} = SnmpMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
           {device.ip, table}
         {:error, reason} ->
           {device.ip, {:error, reason}}
@@ -476,7 +476,7 @@ end
 defmodule TableReporter do
   def export_table_to_csv(table, column_map, filename) do
     # Convert table to records
-    {:ok, records} = SNMPMgr.Table.to_records(table, column_map)
+    {:ok, records} = SnmpMgr.Table.to_records(table, column_map)
     
     # Create CSV content
     headers = [:index | Map.values(column_map)]
@@ -494,7 +494,7 @@ defmodule TableReporter do
   end
 
   def generate_table_report(table, column_map, title) do
-    {:ok, records} = SNMPMgr.Table.to_records(table, column_map)
+    {:ok, records} = SnmpMgr.Table.to_records(table, column_map)
     
     report = """
     #{title}
@@ -531,17 +531,17 @@ table_requests = Enum.map(devices, fn ip ->
   {ip, "ifTable", [community: "public"]}
 end)
 
-walk_results = SNMPMgr.Multi.walk_multi(table_requests)
+walk_results = SnmpMgr.Multi.walk_multi(table_requests)
 
 # Process all tables
 processed_tables = Enum.zip(devices, walk_results)
 |> Enum.map(fn {device_ip, walk_result} ->
   case walk_result do
     {:ok, table_data} ->
-      {:ok, table} = SNMPMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
+      {:ok, table} = SnmpMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
       
       column_map = %{2 => :description, 3 => :type, 5 => :speed}
-      {:ok, records} = SNMPMgr.Table.to_records(table, column_map)
+      {:ok, records} = SnmpMgr.Table.to_records(table, column_map)
       
       {device_ip, records}
     {:error, reason} ->
@@ -556,12 +556,12 @@ end)
 # Process table values with proper type handling
 defmodule TypedTableProcessor do
   def process_typed_table(table_data, table_oid) do
-    {:ok, table} = SNMPMgr.Table.to_table(table_data, table_oid)
+    {:ok, table} = SnmpMgr.Table.to_table(table_data, table_oid)
     
     # Process each cell with appropriate type handling
     typed_table = Map.new(table, fn {row_index, row} ->
       typed_row = Map.new(row, fn {col_index, value} ->
-        typed_value = SNMPMgr.Types.decode_value(value)
+        typed_value = SnmpMgr.Types.decode_value(value)
         {col_index, typed_value}
       end)
       {row_index, typed_row}
@@ -578,10 +578,10 @@ end
 
 ```elixir
 # Correct - specify the table OID
-{:ok, table} = SNMPMgr.Table.to_table(walk_data, [1,3,6,1,2,1,2,2])
+{:ok, table} = SnmpMgr.Table.to_table(walk_data, [1,3,6,1,2,1,2,2])
 
 # Avoid - letting the function guess the structure
-{:ok, table} = SNMPMgr.Table.to_table(walk_data, :auto)
+{:ok, table} = SnmpMgr.Table.to_table(walk_data, :auto)
 ```
 
 ### 2. Use Column Maps for Clarity
@@ -596,7 +596,7 @@ column_map = %{
   9 => :oper_status
 }
 
-{:ok, interfaces} = SNMPMgr.Table.to_records(table, column_map)
+{:ok, interfaces} = SnmpMgr.Table.to_records(table, column_map)
 
 # Avoid - working with raw column numbers
 speed = table[1][5]  # What is column 5?
@@ -607,7 +607,7 @@ speed = table[1][5]  # What is column 5?
 ```elixir
 defmodule SafeTableProcessor do
   def safe_get_column(table, column, default \\ nil) do
-    case SNMPMgr.Table.get_column(table, column) do
+    case SnmpMgr.Table.get_column(table, column) do
       {:ok, column_data} -> column_data
       {:error, :column_not_found} -> %{}
       {:error, _} -> %{}

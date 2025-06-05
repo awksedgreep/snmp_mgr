@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Bulk do
+defmodule SnmpMgr.Bulk do
   @moduledoc """
   Advanced SNMP bulk operations using SNMPv2c GETBULK.
   
@@ -19,7 +19,7 @@ defmodule SNMPMgr.Bulk do
 
   ## Examples
 
-      iex> SNMPMgr.Bulk.get_bulk("192.168.1.1", "ifTable", max_repetitions: 20)
+      iex> SnmpMgr.Bulk.get_bulk("192.168.1.1", "ifTable", max_repetitions: 20)
       {:ok, [
         {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},
         {"1.3.6.1.2.1.2.2.1.2.2", "eth1"},
@@ -47,7 +47,7 @@ defmodule SNMPMgr.Bulk do
             
             # Use the first OID as the starting point for GETBULK
             starting_oid = hd(resolved_oids)
-            SNMPMgr.Core.send_get_bulk_request(target, starting_oid, bulk_opts)
+            SnmpMgr.Core.send_get_bulk_request(target, starting_oid, bulk_opts)
           
           error -> error
         end
@@ -67,7 +67,7 @@ defmodule SNMPMgr.Bulk do
 
   ## Examples
 
-      iex> SNMPMgr.Bulk.get_table_bulk("switch.local", "ifTable")
+      iex> SnmpMgr.Bulk.get_table_bulk("switch.local", "ifTable")
       {:ok, [
         {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},
         {"1.3.6.1.2.1.2.2.1.3.1", 6},
@@ -97,7 +97,7 @@ defmodule SNMPMgr.Bulk do
 
   ## Examples
 
-      iex> SNMPMgr.Bulk.walk_bulk("device.local", "system")
+      iex> SnmpMgr.Bulk.walk_bulk("device.local", "system")
       {:ok, [
         {"1.3.6.1.2.1.1.1.0", "System Description"},
         {"1.3.6.1.2.1.1.2.0", "1.3.6.1.4.1.9"},
@@ -128,7 +128,7 @@ defmodule SNMPMgr.Bulk do
       ...>   {"device2", "sysUpTime.0"},
       ...>   {"device3", "ifNumber.0"}
       ...> ]
-      iex> SNMPMgr.Bulk.get_bulk_multi(requests)
+      iex> SnmpMgr.Bulk.get_bulk_multi(requests)
       [
         {:ok, [{"1.3.6.1.2.1.1.1.0", "Device 1"}]},
         {:ok, [{"1.3.6.1.2.1.1.3.0", 123456}]},
@@ -166,7 +166,7 @@ defmodule SNMPMgr.Bulk do
     |> Keyword.put(:max_repetitions, max_repetitions)
     |> Keyword.put(:version, :v2c)
     
-    case SNMPMgr.Core.send_get_bulk_request(target, current_oid, bulk_opts) do
+    case SnmpMgr.Core.send_get_bulk_request(target, current_oid, bulk_opts) do
       {:ok, results} ->
         # Filter results that are still within the table scope
         {in_scope, next_oid} = filter_table_results(results, root_oid)
@@ -193,7 +193,7 @@ defmodule SNMPMgr.Bulk do
     |> Keyword.put(:max_repetitions, max_repetitions)
     |> Keyword.put(:version, :v2c)
     
-    case SNMPMgr.Core.send_get_bulk_request(target, current_oid, bulk_opts) do
+    case SnmpMgr.Core.send_get_bulk_request(target, current_oid, bulk_opts) do
       {:ok, results} ->
         # Filter results that are still within the subtree scope
         {in_scope, next_oid} = filter_subtree_results(results, root_oid)
@@ -259,7 +259,7 @@ defmodule SNMPMgr.Bulk do
       {:ok, oid_list} -> {:ok, oid_list}
       {:error, _} ->
         # Try as symbolic name
-        case SNMPMgr.MIB.resolve(oid) do
+        case SnmpMgr.MIB.resolve(oid) do
           {:ok, resolved_oid} -> {:ok, resolved_oid}
           error -> error
         end

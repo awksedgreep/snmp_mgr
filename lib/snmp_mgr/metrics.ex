@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Metrics do
+defmodule SnmpMgr.Metrics do
   @moduledoc """
   Comprehensive metrics collection and monitoring for SNMP operations.
   
@@ -35,7 +35,7 @@ defmodule SNMPMgr.Metrics do
   
   ## Examples
   
-      {:ok, metrics} = SNMPMgr.Metrics.start_link(
+      {:ok, metrics} = SnmpMgr.Metrics.start_link(
         window_size: 120,
         retention_period: 7200
       )
@@ -56,7 +56,7 @@ defmodule SNMPMgr.Metrics do
   
   ## Examples
   
-      SNMPMgr.Metrics.counter(metrics, :requests_total, 1, %{target: "device1"})
+      SnmpMgr.Metrics.counter(metrics, :requests_total, 1, %{target: "device1"})
   """
   def counter(metrics, metric_name, value \\ 1, tags \\ %{}) do
     GenServer.cast(metrics, {:counter, metric_name, value, tags, System.monotonic_time(:millisecond)})
@@ -73,7 +73,7 @@ defmodule SNMPMgr.Metrics do
   
   ## Examples
   
-      SNMPMgr.Metrics.gauge(metrics, :active_connections, 15, %{pool: "main"})
+      SnmpMgr.Metrics.gauge(metrics, :active_connections, 15, %{pool: "main"})
   """
   def gauge(metrics, metric_name, value, tags \\ %{}) do
     GenServer.cast(metrics, {:gauge, metric_name, value, tags, System.monotonic_time(:millisecond)})
@@ -90,7 +90,7 @@ defmodule SNMPMgr.Metrics do
   
   ## Examples
   
-      SNMPMgr.Metrics.histogram(metrics, :request_duration_ms, 150, %{operation: "get"})
+      SnmpMgr.Metrics.histogram(metrics, :request_duration_ms, 150, %{operation: "get"})
   """
   def histogram(metrics, metric_name, value, tags \\ %{}) do
     GenServer.cast(metrics, {:histogram, metric_name, value, tags, System.monotonic_time(:millisecond)})
@@ -107,8 +107,8 @@ defmodule SNMPMgr.Metrics do
   
   ## Examples
   
-      result = SNMPMgr.Metrics.time(metrics, :snmp_get_duration, fn ->
-        SNMPMgr.get("device1", "sysDescr.0")
+      result = SnmpMgr.Metrics.time(metrics, :snmp_get_duration, fn ->
+        SnmpMgr.get("device1", "sysDescr.0")
       end, %{device: "device1"})
   """
   def time(metrics, metric_name, fun, tags \\ %{}) do
@@ -203,7 +203,7 @@ defmodule SNMPMgr.Metrics do
     
     state = %{state | collection_timer: collection_timer}
     
-    Logger.info("SNMPMgr Metrics started with window_size=#{window_size}s")
+    Logger.info("SnmpMgr Metrics started with window_size=#{window_size}s")
     
     {:ok, state}
   end

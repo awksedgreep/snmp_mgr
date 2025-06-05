@@ -1,7 +1,7 @@
 # SNMP Manager Testing Progress
 
 ## Overview
-This document tracks the testing progress for all test files in the SNMPMgr project. We've systematically worked through test files to achieve enterprise-grade functionality.
+This document tracks the testing progress for all test files in the SnmpMgr project. We've systematically worked through test files to achieve enterprise-grade functionality.
 
 **Total Test Files:** 30+  
 **Current Status:** 🏆 **SYSTEMATIC TEST COVERAGE IMPROVEMENTS ONGOING** - Multiple test files achieving perfect 100% success rates  
@@ -120,7 +120,7 @@ This document tracks the testing progress for all test files in the SNMPMgr proj
 8. **unit/transport_test.exs** - ⚠️ **PARTIAL** - 9/12 tests passing, 3 failures - ✅ **EXCELLENT** - Issues: Minor edge cases (connection checkout format, large message handling), excellent performance
 9. **unit/pool_comprehensive_test.exs** - ❌ **FAILING** - 29/45 tests passing, 16 failures - Issues: Pool already started errors, String.Chars protocol error for References, incorrect connection handling
 10. **unit/types_comprehensive_test.exs** - ✅ **EXCELLENT** - 16/16 tests passing - ✅ **BREAKTHROUGH** - SNMPSimEx library fixes eliminated all failures, perfect type system functionality
-11. **unit/performance_scale_test.exs** - ❌ **FAILING** - 0/13 tests passing - Issues: Functions not implemented (SNMPMgr.start_engine, SNMPMgr.engine_request, SNMPMgr.engine_batch), missing Router/Engine modules  
+11. **unit/performance_scale_test.exs** - ❌ **FAILING** - 0/13 tests passing - Issues: Functions not implemented (SnmpMgr.start_engine, SnmpMgr.engine_request, SnmpMgr.engine_batch), missing Router/Engine modules  
 12. **unit/custom_mib_test.exs** - ⚠️ **PARTIAL** - 15/17 tests passing, 2 failures - Issues: MIB loading error format mismatch, minor error handling
 
 ### Unit Tests - Advanced Features  
@@ -146,10 +146,10 @@ This document tracks the testing progress for all test files in the SNMPMgr proj
 ### Unit Tests - Error Handling & Reliability
 25. **unit/error_comprehensive_test.exs** - ⚠️ **PARTIAL** - 7/10 tests passing, 3 failures - ✅ **GOOD** - Issues: Minor error message formatting, String.Chars protocol, SNMPSimulator cleanup
 26. **unit/error_handling_retry_test.exs** - ❌ **FAILING** - 5/25 tests passing, 20 failures - Issues: Timeout on all network operations (no real SNMP targets), retry logic testing blocked by timeouts  
-27. **unit/chaos_testing_test.exs** - ❌ **FAILING** - 0/11 tests passing, 11 failures - Issues: SNMPMgr.Router not started (supervisor issue), calls to SNMPMgr.engine_request fail, get_engine_stats calls fail
+27. **unit/chaos_testing_test.exs** - ❌ **FAILING** - 0/11 tests passing, 11 failures - Issues: SnmpMgr.Router not started (supervisor issue), calls to SnmpMgr.engine_request fail, get_engine_stats calls fail
 
 ### Unit Tests - Performance & Scale
-26. **unit/performance_scale_test.exs** - ❌ **FAILING** - 0/13 tests passing - Issues: Functions not implemented (SNMPMgr.start_engine, SNMPMgr.engine_request, SNMPMgr.engine_batch), missing Router/Engine modules  
+26. **unit/performance_scale_test.exs** - ❌ **FAILING** - 0/13 tests passing - Issues: Functions not implemented (SnmpMgr.start_engine, SnmpMgr.engine_request, SnmpMgr.engine_batch), missing Router/Engine modules  
 
 ### User Experience Tests
 27. **user_experience/first_time_user_test.exs** - ❌ **FAILING** - 2/11 tests passing, 9 failures - Issues: FunctionClauseError in :snmp_pdus.dec_message/1 (same PDU decoding issue), MIB name resolution errors, user experience problems
@@ -158,7 +158,7 @@ This document tracks the testing progress for all test files in the SNMPMgr proj
 
 ## SNMPSimulator Usage Reference
 
-The project uses SNMPSimEx library through the `SNMPMgr.TestSupport.SNMPSimulator` module for test device simulation.
+The project uses SNMPSimEx library through the `SnmpMgr.TestSupport.SNMPSimulator` module for test device simulation.
 
 ### Common Usage Patterns
 
@@ -327,7 +327,7 @@ We'll work through the test files in this order:
 ✅ **UDP ArgumentError**: Fixed host format conversion in Core.ex - no more `:gen_udp.send/5` crashes
 ✅ **String.Chars Protocol**: Fixed Reference interpolation in Pool module logging
 ✅ **PDU Decoding Crisis**: Fixed `:snmp_pdus.dec_message/1` FunctionClauseError with basic ASN.1 decoder - no more decoding crashes blocking 8+ test files
-✅ **Supervisor Startup Failure**: Fixed Router process startup with unique naming (`SNMPMgr.EngineSupervisor`) and proper child specifications - infrastructure fully operational
+✅ **Supervisor Startup Failure**: Fixed Router process startup with unique naming (`SnmpMgr.EngineSupervisor`) and proper child specifications - infrastructure fully operational
 ✅ **ArithmeticError in SNMP Message Building**: Fixed by adding request_id fields to Engine batch processing and converting string OIDs to integer lists
 ✅ **OID Encoding Errors**: Fixed FunctionClauseError in `:snmp_pdus.enc_oid_tag/1` by normalizing string OIDs to integer lists in PDU module
 ✅ **Response Request ID Extraction**: Fixed PDU decoder to extract request_id from SNMP responses for proper correlation
@@ -357,7 +357,7 @@ The #1 blocking issue is **PDU message decoding** - `:snmp_pdus.dec_message/1` f
 
 ### 📋 **RECOMMENDED NEXT STEPS**
 1. **Fix PDU Decoding** - Debug `:snmp_pdus.dec_message/1` format requirements  
-2. **Debug Supervisor** - Resolve Router process startup failure in `SNMPMgr.Supervisor.start_link/1`
+2. **Debug Supervisor** - Resolve Router process startup failure in `SnmpMgr.Supervisor.start_link/1`
 3. **Implement Missing Functions** - Add OID and Errors module functions for complete functionality
 4. **Stabilize MIB Module** - Fix nil string handling in `MIB.resolve_name/2`
 
@@ -1210,7 +1210,7 @@ Successfully fixed remaining circuit breaker test failures and achieved perfect 
 - **✅ Circuit Breaker Tests**: **17/17 tests passing** (100% success rate - **PERFECT SCORE ACHIEVED**) ✅  
 - **✅ String.Chars Protocol Errors**: All format interpolation issues completely resolved ✅
 - **✅ Function Result Handling**: Fixed double-wrapping result pattern matching ✅  
-- **✅ API Corrections**: Updated test to use proper CircuitBreaker.call/4 instead of non-existent SNMPMgr.with_circuit_breaker/2 ✅
+- **✅ API Corrections**: Updated test to use proper CircuitBreaker.call/4 instead of non-existent SnmpMgr.with_circuit_breaker/2 ✅
 - **✅ Zero Regressions**: All existing functionality preserved ✅
 
 ### **🔧 Key Technical Fixes Implemented**
@@ -1689,7 +1689,7 @@ Performance Result: Pure Elixir is 1.27x FASTER than Erlang
 
 ### **📊 Performance Testing Infrastructure**
 
-- **✅ Performance Test Module**: `SNMPMgr.PerformanceTest` with comprehensive benchmarking
+- **✅ Performance Test Module**: `SnmpMgr.PerformanceTest` with comprehensive benchmarking
 - **✅ Comparison Testing**: Direct comparison between pure Elixir and Erlang SNMP implementations
 - **✅ Verification Functions**: Ensures both implementations produce identical results
 - **✅ Configurable Iterations**: Default 10,000 operations for statistical significance

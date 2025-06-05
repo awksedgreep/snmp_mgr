@@ -1,6 +1,6 @@
-# SNMPMgr.Multi Module Guide
+# SnmpMgr.Multi Module Guide
 
-The `SNMPMgr.Multi` module provides concurrent multi-target SNMP operations, allowing you to perform SNMP requests against multiple devices simultaneously for improved performance and efficiency.
+The `SnmpMgr.Multi` module provides concurrent multi-target SNMP operations, allowing you to perform SNMP requests against multiple devices simultaneously for improved performance and efficiency.
 
 ## Overview
 
@@ -45,7 +45,7 @@ requests = [
   {"192.168.1.3", "sysDescr.0"}
 ]
 
-results = SNMPMgr.Multi.get_multi(requests, community: "public")
+results = SnmpMgr.Multi.get_multi(requests, community: "public")
 # [
 #   {:ok, "Device 1 Description"},
 #   {:ok, "Device 2 Description"}, 
@@ -59,7 +59,7 @@ requests = [
   {"server.local", "sysName.0", [community: "public", retries: 3]}
 ]
 
-results = SNMPMgr.Multi.get_multi(requests)
+results = SnmpMgr.Multi.get_multi(requests)
 ```
 
 ### `get_bulk_multi/2`
@@ -80,7 +80,7 @@ bulk_requests = [
   {"192.168.1.3", "ifSpeed", [max_repetitions: 20]}
 ]
 
-results = SNMPMgr.Multi.get_bulk_multi(bulk_requests, 
+results = SnmpMgr.Multi.get_bulk_multi(bulk_requests, 
                                       community: "public", 
                                       timeout: 10000)
 
@@ -111,7 +111,7 @@ walk_requests = [
   {"192.168.1.3", "1.3.6.1.2.1.1"}
 ]
 
-results = SNMPMgr.Multi.walk_multi(walk_requests, community: "public")
+results = SnmpMgr.Multi.walk_multi(walk_requests, community: "public")
 
 # Process walk results
 Enum.zip(["Device1", "Device2", "Device3"], results)
@@ -150,7 +150,7 @@ set_requests = [
   {"192.168.1.3", "sysContact.0", "admin@company.com"}
 ]
 
-results = SNMPMgr.Multi.set_multi(set_requests, community: "private")
+results = SnmpMgr.Multi.set_multi(set_requests, community: "private")
 
 # Verify all sets succeeded
 all_successful = Enum.all?(results, fn
@@ -195,7 +195,7 @@ requests = [
   {"secure_device", "sysDescr.0", [community: "private", retries: 3]}
 ]
 
-SNMPMgr.Multi.get_multi(requests, community: "public", timeout: 5000)
+SnmpMgr.Multi.get_multi(requests, community: "public", timeout: 5000)
 ```
 
 ## Advanced Features
@@ -206,7 +206,7 @@ SNMPMgr.Multi.get_multi(requests, community: "public", timeout: 5000)
 # Limit concurrent requests to prevent overwhelming network/devices
 requests = build_large_request_list(100)  # 100 devices
 
-results = SNMPMgr.Multi.get_multi(requests, 
+results = SnmpMgr.Multi.get_multi(requests, 
                                  max_concurrent: 5,  # Only 5 concurrent requests
                                  timeout: 15000)
 ```
@@ -220,7 +220,7 @@ requests = [
   {"unreliable_device2", "sysDescr.0", [retries: 3, timeout: 5000]}
 ]
 
-results = SNMPMgr.Multi.get_multi(requests, retries: 2)  # Global default
+results = SnmpMgr.Multi.get_multi(requests, retries: 2)  # Global default
 
 # Process results with error categorization
 {successful, failed} = Enum.split_with(results, fn
@@ -240,7 +240,7 @@ defmodule ProgressTracker do
     IO.puts("Starting #{operation_name} on #{total} devices...")
     
     start_time = System.monotonic_time(:millisecond)
-    results = SNMPMgr.Multi.get_multi(requests, community: "public")
+    results = SnmpMgr.Multi.get_multi(requests, community: "public")
     end_time = System.monotonic_time(:millisecond)
     
     duration = end_time - start_time
@@ -275,7 +275,7 @@ defmodule NetworkDiscovery do
       {ip, "sysDescr.0", [timeout: 2000, retries: 0]}
     end)
     
-    results = SNMPMgr.Multi.get_multi(requests, community: "public")
+    results = SnmpMgr.Multi.get_multi(requests, community: "public")
     
     # Filter reachable devices
     Enum.zip(ip_range, results)
@@ -321,7 +321,7 @@ defmodule HealthMonitor do
                    oid <- @health_oids,
                    do: {device.ip, oid, [community: device.community]}
 
-    results = SNMPMgr.Multi.get_multi(requests, timeout: 5000)
+    results = SnmpMgr.Multi.get_multi(requests, timeout: 5000)
     
     # Group results by device
     results
@@ -377,7 +377,7 @@ defmodule InterfaceStatsCollector do
                      community: device.community
                    ]}
 
-    results = SNMPMgr.Multi.get_bulk_multi(requests, timeout: 15000)
+    results = SnmpMgr.Multi.get_bulk_multi(requests, timeout: 15000)
     
     # Process results by device
     results
@@ -412,14 +412,14 @@ defmodule ConfigManager do
     end)
     
     # Perform all SETs concurrently
-    results = SNMPMgr.Multi.set_multi(set_requests, timeout: 10000)
+    results = SnmpMgr.Multi.set_multi(set_requests, timeout: 10000)
     
     # Verify changes
     verify_requests = Enum.map(devices, fn device ->
       {device.ip, "sysContact.0", [community: device.read_community]}
     end)
     
-    verify_results = SNMPMgr.Multi.get_multi(verify_requests)
+    verify_results = SnmpMgr.Multi.get_multi(verify_requests)
     
     # Combine set and verify results
     Enum.zip([devices, results, verify_results])
@@ -450,7 +450,7 @@ defmodule LargeScaleOperations do
         {device.ip, "sysDescr.0", [community: device.community]}
       end)
       
-      SNMPMgr.Multi.get_multi(requests, 
+      SnmpMgr.Multi.get_multi(requests, 
                              max_concurrent: 10,
                              timeout: 5000)
     end)
@@ -469,7 +469,7 @@ defmodule AdaptiveMulti do
       {target, oid, opts} -> {target, oid, Keyword.put(opts, :timeout, 2000)}
     end)
     
-    fast_results = SNMPMgr.Multi.get_multi(fast_requests)
+    fast_results = SnmpMgr.Multi.get_multi(fast_requests)
     
     # Retry failed requests with longer timeout
     failed_indexes = fast_results
@@ -483,7 +483,7 @@ defmodule AdaptiveMulti do
         {target, oid, [timeout: 10000, retries: 2]}
       end)
       
-      retry_results = SNMPMgr.Multi.get_multi(retry_requests)
+      retry_results = SnmpMgr.Multi.get_multi(retry_requests)
       
       # Merge results
       merge_results(fast_results, retry_results, failed_indexes)
@@ -541,7 +541,7 @@ defmodule ResilientMulti do
   defp perform_with_retries([], _retries, acc), do: Enum.reverse(acc)
   
   defp perform_with_retries(requests, retries_left, acc) when retries_left > 0 do
-    results = SNMPMgr.Multi.get_multi(requests)
+    results = SnmpMgr.Multi.get_multi(requests)
     
     {successful, failed} = separate_results(requests, results)
     
@@ -570,14 +570,14 @@ walk_requests = Enum.map(devices, fn ip ->
   {ip, "ifTable", [community: "public", timeout: 10000]}
 end)
 
-walk_results = SNMPMgr.Multi.walk_multi(walk_requests)
+walk_results = SnmpMgr.Multi.walk_multi(walk_requests)
 
 # Process each device's table data
 processed_tables = Enum.zip(devices, walk_results)
 |> Enum.map(fn {device_ip, walk_result} ->
   case walk_result do
     {:ok, table_data} ->
-      {:ok, table} = SNMPMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
+      {:ok, table} = SnmpMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
       {device_ip, table}
     {:error, reason} ->
       {device_ip, {:error, reason}}
@@ -589,8 +589,8 @@ end)
 
 ```elixir
 # Set global defaults, then use in multi-operations
-SNMPMgr.Config.set_default_community("monitoring")
-SNMPMgr.Config.set_default_timeout(8000)
+SnmpMgr.Config.set_default_community("monitoring")
+SnmpMgr.Config.set_default_timeout(8000)
 
 # Multi-operations will use these defaults
 requests = [
@@ -599,5 +599,5 @@ requests = [
   {"device3", "sysDescr.0"}   # Uses global community "monitoring"
 ]
 
-results = SNMPMgr.Multi.get_multi(requests)
+results = SnmpMgr.Multi.get_multi(requests)
 ```

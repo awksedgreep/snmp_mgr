@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Multi do
+defmodule SnmpMgr.Multi do
   @moduledoc """
   Concurrent multi-target SNMP operations.
   
@@ -23,7 +23,7 @@ defmodule SNMPMgr.Multi do
       ...>   {"device2", "sysUpTime.0"},
       ...>   {"device3", "ifNumber.0"}
       ...> ]
-      iex> SNMPMgr.Multi.get_multi(requests)
+      iex> SnmpMgr.Multi.get_multi(requests)
       [
         {:ok, "Device 1 Description"},
         {:ok, 123456},
@@ -36,7 +36,7 @@ defmodule SNMPMgr.Multi do
     
     execute_concurrent_requests(targets_and_oids, timeout, max_concurrent, fn {target, oid, request_opts} ->
       merged_opts = Keyword.merge(opts, request_opts)
-      SNMPMgr.get(target, oid, merged_opts)
+      SnmpMgr.get(target, oid, merged_opts)
     end)
   end
 
@@ -54,7 +54,7 @@ defmodule SNMPMgr.Multi do
       ...>   {"switch2", "ifTable"},
       ...>   {"router1", "ipRouteTable"}
       ...> ]
-      iex> SNMPMgr.Multi.get_bulk_multi(requests, max_repetitions: 20)
+      iex> SnmpMgr.Multi.get_bulk_multi(requests, max_repetitions: 20)
       [
         {:ok, [{"1.3.6.1.2.1.2.2.1.2.1", "eth0"}, ...]},
         {:ok, [{"1.3.6.1.2.1.2.2.1.2.1", "GigE0/1"}, ...]},
@@ -67,7 +67,7 @@ defmodule SNMPMgr.Multi do
     
     execute_concurrent_requests(targets_and_oids, timeout, max_concurrent, fn {target, oid, request_opts} ->
       merged_opts = Keyword.merge(opts, request_opts)
-      SNMPMgr.get_bulk(target, oid, merged_opts)
+      SnmpMgr.get_bulk(target, oid, merged_opts)
     end)
   end
 
@@ -85,7 +85,7 @@ defmodule SNMPMgr.Multi do
       ...>   {"device2", "interfaces"},
       ...>   {"device3", [1, 3, 6, 1, 2, 1, 4]}
       ...> ]
-      iex> SNMPMgr.Multi.walk_multi(requests, version: :v2c)
+      iex> SnmpMgr.Multi.walk_multi(requests, version: :v2c)
       [
         {:ok, [{"1.3.6.1.2.1.1.1.0", "Device 1"}, ...]},
         {:ok, [{"1.3.6.1.2.1.2.1.0", 24}, ...]},
@@ -98,7 +98,7 @@ defmodule SNMPMgr.Multi do
     
     execute_concurrent_requests(targets_and_oids, timeout, max_concurrent, fn {target, oid, request_opts} ->
       merged_opts = Keyword.merge(opts, request_opts)
-      SNMPMgr.walk(target, oid, merged_opts)
+      SnmpMgr.walk(target, oid, merged_opts)
     end)
   end
 
@@ -116,7 +116,7 @@ defmodule SNMPMgr.Multi do
       ...>   {"switch2", "ifTable"},
       ...>   {"router1", "ipRouteTable"}
       ...> ]
-      iex> SNMPMgr.Multi.walk_table_multi(requests, version: :v2c)
+      iex> SnmpMgr.Multi.walk_table_multi(requests, version: :v2c)
       [
         {:ok, [{"1.3.6.1.2.1.2.2.1.2.1", "eth0"}, ...]},
         {:ok, [{"1.3.6.1.2.1.2.2.1.2.1", "GigE0/1"}, ...]},
@@ -129,7 +129,7 @@ defmodule SNMPMgr.Multi do
     
     execute_concurrent_requests(targets_and_tables, timeout, max_concurrent, fn {target, table_oid, request_opts} ->
       merged_opts = Keyword.merge(opts, request_opts)
-      SNMPMgr.walk_table(target, table_oid, merged_opts)
+      SnmpMgr.walk_table(target, table_oid, merged_opts)
     end)
   end
 
@@ -149,7 +149,7 @@ defmodule SNMPMgr.Multi do
       ...>   {:get_bulk, "switch1", "ifTable", [max_repetitions: 20]},
       ...>   {:walk, "router1", "system", [version: :v2c]}
       ...> ]
-      iex> SNMPMgr.Multi.execute_mixed(operations)
+      iex> SnmpMgr.Multi.execute_mixed(operations)
       [
         {:ok, "Device 1 Description"},
         {:ok, [{"1.3.6.1.2.1.2.2.1.2.1", "eth0"}, ...]},
@@ -185,7 +185,7 @@ defmodule SNMPMgr.Multi do
 
       targets = [{"device1", "sysUpTime.0"}, {"device2", "ifInOctets.1"}]
       callback = fn change -> IO.inspect(change) end
-      {:ok, monitor_pid} = SNMPMgr.Multi.monitor(targets, callback, interval: 30_000)
+      {:ok, monitor_pid} = SnmpMgr.Multi.monitor(targets, callback, interval: 30_000)
   """
   def monitor(targets_and_oids, callback, opts \\ []) do
     interval = Keyword.get(opts, :interval, 30_000)
@@ -255,27 +255,27 @@ defmodule SNMPMgr.Multi do
   end
 
   defp execute_operation(:get, target, oid, opts) do
-    SNMPMgr.get(target, oid, opts)
+    SnmpMgr.get(target, oid, opts)
   end
 
   defp execute_operation(:get_next, target, oid, opts) do
-    SNMPMgr.get_next(target, oid, opts)
+    SnmpMgr.get_next(target, oid, opts)
   end
 
   defp execute_operation(:set, target, {oid, value}, opts) do
-    SNMPMgr.set(target, oid, value, opts)
+    SnmpMgr.set(target, oid, value, opts)
   end
 
   defp execute_operation(:get_bulk, target, oid, opts) do
-    SNMPMgr.get_bulk(target, oid, opts)
+    SnmpMgr.get_bulk(target, oid, opts)
   end
 
   defp execute_operation(:walk, target, root_oid, opts) do
-    SNMPMgr.walk(target, root_oid, opts)
+    SnmpMgr.walk(target, root_oid, opts)
   end
 
   defp execute_operation(:walk_table, target, table_oid, opts) do
-    SNMPMgr.walk_table(target, table_oid, opts)
+    SnmpMgr.walk_table(target, table_oid, opts)
   end
 
   defp execute_operation(operation, target, args, _opts) do

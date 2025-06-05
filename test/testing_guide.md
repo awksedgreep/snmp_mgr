@@ -1,6 +1,6 @@
-# SNMPMgr Testing Implementation Guide
+# SnmpMgr Testing Implementation Guide
 
-This guide provides practical instructions for implementing the comprehensive testing plan for SNMPMgr.
+This guide provides practical instructions for implementing the comprehensive testing plan for SnmpMgr.
 
 ## Quick Start - Running Existing Tests
 
@@ -44,9 +44,9 @@ Create comprehensive protocol-level tests:
 
 ```elixir
 # test/unit/pdu_test.exs
-defmodule SNMPMgr.PDUTest do
+defmodule SnmpMgr.PDUTest do
   use ExUnit.Case, async: true
-  alias SNMPMgr.PDU
+  alias SnmpMgr.PDU
 
   describe "PDU encoding/decoding" do
     test "GET request PDU" do
@@ -57,9 +57,9 @@ defmodule SNMPMgr.PDUTest do
     end
 
     test "handles all SNMP error codes" do
-      for {code, atom} <- SNMPMgr.Errors.error_code_mapping() do
-        assert SNMPMgr.Errors.code_to_atom(code) == atom
-        assert is_binary(SNMPMgr.Errors.description(atom))
+      for {code, atom} <- SnmpMgr.Errors.error_code_mapping() do
+        assert SnmpMgr.Errors.code_to_atom(code) == atom
+        assert is_binary(SnmpMgr.Errors.description(atom))
       end
     end
   end
@@ -70,9 +70,9 @@ end
 
 ```elixir
 # test/unit/types_test.exs
-defmodule SNMPMgr.TypesTest do
+defmodule SnmpMgr.TypesTest do
   use ExUnit.Case, async: true
-  alias SNMPMgr.Types
+  alias SnmpMgr.Types
 
   @test_cases [
     # {input, expected_type, expected_encoding}
@@ -108,8 +108,8 @@ Extend the simulator to support more realistic scenarios:
 
 ```elixir
 # test/support/advanced_simulator.ex
-defmodule SNMPMgr.TestSupport.AdvancedSimulator do
-  alias SNMPMgr.TestSupport.SNMPSimulator
+defmodule SnmpMgr.TestSupport.AdvancedSimulator do
+  alias SnmpMgr.TestSupport.SNMPSimulator
 
   @doc "Create a device that responds slowly"
   def create_slow_device(opts \\ []) do
@@ -155,7 +155,7 @@ end
 
 ```elixir
 # test/support/performance_helpers.ex
-defmodule SNMPMgr.TestSupport.PerformanceHelpers do
+defmodule SnmpMgr.TestSupport.PerformanceHelpers do
   @doc "Measure operation performance"
   def measure_performance(operation_name, fun) do
     start_time = System.monotonic_time(:microsecond)
@@ -196,9 +196,9 @@ end
 
 ```elixir
 # test/integration/multi_device_test.exs
-defmodule SNMPMgr.MultiDeviceTest do
+defmodule SnmpMgr.MultiDeviceTest do
   use ExUnit.Case, async: false
-  alias SNMPMgr.TestSupport.{SNMPSimulator, AdvancedSimulator}
+  alias SnmpMgr.TestSupport.{SNMPSimulator, AdvancedSimulator}
 
   @tag :integration
   @tag :multi_device
@@ -234,7 +234,7 @@ defmodule SNMPMgr.MultiDeviceTest do
       tasks = Enum.map(devices, fn device ->
         Task.async(fn ->
           target = SNMPSimulator.device_target(device)
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                      community: device.community, timeout: 5000)
         end)
       end)
@@ -260,9 +260,9 @@ end
 
 ```elixir
 # test/user_experience/api_usability_test.exs
-defmodule SNMPMgr.APIUsabilityTest do
+defmodule SnmpMgr.APIUsabilityTest do
   use ExUnit.Case, async: false
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
 
   @moduletag :user_experience
 
@@ -281,7 +281,7 @@ defmodule SNMPMgr.APIUsabilityTest do
       target = SNMPSimulator.device_target(device)
       
       # Line 1: The basic get operation
-      case SNMPMgr.get(target, "sysDescr.0", community: device.community) do
+      case SnmpMgr.get(target, "sysDescr.0", community: device.community) do
         {:ok, description} ->
           assert is_binary(description)
           assert String.length(description) > 0
@@ -304,7 +304,7 @@ defmodule SNMPMgr.APIUsabilityTest do
       ]
       
       results = Enum.map(monitoring_oids, fn oid ->
-        case SNMPMgr.get(target, oid, community: device.community) do
+        case SnmpMgr.get(target, oid, community: device.community) do
           {:ok, value} -> {oid, value}
           {:error, _} -> {oid, :error}
         end
@@ -319,11 +319,11 @@ defmodule SNMPMgr.APIUsabilityTest do
       target = SNMPSimulator.device_target(device)
       
       # Test various error scenarios
-      invalid_oid_result = SNMPMgr.get(target, "invalid.oid", 
+      invalid_oid_result = SnmpMgr.get(target, "invalid.oid", 
                                       community: device.community)
-      wrong_community_result = SNMPMgr.get(target, "sysDescr.0", 
+      wrong_community_result = SnmpMgr.get(target, "sysDescr.0", 
                                           community: "wrong")
-      invalid_target_result = SNMPMgr.get("invalid.host:161", "sysDescr.0", 
+      invalid_target_result = SnmpMgr.get("invalid.host:161", "sysDescr.0", 
                                          community: device.community)
       
       # Error messages should be informative
@@ -345,9 +345,9 @@ end
 
 ```elixir
 # test/performance/benchmark_test.exs
-defmodule SNMPMgr.BenchmarkTest do
+defmodule SnmpMgr.BenchmarkTest do
   use ExUnit.Case, async: false
-  alias SNMPMgr.TestSupport.{SNMPSimulator, PerformanceHelpers}
+  alias SnmpMgr.TestSupport.{SNMPSimulator, PerformanceHelpers}
 
   @moduletag :performance
   @moduletag timeout: 300_000  # 5 minutes for performance tests
@@ -378,7 +378,7 @@ defmodule SNMPMgr.BenchmarkTest do
         "sustained_gets", fn ->
           # Perform 100 GET operations
           for _i <- 1..100 do
-            SNMPMgr.get(target, "sysUpTime.0", community: device.community)
+            SnmpMgr.get(target, "sysUpTime.0", community: device.community)
           end
         end
       )
@@ -401,14 +401,14 @@ defmodule SNMPMgr.BenchmarkTest do
       {_individual_results, individual_metrics} = 
         PerformanceHelpers.measure_performance("individual_gets", fn ->
           for i <- 1..10 do
-            SNMPMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
+            SnmpMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
                        community: device.community)
           end
         end)
       
       {_bulk_results, bulk_metrics} = 
         PerformanceHelpers.measure_performance("bulk_walk", fn ->
-          SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+          SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                       community: device.community, version: :v2c)
         end)
       

@@ -1,4 +1,4 @@
-defmodule SNMPMgr.MIB do
+defmodule SnmpMgr.MIB do
   @compile {:no_warn_undefined, [:snmpc, :snmp_misc]}
   
   @moduledoc """
@@ -102,10 +102,10 @@ defmodule SNMPMgr.MIB do
 
   ## Examples
 
-      iex> SNMPMgr.MIB.compile("SNMPv2-MIB.mib")
+      iex> SnmpMgr.MIB.compile("SNMPv2-MIB.mib")
       {:ok, "SNMPv2-MIB.bin"}
 
-      iex> SNMPMgr.MIB.compile("nonexistent.mib")
+      iex> SnmpMgr.MIB.compile("nonexistent.mib")
       {:error, :file_not_found}
   """
   def compile(mib_file, opts \\ []) do
@@ -150,7 +150,7 @@ defmodule SNMPMgr.MIB do
   
   ## Examples
   
-      iex> SNMPMgr.MIB.parse_mib_file("SNMPv2-MIB.mib")
+      iex> SnmpMgr.MIB.parse_mib_file("SNMPv2-MIB.mib")
       {:ok, %{objects: [...], imports: [...], exports: [...]}}
   """
   def parse_mib_file(mib_file, opts \\ []) do
@@ -168,7 +168,7 @@ defmodule SNMPMgr.MIB do
   ## Examples
   
       iex> content = "sysDescr OBJECT-TYPE SYNTAX DisplayString ACCESS read-only STATUS mandatory"
-      iex> SNMPMgr.MIB.parse_mib_content(content)
+      iex> SnmpMgr.MIB.parse_mib_content(content)
       {:ok, %{tokens: [...], parsed_objects: [...]}}
   """
   def parse_mib_content(content, opts \\ []) when is_binary(content) do
@@ -251,13 +251,13 @@ defmodule SNMPMgr.MIB do
 
   ## Examples
 
-      iex> SNMPMgr.MIB.resolve("sysDescr.0")
+      iex> SnmpMgr.MIB.resolve("sysDescr.0")
       {:ok, [1, 3, 6, 1, 2, 1, 1, 1, 0]}
 
-      iex> SNMPMgr.MIB.resolve("sysDescr")
+      iex> SnmpMgr.MIB.resolve("sysDescr")
       {:ok, [1, 3, 6, 1, 2, 1, 1, 1]}
 
-      iex> SNMPMgr.MIB.resolve("unknownName")
+      iex> SnmpMgr.MIB.resolve("unknownName")
       {:error, :not_found}
   """
   def resolve(name) do
@@ -269,10 +269,10 @@ defmodule SNMPMgr.MIB do
 
   ## Examples
 
-      iex> SNMPMgr.MIB.reverse_lookup([1, 3, 6, 1, 2, 1, 1, 1, 0])
+      iex> SnmpMgr.MIB.reverse_lookup([1, 3, 6, 1, 2, 1, 1, 1, 0])
       {:ok, "sysDescr.0"}
 
-      iex> SNMPMgr.MIB.reverse_lookup([1, 3, 6, 1, 2, 1, 1, 1])
+      iex> SnmpMgr.MIB.reverse_lookup([1, 3, 6, 1, 2, 1, 1, 1])
       {:ok, "sysDescr"}
   """
   def reverse_lookup(oid) when is_list(oid) do

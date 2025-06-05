@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Core do
+defmodule SnmpMgr.Core do
   @moduledoc """
   Core SNMP operations using Erlang's SNMP PDU functions directly.
   
@@ -17,7 +17,7 @@ defmodule SNMPMgr.Core do
   @spec send_get_request(target(), oid(), opts()) :: snmp_result()
   def send_get_request(target, oid, opts \\ []) do
     # Parse target to extract host and port
-    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+    {host, updated_opts} = case SnmpMgr.Target.parse(target) do
       {:ok, %{host: host, port: port}} -> 
         # Use parsed port, overriding any default
         opts_with_port = Keyword.put(opts, :port, port)
@@ -54,7 +54,7 @@ defmodule SNMPMgr.Core do
   @spec send_get_next_request(target(), oid(), opts()) :: snmp_result()
   def send_get_next_request(target, oid, opts \\ []) do
     # Parse target to extract host and port
-    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+    {host, updated_opts} = case SnmpMgr.Target.parse(target) do
       {:ok, %{host: host, port: port}} -> 
         # Use parsed port, overriding any default
         opts_with_port = Keyword.put(opts, :port, port)
@@ -110,7 +110,7 @@ defmodule SNMPMgr.Core do
   @spec send_set_request(target(), oid(), term(), opts()) :: snmp_result()
   def send_set_request(target, oid, value, opts \\ []) do
     # Parse target to extract host and port
-    {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+    {host, updated_opts} = case SnmpMgr.Target.parse(target) do
       {:ok, %{host: host, port: port}} -> 
         # Use parsed port, overriding any default
         opts_with_port = Keyword.put(opts, :port, port)
@@ -127,7 +127,7 @@ defmodule SNMPMgr.Core do
     end
     
     # Convert value to snmp_lib format
-    typed_value = case SNMPMgr.Types.encode_value(value, opts) do
+    typed_value = case SnmpMgr.Types.encode_value(value, opts) do
       {:ok, tv} -> tv
       {:error, _} -> value
     end
@@ -156,7 +156,7 @@ defmodule SNMPMgr.Core do
     case version do
       :v2c ->
         # Parse target to extract host and port
-        {host, updated_opts} = case SNMPMgr.Target.parse(target) do
+        {host, updated_opts} = case SnmpMgr.Target.parse(target) do
           {:ok, %{host: host, port: port}} -> 
             # Use parsed port, overriding any default
             opts_with_port = Keyword.put(opts, :port, port)
@@ -226,7 +226,7 @@ defmodule SNMPMgr.Core do
 
   @spec map_options_to_snmp_lib(opts()) :: list()
   defp map_options_to_snmp_lib(opts) do
-    # Map SNMPMgr options to SnmpLib.Manager options
+    # Map SnmpMgr options to SnmpLib.Manager options
     mapped = []
     
     mapped = if community = Keyword.get(opts, :community), do: [{:community, community} | mapped], else: mapped
@@ -242,7 +242,7 @@ defmodule SNMPMgr.Core do
   
   @spec map_error_from_snmp_lib(term()) :: term()
   defp map_error_from_snmp_lib(reason) do
-    # Map SnmpLib errors back to SNMPMgr error format for backward compatibility
+    # Map SnmpLib errors back to SnmpMgr error format for backward compatibility
     case reason do
       :timeout -> :timeout
       :host_unreachable -> :host_unreachable

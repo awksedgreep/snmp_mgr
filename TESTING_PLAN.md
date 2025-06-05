@@ -1,8 +1,8 @@
-# SNMPMgr Comprehensive Testing Plan
+# SnmpMgr Comprehensive Testing Plan
 
 ## Overview
 
-This testing plan is designed to achieve 80% test coverage across all aspects of the SNMPMgr library through systematic, phased testing. The plan focuses on user experience, reliability, and real-world scenarios to ensure the library is production-ready for open-source use.
+This testing plan is designed to achieve 80% test coverage across all aspects of the SnmpMgr library through systematic, phased testing. The plan focuses on user experience, reliability, and real-world scenarios to ensure the library is production-ready for open-source use.
 
 ## Testing Philosophy
 
@@ -25,10 +25,10 @@ This testing plan is designed to achieve 80% test coverage across all aspects of
 ### 1.1 Low-Level Protocol Testing
 ```elixir
 # Target: lib/snmp_mgr/core/
-- SNMPMgr.PDU (Protocol Data Unit handling)
-- SNMPMgr.Transport (UDP socket management)
-- SNMPMgr.Encoding (ASN.1 encoding/decoding)
-- SNMPMgr.Security (Community string validation)
+- SnmpMgr.PDU (Protocol Data Unit handling)
+- SnmpMgr.Transport (UDP socket management)
+- SnmpMgr.Encoding (ASN.1 encoding/decoding)
+- SnmpMgr.Security (Community string validation)
 ```
 
 **Test Categories:**
@@ -106,7 +106,7 @@ This testing plan is designed to achieve 80% test coverage across all aspects of
 - Forward-compatible test structure supports upcoming module development
 - Performance benchmarks integrated into all test suites
 - Real SNMP device simulation provides realistic testing scenarios
-- All existing SNMPMgr.Errors functionality thoroughly validated
+- All existing SnmpMgr.Errors functionality thoroughly validated
 
 ## Phase 2: MIB and Schema Testing (Week 3-4) ✅ COMPLETED
 
@@ -175,7 +175,7 @@ This testing plan is designed to achieve 80% test coverage across all aspects of
 - **Custom MIB Tests**: 18 tests for enterprise and vendor-specific MIB integration
 
 **Implementation Notes:**
-- MIB system tests work with existing SNMPMgr.MIB GenServer implementation
+- MIB system tests work with existing SnmpMgr.MIB GenServer implementation
 - Configuration tests validate all public API functions and edge cases
 - Standard MIB tests ensure compliance with RFC1213 and RFC2863 specifications
 - Custom MIB tests prepare for enterprise and vendor-specific MIB support
@@ -186,7 +186,7 @@ This testing plan is designed to achieve 80% test coverage across all aspects of
 
 ### 3.1 Basic SNMP Operations
 ```elixir
-# Target: Main SNMPMgr API functions
+# Target: Main SnmpMgr API functions
 - get/3, get_next/3, set/4
 - Error handling and retries
 - Timeout management
@@ -680,4 +680,4 @@ test/
 - **User Feedback**: Open source community input integration
 - **Real-World Testing**: Production deployment feedback
 
-This comprehensive testing plan ensures that SNMPMgr will be a robust, user-friendly, and production-ready library that the open-source community can rely on for their SNMP management needs.
+This comprehensive testing plan ensures that SnmpMgr will be a robust, user-friendly, and production-ready library that the open-source community can rely on for their SNMP management needs.

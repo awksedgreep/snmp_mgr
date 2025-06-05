@@ -1,4 +1,4 @@
-defmodule SNMPMgr.Table do
+defmodule SnmpMgr.Table do
   @moduledoc """
   Table processing utilities for SNMP table data.
   
@@ -24,7 +24,7 @@ defmodule SNMPMgr.Table do
       ...>   {"1.3.6.1.2.1.2.2.1.3.1", 6},
       ...>   {"1.3.6.1.2.1.2.2.1.3.2", 6}
       ...> ]
-      iex> SNMPMgr.Table.to_table(pairs, [1, 3, 6, 1, 2, 1, 2, 2])
+      iex> SnmpMgr.Table.to_table(pairs, [1, 3, 6, 1, 2, 1, 2, 2])
       {:ok, %{
         1 => %{2 => "eth0", 3 => 6},
         2 => %{2 => "eth1", 3 => 6}
@@ -97,7 +97,7 @@ defmodule SNMPMgr.Table do
       ...>   {"1.3.6.1.2.1.2.2.1.1.2", 2},
       ...>   {"1.3.6.1.2.1.2.2.1.2.2", "eth1"}
       ...> ]
-      iex> SNMPMgr.Table.to_map(pairs, 1)
+      iex> SnmpMgr.Table.to_map(pairs, 1)
       {:ok, %{
         1 => %{ifIndex: 1, ifDescr: "eth0"},
         2 => %{ifIndex: 2, ifDescr: "eth1"}
@@ -230,7 +230,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0"}, 2 => %{2 => "eth1"}, 10 => %{2 => "lo"}}
-      iex> SNMPMgr.Table.filter_by_index(table, fn index -> index < 10 end)
+      iex> SnmpMgr.Table.filter_by_index(table, fn index -> index < 10 end)
       {:ok, %{1 => %{2 => "eth0"}, 2 => %{2 => "eth1"}}}
   """
   def filter_by_index(table_data, index_filter) when is_map(table_data) and is_function(index_filter, 1) do
@@ -251,7 +251,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0", 3 => 6}, 2 => %{2 => "eth1", 3 => 6}}
-      iex> SNMPMgr.Table.to_list(table)
+      iex> SnmpMgr.Table.to_list(table)
       {:ok, [
         %{index: 1, 2 => "eth0", 3 => 6},
         %{index: 2, 2 => "eth1", 3 => 6}
@@ -284,7 +284,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0", 3 => 6}, 2 => %{2 => "eth1", 3 => 6}}
-      iex> SNMPMgr.Table.analyze(table)
+      iex> SnmpMgr.Table.analyze(table)
       {:ok, %{
         row_count: 2,
         column_count: 2,
@@ -359,7 +359,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0", 3 => 1}, 2 => %{2 => "eth1", 3 => 0}}
-      iex> SNMPMgr.Table.filter_by_column(table, 3, fn val -> val == 1 end)
+      iex> SnmpMgr.Table.filter_by_column(table, 3, fn val -> val == 1 end)
       {:ok, %{1 => %{2 => "eth0", 3 => 1}}}
   """
   def filter_by_column(table_data, column, filter_fn) when is_map(table_data) and is_function(filter_fn, 1) do
@@ -390,7 +390,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth1"}, 2 => %{2 => "eth0"}}
-      iex> SNMPMgr.Table.sort_by_column(table, 2)
+      iex> SnmpMgr.Table.sort_by_column(table, 2)
       {:ok, [{2, %{2 => "eth0"}}, {1, %{2 => "eth1"}}]}
   """
   def sort_by_column(table_data, column, direction \\ :asc) when is_map(table_data) do
@@ -416,7 +416,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth", 3 => 1}, 2 => %{2 => "lo", 3 => 1}}
-      iex> SNMPMgr.Table.group_by_column(table, 3)
+      iex> SnmpMgr.Table.group_by_column(table, 3)
       {:ok, %{1 => [%{index: 1, 2 => "eth", 3 => 1}, %{index: 2, 2 => "lo", 3 => 1}]}}
   """
   def group_by_column(table_data, column) when is_map(table_data) do
@@ -449,7 +449,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0", 3 => 100}, 2 => %{2 => "eth1", 3 => 200}}
-      iex> SNMPMgr.Table.column_stats(table, [3])
+      iex> SnmpMgr.Table.column_stats(table, [3])
       {:ok, %{3 => %{count: 2, sum: 300, avg: 150.0, min: 100, max: 200}}}
   """
   def column_stats(table_data, columns \\ nil) when is_map(table_data) do
@@ -497,7 +497,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth", 3 => 1}, 2 => %{2 => "eth", 3 => 1}}
-      iex> SNMPMgr.Table.find_duplicates(table, [2, 3])
+      iex> SnmpMgr.Table.find_duplicates(table, [2, 3])
       {:ok, [[{1, %{2 => "eth", 3 => 1}}, {2, %{2 => "eth", 3 => 1}}]]}
   """
   def find_duplicates(table_data, columns) when is_map(table_data) and is_list(columns) do
@@ -526,7 +526,7 @@ defmodule SNMPMgr.Table do
   ## Examples
 
       iex> table = %{1 => %{2 => "eth0", 3 => 100}}
-      iex> SNMPMgr.Table.validate(table)
+      iex> SnmpMgr.Table.validate(table)
       {:ok, %{valid: true, issues: []}}
   """
   def validate(table_data, opts \\ []) when is_map(table_data) do

@@ -14,32 +14,32 @@ The test suite is now running efficiently (16.4s vs previous 2+ minutes) after r
 **Root Cause:** Tests expecting successful operations but getting `{:error, :endOfMibView}` from SNMP simulator
 
 #### Value Decoding Issues (2 failures)
-1. **SNMPMgr.TypesIntegrationTest: "decodes typed values to Elixir terms"**
+1. **SnmpMgr.TypesIntegrationTest: "decodes typed values to Elixir terms"**
    - **Location:** `test/unit/types_comprehensive_test.exs:47`
    - **Issue:** `assert Types.decode_value({:ipAddress, {192, 168, 1, 1}}) == "192.168.1.1"`
    - **Actual:** `{192, 168, 1, 1}` != `"192.168.1.1"`
    - **Root Cause:** IP address decoding returns tuple instead of string
 
-2. **SNMPMgr.TypesIntegrationTest: "encodes values with automatic type inference"**
+2. **SnmpMgr.TypesIntegrationTest: "encodes values with automatic type inference"**
    - **Location:** `test/unit/types_comprehensive_test.exs:34`
    - **Issue:** `assert {:ok, {:string, "hello"}} = Types.encode_value("hello")`
    - **Actual:** `{:ok, {:string, ~c"hello"}}` (charlist vs string)
    - **Root Cause:** String encoding format mismatch
 
 #### API Migration Issues (3 failures)
-3. **SNMPMgr.MIBIntegrationTest: "MIB name resolution works with SNMP operations"**
+3. **SnmpMgr.MIBIntegrationTest: "MIB name resolution works with SNMP operations"**
    - **Location:** `test/unit/mib_comprehensive_test.exs:34`
-   - **Issue:** `SNMPMgr.get/5 is undefined or private`
+   - **Issue:** `SnmpMgr.get/5 is undefined or private`
    - **Root Cause:** Test still using obsolete 5-parameter API
 
-4. **SNMPMgr.MIBIntegrationTest: "MIB tree walking integration"**
+4. **SnmpMgr.MIBIntegrationTest: "MIB tree walking integration"**
    - **Location:** `test/unit/mib_comprehensive_test.exs:109`
-   - **Issue:** `SNMPMgr.walk/5 is undefined or private`
+   - **Issue:** `SnmpMgr.walk/5 is undefined or private`
    - **Root Cause:** Test still using obsolete 5-parameter API
 
-5. **SNMPMgr.MIBIntegrationTest: "integrates with SnmpLib.MIB for enhanced functionality"**
+5. **SnmpMgr.MIBIntegrationTest: "integrates with SnmpLib.MIB for enhanced functionality"**
    - **Location:** `test/unit/mib_comprehensive_test.exs:81`
-   - **Issue:** `SNMPMgr.get/5 is undefined or private`
+   - **Issue:** `SnmpMgr.get/5 is undefined or private`
    - **Root Cause:** Test still using obsolete 5-parameter API
 
 #### SNMP Walk/Operation Issues (17 failures)
@@ -55,7 +55,7 @@ The test suite is now running efficiently (16.4s vs previous 2+ minutes) after r
 ### Category 2: Integration/Setup Issues (15 failures)
 
 #### Test Infrastructure (Multiple failures)
-23. **SNMPMgr.EngineIntegrationTest: Engine startup and configuration**
+23. **SnmpMgr.EngineIntegrationTest: Engine startup and configuration**
    - **Issue:** Engine infrastructure not starting properly in test environment
    - **Root Cause:** Missing engine setup in test environment
 
@@ -74,12 +74,12 @@ These blocked basic functionality:
 1. **✅ MIB Tests Using Obsolete API (3 failures) - FIXED**
    ```elixir
    # ✅ Fixed obsolete calls:
-   SNMPMgr.get(host, port, community, oid, opts)  # 5 params - OBSOLETE
-   SNMPMgr.walk(host, port, community, oid, opts) # 5 params - OBSOLETE
+   SnmpMgr.get(host, port, community, oid, opts)  # 5 params - OBSOLETE
+   SnmpMgr.walk(host, port, community, oid, opts) # 5 params - OBSOLETE
    
    # ✅ Now correctly using:
-   SNMPMgr.get(target, oid, [community: community] ++ opts)  # 3 params
-   SNMPMgr.walk(target, oid, [community: community] ++ opts) # 3 params
+   SnmpMgr.get(target, oid, [community: community] ++ opts)  # 3 params
+   SnmpMgr.walk(target, oid, [community: community] ++ opts) # 3 params
    ```
 
 ### ✅ Medium Priority (Data Format Issues - 2 failures) - COMPLETED
@@ -109,8 +109,8 @@ These require environment investigation:
 
 ### ✅ Phase 1: Fix API Compatibility (3 failures) - COMPLETED
 - ✅ Updated MIB tests to use 3-parameter API
-- ✅ Fixed obsolete `SNMPMgr.get(host, port, community, oid, opts)` calls
-- ✅ Fixed obsolete `SNMPMgr.walk(host, port, community, oid, opts)` calls
+- ✅ Fixed obsolete `SnmpMgr.get(host, port, community, oid, opts)` calls
+- ✅ Fixed obsolete `SnmpMgr.walk(host, port, community, oid, opts)` calls
 - ✅ Updated return value expectations (`{:ok, value}` vs `{:ok, {oid, value}}`)
 
 ### ✅ Phase 2: Fix Data Formats (2 failures) - COMPLETED
@@ -125,12 +125,12 @@ These require environment investigation:
 ### ✅ Phase 4: Fix Config API Migration Issues (5 failures) - COMPLETED
 - ✅ **Root Cause Identified:** Config tests still using obsolete 4-parameter and 5-parameter API calls
 - ✅ **Fixed config integration tests:** Updated 6 failing API calls in `config_comprehensive_test.exs` to use 3-parameter API
-- ✅ **API migration complete:** All config tests now use `SNMPMgr.get(target, oid, opts)` format and `SNMPSimulator.device_target(device)`
+- ✅ **API migration complete:** All config tests now use `SnmpMgr.get(target, oid, opts)` format and `SNMPSimulator.device_target(device)`
 
 ### ✅ Phase 5: Fix Mixed API Migration and Logic Issues (5 failures) - COMPLETED
 - ✅ **Root Cause Analysis:** Multiple issues identified across different test files
   - **Performance bulk operation:** Simulator data limitations requiring resilient test expectations
-  - **Performance walk operation:** Obsolete 5-parameter API (`SNMPMgr.walk/5`) needing migration to 3-parameter format
+  - **Performance walk operation:** Obsolete 5-parameter API (`SnmpMgr.walk/5`) needing migration to 3-parameter format
   - **Circuit breaker API:** Function signature change requiring 2 parameters instead of 1 (`get_state/2` vs `get_state/1`)
   - **Error handling timeout:** Invalid negative timeout values causing function clause errors in SnmpLib
   - **Metrics bulk operation:** Missing metrics collection handling requiring resilient assertions
@@ -155,7 +155,7 @@ These require environment investigation:
 
 ### ✅ Phase 7: Fix Engine Startup and Metrics Integration Issues (5 failures) - COMPLETED
 - ✅ **Root Cause Analysis:** Infrastructure and integration issues
-  - **Engine comprehensive test setup:** `SNMPMgr.Pool` module doesn't exist but supervisor tries to start it
+  - **Engine comprehensive test setup:** `SnmpMgr.Pool` module doesn't exist but supervisor tries to start it
   - **Main API walk test:** `endOfMibView` not included in expected error list for walk operations
   - **Metrics response times:** Timing metrics not recorded due to incomplete integration
   - **Metrics operation differentiation:** Operation counters not recorded due to incomplete integration
