@@ -61,23 +61,43 @@ defmodule SNMPMgr.EngineIntegrationTest do
       Enum.each(operations, fn
         {:get, target, oid, opts} ->
           result = SNMPMgr.get(target, oid, opts)
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, _} -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+            {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+          end
           
         {:set, target, oid, value, opts} ->
           result = SNMPMgr.set(target, oid, value, opts)
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, _} -> :ok
+            {:error, reason} when reason in [:not_writable, :read_only, :no_access, :gen_err] -> :ok
+            {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+          end
           
         {:get_bulk, target, oid, opts} ->
           result = SNMPMgr.get_bulk(target, oid, opts)
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, data} when is_list(data) -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+            {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+          end
           
         {:get_next, target, oid, opts} ->
           result = SNMPMgr.get_next(target, oid, opts)
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, _} -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :end_of_mib_view] -> :ok
+            {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+          end
           
         {:walk, target, oid, opts} ->
           result = SNMPMgr.walk(target, oid, opts)
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, data} when is_list(data) -> :ok
+            {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+            {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+          end
       end)
     end
 
@@ -98,7 +118,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       assert length(results) == 5
       
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 
@@ -131,7 +155,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       assert length(results) == 4
       
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -169,7 +197,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # Each result should be proper format from snmp_lib integration
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 
@@ -190,8 +222,9 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Each result should be proper format from snmp_lib integration
       Enum.each(results, fn result ->
         case result do
-          {:ok, list} when is_list(list) -> assert true
-          {:error, reason} -> assert is_atom(reason) or is_tuple(reason)
+          {:ok, list} when is_list(list) -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
       end)
     end
@@ -222,7 +255,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       assert length(bulk_results) == 2
       
       Enum.each(get_results ++ bulk_results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -252,7 +289,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0")
       
       # Should process with configured defaults through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      case result do
+        {:ok, _} -> :ok
+        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+        {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+      end
     end
 
     test "request options override configuration in snmp_lib calls", %{device: device} do
@@ -267,7 +308,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
                           community: device.community, timeout: 100, version: :v1)
       
       # Should process with overridden options through snmp_lib
-      assert match?({:ok, _} | {:error, _}, result)
+      case result do
+        {:ok, _} -> :ok
+        {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+        {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+      end
     end
 
     test "version configuration affects snmp_lib operation mode", %{device: device} do
@@ -283,7 +328,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
                             community: device.community, timeout: 100)
         
         # Should process with specified version through snmp_lib
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end
@@ -318,7 +367,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # All should return proper format through snmp_lib
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, _} -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
 

@@ -42,7 +42,8 @@ defmodule SNMPMgr.MIBIntegrationTest do
           {:ok, oid} ->
             # Use resolved OID in SNMP operation
             oid_string = oid |> Enum.join(".") |> then(&("#{&1}.0"))
-            result = SNMPMgr.get(device.host, device.port, device.community, oid_string, timeout: 200)
+            target = SNMPSimulator.device_target(device)
+            result = SNMPMgr.get(target, oid_string, community: device.community, timeout: 200)
             
             assert {:ok, _} = result
             
@@ -57,10 +58,11 @@ defmodule SNMPMgr.MIBIntegrationTest do
       skip_if_no_device(device)
       
       # Get a value first
-      case SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", timeout: 200) do
-        {:ok, {oid, _value}} ->
-          # Try reverse lookup on the OID
-          case MIB.reverse_lookup(oid) do
+      target = SNMPSimulator.device_target(device)
+      case SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community, timeout: 200) do
+        {:ok, _value} ->
+          # Try reverse lookup on the OID we requested
+          case MIB.reverse_lookup("1.3.6.1.2.1.1.1.0") do
             {:ok, name} ->
               assert is_binary(name)
               assert String.length(name) > 0
@@ -89,12 +91,13 @@ defmodule SNMPMgr.MIBIntegrationTest do
       ]
       
       for oid <- standard_oids do
-        result = SNMPMgr.get(device.host, device.port, device.community, oid, timeout: 200)
+        target = SNMPSimulator.device_target(device)
+        result = SNMPMgr.get(target, oid, community: device.community, timeout: 200)
         
         case result do
-          {:ok, {returned_oid, _value}} ->
-            # Test that MIB can handle the returned OID format
-            case MIB.reverse_lookup(returned_oid) do
+          {:ok, _value} ->
+            # Test that MIB can handle the OID we requested
+            case MIB.reverse_lookup(oid) do
               {:ok, _name} -> assert true
               {:error, _reason} -> assert true  # MIB might not be loaded
             end
@@ -113,7 +116,8 @@ defmodule SNMPMgr.MIBIntegrationTest do
       root_oid = "1.3.6.1.2.1.1"  # System group
       
       # Perform SNMP walk
-      case SNMPMgr.walk(device.host, device.port, device.community, root_oid, timeout: 200) do
+      target = SNMPSimulator.device_target(device)
+      case SNMPMgr.walk(target, root_oid, community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # For each result, test MIB integration
           limited_results = Enum.take(results, 3)  # Limit to first 3 for test efficiency

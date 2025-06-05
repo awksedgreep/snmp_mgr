@@ -64,11 +64,21 @@ defmodule SNMPMgr.TypesIntegrationTest do
           assert match?({:string, _}, encoded_value)
           
           # Attempt SET operation (may fail due to read-only OID, but tests integration)
-          result = SNMPMgr.set(device.host, device.port, device.community, "1.3.6.1.2.1.1.4.0", 
-                              "test_value", timeout: 200)
+          target = SNMPSimulator.device_target(device)
+          result = SNMPMgr.set(target, "1.3.6.1.2.1.1.4.0", "test_value", 
+                              community: device.community, timeout: 200)
           
           # SET may fail due to permissions, but should not fail due to type encoding
-          assert match?({:ok, _} | {:error, _}, result)
+          case result do
+            {:ok, _} -> 
+              # SET succeeded
+              :ok
+            {:error, reason} when reason in [:not_writable, :read_only, :no_access] ->
+              # Expected permission errors are acceptable
+              :ok
+            {:error, reason} ->
+              flunk("SET failed due to type encoding issue: #{inspect(reason)}")
+          end
           
         {:error, reason} ->
           flunk("Type encoding failed: #{inspect(reason)}")

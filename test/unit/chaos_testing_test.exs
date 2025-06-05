@@ -98,7 +98,11 @@ defmodule SNMPMgr.ChaosTestingTest do
       # Should handle bulk operations under mild stress
       assert length(bulk_results) == 3
       Enum.each(bulk_results, fn result ->
-        assert match?(({:ok, _} | {:error, _}), result)
+        case result do
+          {:ok, data} when is_list(data) -> :ok
+          {:error, reason} when reason in [:timeout, :gen_err, :no_such_name] -> :ok
+          {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
+        end
       end)
     end
   end

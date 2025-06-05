@@ -45,8 +45,9 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       # Test basic circuit breaker functionality
       assert Process.alive?(cb)
       
-      # Circuit breaker should provide status
-      case CircuitBreaker.get_state(cb) do
+      # Circuit breaker should provide status - requires target parameter
+      test_target = "test_target"
+      case CircuitBreaker.get_state(cb, test_target) do
         state when state in [:closed, :open, :half_open] ->
           assert true
           
@@ -60,8 +61,9 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       skip_if_no_device(device)
       
       # Test successful operation through circuit breaker
+      target = SNMPSimulator.device_target(device)
       operation = fn ->
-        SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", timeout: 200)
+        SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community, timeout: 200)
       end
       
       result = execute_with_circuit_breaker(cb, operation)
@@ -81,8 +83,9 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       skip_if_no_device(device)
       
       # Test operation that will likely fail (invalid community)
+      target = SNMPSimulator.device_target(device)
       failing_operation = fn ->
-        SNMPMgr.get(device.host, device.port, "invalid_community", "1.3.6.1.2.1.1.1.0", timeout: 100)
+        SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "invalid_community", timeout: 100)
       end
       
       # Execute failing operation multiple times
@@ -92,9 +95,20 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       
       # Circuit breaker should handle failures (may open after threshold)
       assert length(results) == 3
-      assert Enum.all?(results, fn result ->
-        match?({:ok, _} | {:error, _} | :circuit_open, result)
+      
+      # With invalid community, operations should fail or circuit should open
+      error_count = Enum.count(results, fn result ->
+        case result do
+          {:error, _} -> true
+          _ -> false
+        end
       end)
+      
+      circuit_open_count = Enum.count(results, &(&1 == :circuit_open))
+      
+      # Either all operations fail or circuit opens to protect
+      assert error_count + circuit_open_count == 3,
+        "Expected all operations to fail or circuit to open, got: #{inspect(results)}"
     end
     
     test "circuit breaker opens after failure threshold", %{circuit_breaker: cb} do
@@ -111,7 +125,11 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       # Should handle failures gracefully
       assert length(results) == 5
       assert Enum.all?(results, fn result ->
-        match?({:error, _} | :circuit_open, result)
+        case result do
+          {:error, _} -> true
+          :circuit_open -> true
+          _ -> false
+        end
       end)
     end
   end
@@ -121,15 +139,21 @@ defmodule SNMPMgr.CircuitBreakerIntegrationTest do
       skip_if_no_device(device)
       
       # Test circuit breaker with bulk operations
+      target = SNMPSimulator.device_target(device)
       bulk_operation = fn ->
-        SNMPMgr.get_bulk(device.host, device.port, device.community, "1.3.6.1.2.1.1", 
-                        timeout: 200, max_repetitions: 3)
+        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+                        community: device.community, timeout: 200, max_repetitions: 3)
       end
       
       result = execute_with_circuit_breaker(cb, bulk_operation)
       
       # Should handle bulk operations through circuit breaker
-      assert match?({:ok, _} | {:error, _} | :circuit_open, result)
+      case result do
+        {:ok, data} when is_list(data) -> :ok
+        {:error, _reason} -> :ok
+        :circuit_open -> :ok
+        other -> flunk("Unexpected result: #{inspect(other)}")
+      end
     end
   end
   

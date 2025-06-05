@@ -122,7 +122,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     test "validates basic engine request submission" do
       request = %{
         type: :get,
-        target: "127.0.0.1",
+        target: "192.0.2.1:161",  # RFC3330 documentation range - unreachable
         oid: @test_oids.system_descr,
         community: "public"
       }
@@ -148,7 +148,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     test "validates engine request with options" do
       request = %{
         type: :get,
-        target: "127.0.0.1",
+        target: "192.0.2.1:161",
         oid: @test_oids.system_uptime,
         community: "public",
         timeout: 5000,
@@ -177,7 +177,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       for {type, oid} <- request_types do
         request = %{
           type: type,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: oid,
           community: "public"
         }
@@ -203,7 +203,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       requests = for i <- 1..5 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "test_#{i}"
@@ -232,9 +232,9 @@ defmodule SNMPMgr.EngineComprehensiveTest do
   describe "engine batch processing" do
     test "validates batch request submission" do
       batch_requests = [
-        %{type: :get, target: "127.0.0.1", oid: @test_oids.system_descr, community: "public"},
-        %{type: :get, target: "127.0.0.1", oid: @test_oids.system_uptime, community: "public"},
-        %{type: :get, target: "127.0.0.1", oid: @test_oids.system_name, community: "public"}
+        %{type: :get, target: "192.0.2.1:161", oid: @test_oids.system_descr, community: "public"},
+        %{type: :get, target: "192.0.2.1:161", oid: @test_oids.system_uptime, community: "public"},
+        %{type: :get, target: "192.0.2.1:161", oid: @test_oids.system_name, community: "public"}
       ]
       
       case SNMPMgr.engine_batch(batch_requests) do
@@ -262,7 +262,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       optimized_batch = for i <- 1..10 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "opt_#{i}"
@@ -290,8 +290,8 @@ defmodule SNMPMgr.EngineComprehensiveTest do
 
     test "validates mixed target batch processing" do
       mixed_batch = [
-        %{type: :get, target: "127.0.0.1", oid: @test_oids.system_descr, community: "public"},
-        %{type: :get, target: "localhost", oid: @test_oids.system_uptime, community: "public"},
+        %{type: :get, target: "192.0.2.1:161", oid: @test_oids.system_descr, community: "public"},
+        %{type: :get, target: "203.0.113.1:161", oid: @test_oids.system_uptime, community: "public"},
         %{type: :get, target: "192.168.1.1", oid: @test_oids.system_name, community: "public"}
       ]
       
@@ -310,7 +310,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       large_batch = for i <- 1..100 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "large_#{i}"
@@ -337,7 +337,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         Task.async(fn ->
           request = %{
             type: :get,
-            target: "127.0.0.1",
+            target: "192.0.2.1:161",
             oid: @test_oids.system_descr,
             community: "public",
             request_id: "concurrent_#{i}"
@@ -371,7 +371,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       latencies = for _i <- 1..10 do
         request = %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public"
         }
@@ -400,7 +400,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       requests = for i <- 1..100 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "memory_#{i}"
@@ -424,7 +424,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       queue_test_requests = for i <- 1..20 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "queue_#{i}",
@@ -481,13 +481,13 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     test "validates engine handling of malformed requests" do
       malformed_requests = [
         # Missing required fields
-        %{type: :get, target: "127.0.0.1"},
+        %{type: :get, target: "192.0.2.1:161"},
         %{type: :get, oid: @test_oids.system_descr},
         
         # Invalid field values
-        %{type: :invalid_type, target: "127.0.0.1", oid: @test_oids.system_descr},
+        %{type: :invalid_type, target: "192.0.2.1:161", oid: @test_oids.system_descr},
         %{type: :get, target: "", oid: @test_oids.system_descr},
-        %{type: :get, target: "127.0.0.1", oid: ""}
+        %{type: :get, target: "192.0.2.1:161", oid: ""}
       ]
       
       for {malformed_request, i} <- Enum.with_index(malformed_requests) do
@@ -510,7 +510,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     test "validates engine timeout and retry handling" do
       timeout_request = %{
         type: :get,
-        target: "127.0.0.1",
+        target: "192.0.2.1:161",
         oid: @test_oids.system_descr,
         community: "public",
         timeout: 1, # Very short timeout
@@ -588,7 +588,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       test_requests = for i <- 1..5 do
         %{
           type: :get,
-          target: "127.0.0.1",
+          target: "192.0.2.1:161",
           oid: @test_oids.system_descr,
           community: "public",
           request_id: "metrics_#{i}"
@@ -634,7 +634,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       test_request = %{
         type: :get,
-        target: "127.0.0.1",
+        target: "192.0.2.1:161",
         oid: @test_oids.system_descr,
         community: "public"
       }
@@ -778,7 +778,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     end
 
     test "validates circuit breaker recovery through engine" do
-      protected_target = "127.0.0.1"
+      protected_target = "192.0.2.1:161"
       
       # Function to make request through engine with circuit breaker
       make_protected_request = fn ->

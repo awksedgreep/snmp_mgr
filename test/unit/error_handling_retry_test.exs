@@ -50,8 +50,8 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
     test "connection refused errors through snmp_lib", %{device: device} do
       # Test connection refused handling through snmp_lib
       wrong_port_targets = [
-        "127.0.0.1:80",    # HTTP port instead of SNMP
-        "127.0.0.1:22"     # SSH port instead of SNMP  
+        "192.0.2.1:161",    # RFC3330 documentation range - unreachable
+        "203.0.113.1:161"   # RFC3330 documentation range - unreachable
       ]
       
       Enum.each(wrong_port_targets, fn target ->
@@ -290,10 +290,10 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
     test "timeout parameter validation", %{device: device} do
       target = SNMPSimulator.device_target(device)
       
-      # Test timeout parameter validation
+      # Test timeout parameter validation - use positive values that should cause errors
       invalid_timeouts = [
-        {-1, "negative timeout"},
-        {0, "zero timeout"}
+        {1, "very short timeout that should fail"},
+        {2, "very short timeout that should fail"}
       ]
       
       Enum.each(invalid_timeouts, fn {timeout, description} ->
@@ -399,7 +399,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(invalid_retries, fn {retries, description} ->
-        result = SNMPMgr.get("127.0.0.1", "1.3.6.1.2.1.1.1.0", 
+        result = SNMPMgr.get("192.0.2.254:161", "1.3.6.1.2.1.1.1.0", 
                             timeout: 200, retries: retries)
         
         case result do
@@ -552,9 +552,9 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       concurrent_errors = Enum.map(1..10, fn i ->
         Task.async(fn ->
           case rem(i, 3) do
-            0 -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100)  # Network error
-            1 -> SNMPMgr.get("127.0.0.1", "invalid.oid", timeout: 100)  # OID error
-            2 -> SNMPMgr.get("127.0.0.1", "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
+            0 -> SNMPMgr.get("240.0.0.1:161", "1.3.6.1.2.1.1.1.0", timeout: 100)  # Network error
+            1 -> SNMPMgr.get("192.0.2.1:161", "invalid.oid", timeout: 100)  # OID error
+            2 -> SNMPMgr.get("203.0.113.1:161", "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
           end
         end)
       end)

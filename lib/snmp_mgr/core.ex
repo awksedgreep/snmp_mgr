@@ -75,8 +75,25 @@ defmodule SNMPMgr.Core do
     
     # Use SnmpLib.Manager.get_bulk with single repetition to simulate GETNEXT
     case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
-      {:ok, [result]} -> {:ok, result}  # Extract single result
-      {:ok, results} when is_list(results) -> {:ok, List.first(results)}
+      {:ok, []} -> 
+        # Empty results indicate end of MIB or no next object
+        {:error, :endOfMibView}
+      {:ok, [{next_oid, value}]} -> 
+        # Single result with proper format
+        {:ok, {next_oid, value}}
+      {:ok, [result | _]} -> 
+        # Multiple results, take first and ensure proper format
+        case result do
+          {oid, value} -> {:ok, {oid, value}}
+          _ -> {:error, :invalid_response}
+        end
+      {:ok, results} when is_list(results) -> 
+        # Fallback for any other list format
+        case List.first(results) do
+          {oid, value} -> {:ok, {oid, value}}
+          nil -> {:error, :endOfMibView}
+          _ -> {:error, :invalid_response}
+        end
       {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
     end
   end
@@ -228,14 +245,32 @@ defmodule SNMPMgr.Core do
   end
 
   @doc """
-  Parses and normalizes an OID using SnmpLib.OID.normalize.
+  Parses and normalizes an OID using SnmpLib.OID.normalize with MIB support.
   """
   def parse_oid(oid) do
-    # Use SnmpLib.OID.normalize which handles both string and list inputs
-    # and provides comprehensive validation and normalization
-    case SnmpLib.OID.normalize(oid) do
+    # Try MIB registry first for symbolic names like "sysDescr.0"
+    case try_mib_resolution(oid) do
       {:ok, oid_list} -> {:ok, oid_list}
-      {:error, reason} -> {:error, reason}
+      {:error, _} ->
+        # Fall back to basic OID parsing for numeric strings and lists
+        case SnmpLib.OID.normalize(oid) do
+          {:ok, oid_list} -> {:ok, oid_list}
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
+
+  # Private helper to try MIB resolution first
+  defp try_mib_resolution(oid) when is_binary(oid) do
+    # First try MIB registry resolution for symbolic names
+    SnmpLib.MIB.Registry.resolve_name(oid)
+  end
+  defp try_mib_resolution(oid) when is_list(oid) do
+    # For lists, validate directly
+    case SnmpLib.OID.valid_oid?(oid) do
+      :ok -> {:ok, oid}
+      error -> error
+    end
+  end
+  defp try_mib_resolution(_), do: {:error, :invalid_input}
 end

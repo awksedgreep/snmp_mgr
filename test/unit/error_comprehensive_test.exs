@@ -400,14 +400,15 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
             assert value in expected_exceptions,
               "Exception value #{value} should be in #{inspect(expected_exceptions)}"
             
-          {:error, reason} when reason in expected_exceptions ->
-            # Exception converted to error by snmp_lib
-            assert true
-            
           {:error, reason} ->
-            # Other error format from snmp_lib
-            assert is_atom(reason) or is_tuple(reason),
-              "Exception should be properly formatted: #{inspect(reason)}"
+            # Exception converted to error by snmp_lib
+            if reason in expected_exceptions do
+              assert true
+            else
+              # Other error format from snmp_lib
+              assert is_atom(reason) or is_tuple(reason),
+                "Unexpected error format: #{inspect(reason)}"
+            end
             
           {:ok, _other_value} ->
             # Might get different response from simulator

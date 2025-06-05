@@ -25,12 +25,20 @@ defmodule SNMPMgr.AdaptiveWalk do
 
   ## Examples
 
-      iex> SNMPMgr.AdaptiveWalk.bulk_walk("switch.local", "ifTable")
-      {:ok, [
-        {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},
-        {"1.3.6.1.2.1.2.2.1.2.2", "eth1"},
-        # ... optimally retrieved data
-      ]}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, results} = SNMPMgr.AdaptiveWalk.bulk_walk("switch.local", "ifTable")
+      # Automatically adjusts bulk size for optimal performance:
+      # [
+      #   {"1.3.6.1.2.1.2.2.1.2.1", "FastEthernet0/1"},
+      #   {"1.3.6.1.2.1.2.2.1.2.2", "FastEthernet0/2"},
+      #   {"1.3.6.1.2.1.2.2.1.2.3", "GigabitEthernet0/1"},
+      #   # ... optimally retrieved with adaptive bulk sizing
+      # ]
+      
+      # With custom options:
+      {:ok, results} = SNMPMgr.AdaptiveWalk.bulk_walk("router.local", "sysDescr", 
+        adaptive_tuning: true, max_entries: 100, performance_threshold: 50)
+      # [{"1.3.6.1.2.1.1.1.0", "Cisco IOS Software, Version 15.1"}]
   """
   def bulk_walk(target, root_oid, opts \\ []) do
     adaptive_tuning = Keyword.get(opts, :adaptive_tuning, true)
@@ -61,8 +69,20 @@ defmodule SNMPMgr.AdaptiveWalk do
 
   ## Examples
 
-      iex> SNMPMgr.AdaptiveWalk.table_walk("switch.local", "ifTable", max_entries: 1000)
-      {:ok, table_data}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, table_data} = SNMPMgr.AdaptiveWalk.table_walk("switch.local", "ifTable", max_entries: 1000)
+      # Efficiently walks large tables with automatic optimization:
+      # [
+      #   {"1.3.6.1.2.1.2.2.1.1.1", 1},           # ifIndex.1
+      #   {"1.3.6.1.2.1.2.2.1.2.1", "Ethernet1"}, # ifDescr.1
+      #   {"1.3.6.1.2.1.2.2.1.3.1", 6},           # ifType.1 (ethernetCsmacd)
+      #   {"1.3.6.1.2.1.2.2.1.5.1", 1000000000},  # ifSpeed.1 (1 Gbps)
+      #   # ... continues with adaptive pagination for large tables
+      # ]
+      
+      # For very large tables with streaming:
+      {:ok, results} = SNMPMgr.AdaptiveWalk.table_walk("core-switch", "ipRouteTable", 
+        max_entries: 10000, adaptive_tuning: true)
   """
   def table_walk(target, table_oid, opts \\ []) do
     adaptive_tuning = Keyword.get(opts, :adaptive_tuning, true)
@@ -93,16 +113,27 @@ defmodule SNMPMgr.AdaptiveWalk do
 
   ## Examples
 
-      iex> SNMPMgr.AdaptiveWalk.benchmark_device("switch.local", "ifTable")
-      {:ok, %{
-        optimal_bulk_size: 25,
-        avg_response_time: 45,
-        error_rate: 0.0,
-        recommendations: %{
-          max_repetitions: 25,
-          timeout: 3000
-        }
-      }}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, benchmark} = SNMPMgr.AdaptiveWalk.benchmark_device("switch.local", "ifTable")
+      # Returns comprehensive performance analysis:
+      # %{
+      #   optimal_bulk_size: 25,
+      #   avg_response_time: 45,
+      #   error_rate: 0.0,
+      #   all_results: [
+      #     {1, 120}, {5, 85}, {10, 52}, {15, 48}, 
+      #     {20, 44}, {25, 42}, {30, 45}, {40, 52}, {50, 68}
+      #   ],
+      #   recommendations: %{
+      #     max_repetitions: 25,
+      #     timeout: 3000,
+      #     adaptive_tuning: false  # Device has consistent performance
+      #   }
+      # }
+      
+      # Custom benchmark with specific test sizes:
+      {:ok, results} = SNMPMgr.AdaptiveWalk.benchmark_device("router.local", "ipRouteTable",
+        test_sizes: [5, 10, 20, 50], iterations: 5)
   """
   def benchmark_device(target, test_oid, opts \\ []) do
     test_sizes = Keyword.get(opts, :test_sizes, [1, 5, 10, 15, 20, 25, 30, 40, 50])

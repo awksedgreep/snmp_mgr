@@ -16,12 +16,12 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.get("192.168.1.1:161", "1.3.6.1.2.1.1.1.0", community: "public")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, value} = SNMPMgr.get("device.local:161", "sysDescr.0", community: "public")
+      # "Linux server 5.4.0-42-generic #46-Ubuntu SMP Fri Jul 10 00:24:02 UTC 2020 x86_64"
 
-      iex> SNMPMgr.get("192.168.1.1", "1.3.6.1.2.1.1.1.0")
-      {:error, :timeout}
+      {:ok, uptime} = SNMPMgr.get("router.local", "sysUpTime.0")
+      # {:timeticks, 123456789}  # System uptime in hundredths of seconds
   """
   def get(target, oid, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -38,9 +38,12 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.get_next("192.168.1.1", "1.3.6.1.2.1.1")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, {next_oid, value}} = SNMPMgr.get_next("switch.local", "1.3.6.1.2.1.1")
+      # {"1.3.6.1.2.1.1.1.0", "Cisco IOS Software, C2960 Software"}
+
+      {:ok, {oid, val}} = SNMPMgr.get_next("device.local", "sysDescr")
+      # {"1.3.6.1.2.1.1.1.0", "Linux hostname 5.4.0 #1 SMP"}
   """
   def get_next(target, oid, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -58,9 +61,13 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.set("192.168.1.1", "1.3.6.1.2.1.1.6.0", "New Location")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, :ok} = SNMPMgr.set("device.local", "sysLocation.0", "Server Room A")
+      # :ok
+
+      {:ok, :ok} = SNMPMgr.set("switch.local", "sysContact.0", "admin@company.com", 
+        community: "private", timeout: 3000)
+      # :ok
   """
   def set(target, oid, value, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -75,12 +82,15 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      ref = SNMPMgr.get_async("192.168.1.1", "1.3.6.1.2.1.1.1.0")
+      # Note: This function makes actual network calls and is not suitable for doctests
+      ref = SNMPMgr.get_async("device.local", "sysDescr.0")
       receive do
-        {^ref, result} -> result
+        {^ref, {:ok, description}} -> description
+        {^ref, {:error, reason}} -> {:error, reason}
       after
         5000 -> {:error, :timeout}
       end
+      # "Linux server 5.4.0-42-generic"
   """
   def get_async(target, oid, opts \\ []) do
     merged_opts = SNMPMgr.Config.merge_opts(opts)
@@ -100,9 +110,16 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.get_bulk("192.168.1.1", "1.3.6.1.2.1.2.2", max_repetitions: 10)
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, results} = SNMPMgr.get_bulk("switch.local", "ifTable", max_repetitions: 10)
+      # [
+      #   {"1.3.6.1.2.1.2.2.1.1.1", 1},                    # ifIndex.1
+      #   {"1.3.6.1.2.1.2.2.1.2.1", "FastEthernet0/1"},    # ifDescr.1
+      #   {"1.3.6.1.2.1.2.2.1.8.1", 1},                    # ifOperStatus.1 (up)
+      #   {"1.3.6.1.2.1.2.2.1.1.2", 2},                    # ifIndex.2
+      #   {"1.3.6.1.2.1.2.2.1.2.2", "FastEthernet0/2"},    # ifDescr.2
+      #   # ... up to max_repetitions entries
+      # ]
   """
   def get_bulk(target, oid, opts \\ []) do
     # Check if user explicitly specified a version other than v2c
@@ -155,9 +172,16 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.walk("192.168.1.1", "1.3.6.1.2.1.1")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, results} = SNMPMgr.walk("device.local", "1.3.6.1.2.1.1")
+      # [
+      #   {"1.3.6.1.2.1.1.1.0", "Linux hostname 5.4.0-42-generic"},  # sysDescr
+      #   {"1.3.6.1.2.1.1.2.0", [1,3,6,1,4,1,8072,3,2,10]},         # sysObjectID
+      #   {"1.3.6.1.2.1.1.3.0", {:timeticks, 12345678}},             # sysUpTime
+      #   {"1.3.6.1.2.1.1.4.0", "admin@company.com"},                # sysContact
+      #   {"1.3.6.1.2.1.1.5.0", "server01.company.com"},             # sysName
+      #   {"1.3.6.1.2.1.1.6.0", "Data Center Room 42"}               # sysLocation
+      # ]
   """
   def walk(target, root_oid, opts \\ []) do
     SNMPMgr.Walk.walk(target, root_oid, opts)
@@ -173,9 +197,15 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.walk_table("192.168.1.1", "1.3.6.1.2.1.2.2")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, entries} = SNMPMgr.walk_table("switch.local", "ifTable")
+      # [
+      #   {"1.3.6.1.2.1.2.2.1.1.1", 1},
+      #   {"1.3.6.1.2.1.2.2.1.2.1", "GigabitEthernet0/1"},
+      #   {"1.3.6.1.2.1.2.2.1.3.1", 6},  # ethernetCsmacd
+      #   {"1.3.6.1.2.1.2.2.1.5.1", 1000000000},  # 1 Gbps
+      #   # ... all interface table entries
+      # ]
   """
   def walk_table(target, table_oid, opts \\ []) do
     SNMPMgr.Walk.walk_table(target, table_oid, opts)
@@ -191,9 +221,17 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      # Note: Network operations will timeout on unreachable hosts
-      iex> SNMPMgr.get_table("192.168.1.1", "ifTable")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, table} = SNMPMgr.get_table("switch.local", "ifTable")
+      # %{
+      #   columns: ["ifIndex", "ifDescr", "ifType", "ifMtu", "ifSpeed", "ifOperStatus"],
+      #   rows: [
+      #     %{"ifIndex" => 1, "ifDescr" => "GigabitEthernet0/1", "ifType" => 6, 
+      #       "ifMtu" => 1500, "ifSpeed" => 1000000000, "ifOperStatus" => 1},
+      #     %{"ifIndex" => 2, "ifDescr" => "GigabitEthernet0/2", "ifType" => 6, 
+      #       "ifMtu" => 1500, "ifSpeed" => 1000000000, "ifOperStatus" => 2}
+      #   ]
+      # }
   """
   def get_table(target, table_oid, opts \\ []) do
     case resolve_oid_if_needed(table_oid) do
@@ -290,8 +328,17 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      iex> SNMPMgr.adaptive_walk("192.168.1.1", "ifTable")
-      {:error, :timeout}
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, results} = SNMPMgr.adaptive_walk("switch.local", "ifTable")
+      # Returns optimally retrieved interface table data:
+      # [
+      #   {"1.3.6.1.2.1.2.2.1.1.1", 1},           # ifIndex.1
+      #   {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},      # ifDescr.1  
+      #   {"1.3.6.1.2.1.2.2.1.8.1", 1},           # ifOperStatus.1
+      #   {"1.3.6.1.2.1.2.2.1.1.2", 2},           # ifIndex.2
+      #   {"1.3.6.1.2.1.2.2.1.2.2", "eth1"},      # ifDescr.2
+      #   {"1.3.6.1.2.1.2.2.1.8.2", 1}            # ifOperStatus.2
+      # ]
   """
   def adaptive_walk(target, root_oid, opts \\ []) do
     SNMPMgr.AdaptiveWalk.bulk_walk(target, root_oid, opts)
@@ -308,7 +355,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.walk_stream("192.168.1.1", "ifTable")
+      stream = SNMPMgr.walk_stream("192.0.2.1", "ifTable")
       # Process stream lazily...
   """
   def walk_stream(target, root_oid, opts \\ []) do
@@ -326,7 +373,7 @@ defmodule SNMPMgr do
   ## Examples
 
       # Note: Requires Erlang SNMP modules for actual operation
-      stream = SNMPMgr.table_stream("192.168.1.1", "ifTable")
+      stream = SNMPMgr.table_stream("192.0.2.1", "ifTable")
       # Process table stream...
   """
   def table_stream(target, table_oid, opts \\ []) do
@@ -342,7 +389,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, table} = SNMPMgr.get_table("192.168.1.1", "ifTable")
+      {:ok, table} = SNMPMgr.get_table("192.0.2.1", "ifTable")
       {:ok, analysis} = SNMPMgr.analyze_table(table)
       IO.inspect(analysis.completeness)  # Shows data completeness ratio
   """
@@ -360,7 +407,7 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      {:ok, results} = SNMPMgr.benchmark_device("192.168.1.1", "ifTable")
+      {:ok, results} = SNMPMgr.benchmark_device("192.0.2.1", "ifTable")
       optimal_size = results.optimal_bulk_size
   """
   def benchmark_device(target, test_oid, opts \\ []) do
@@ -407,7 +454,7 @@ defmodule SNMPMgr do
 
       request = %{
         type: :get,
-        target: "192.168.1.1",
+        target: "192.0.2.1",
         oid: "sysDescr.0",
         community: "public"
       }
@@ -496,8 +543,8 @@ defmodule SNMPMgr do
 
   ## Examples
 
-      result = SNMPMgr.with_circuit_breaker("device1", fn ->
-        SNMPMgr.get("device1", "sysDescr.0")
+      result = SNMPMgr.with_circuit_breaker("192.0.2.1", fn ->
+        SNMPMgr.get("192.0.2.1", "sysDescr.0")
       end)
   """
   def with_circuit_breaker(target, fun, opts \\ []) do

@@ -28,9 +28,10 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
         "1.3.6.1.2.1.1.5.0"   # sysName
       ]
       
+      target = SNMPSimulator.device_target(device)
       tasks = Enum.map(oids, fn oid ->
         Task.async(fn ->
-          SNMPMgr.get(device.host, device.port, device.community, oid, timeout: 200)
+          SNMPMgr.get(target, oid, community: device.community, timeout: 200)
         end)
       end)
       
@@ -59,22 +60,29 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
         {:walk, "1.3.6.1.2.1.1"}
       ]
       
+      target = SNMPSimulator.device_target(device)
       results = Enum.map(operations, fn
         {:get, oid} ->
-          SNMPMgr.get(device.host, device.port, device.community, oid, timeout: 200)
+          SNMPMgr.get(target, oid, community: device.community, timeout: 200)
           
         {:get_bulk, oid} ->
-          SNMPMgr.get_bulk(device.host, device.port, device.community, oid, 
-                          timeout: 200, max_repetitions: 3)
+          SNMPMgr.get_bulk(target, oid, 
+                          community: device.community, timeout: 200, max_repetitions: 3)
           
         {:walk, oid} ->
-          SNMPMgr.walk(device.host, device.port, device.community, oid, timeout: 200)
+          SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
       end)
       
-      # All operations should return valid responses
+      # All operations should succeed with the SNMP simulator
       assert length(results) == 3
+      
+      # Verify each operation returns expected data
       Enum.each(results, fn result ->
-        assert match?({:ok, _} | {:error, _}, result)
+        case result do
+          {:ok, data} when is_list(data) -> :ok
+          {:error, reason} -> flunk("Operation failed: #{inspect(reason)}")
+          other -> flunk("Unexpected result: #{inspect(other)}")
+        end
       end)
     end
   end
@@ -86,9 +94,10 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
       repetition_counts = [1, 3, 5]
       base_oid = "1.3.6.1.2.1.1"
       
+      target = SNMPSimulator.device_target(device)
       results = Enum.map(repetition_counts, fn count ->
-        SNMPMgr.get_bulk(device.host, device.port, device.community, base_oid,
-                        timeout: 200, max_repetitions: count)
+        SNMPMgr.get_bulk(target, base_oid,
+                        community: device.community, timeout: 200, max_repetitions: count)
       end)
       
       # All bulk operations should complete
@@ -113,8 +122,9 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
         "1.3.6.1.2.1.2.2"   # Interface table (if available)
       ]
       
+      target = SNMPSimulator.device_target(device)
       results = Enum.map(table_oids, fn oid ->
-        case SNMPMgr.walk(device.host, device.port, device.community, oid, timeout: 200) do
+        case SNMPMgr.walk(target, oid, community: device.community, timeout: 200) do
           {:ok, data} when is_list(data) ->
             # Limit results for test efficiency
             limited_data = Enum.take(data, 5)

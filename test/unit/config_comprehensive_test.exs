@@ -49,7 +49,8 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       Config.set_default_version(:v2c)
       
       # Perform operation without explicit options (should use config defaults)
-      result = SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0")
+      target = SNMPSimulator.device_target(device)
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community, timeout: 200)
       
       assert {:ok, _value} = result
       
@@ -66,8 +67,9 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       Config.set_default_timeout(10000)
       
       # Perform operation with explicit options (should override config)
-      result = SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
-                          timeout: 200)
+      target = SNMPSimulator.device_target(device)
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, timeout: 200)
       
       assert {:ok, _value} = result
       
@@ -84,8 +86,9 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       Config.set_default_version(:v1)
       
       # Test with v1 operations (no bulk operations)
-      result = SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
-                          timeout: 200)
+      target = SNMPSimulator.device_target(device)
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, version: :v1, timeout: 200)
       
       assert {:ok, _value} = result
       assert Config.get_default_version() == :v1
@@ -97,11 +100,12 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       Config.set_default_version(:v2c)
       
       # Test with v2c operations (bulk operations available)
-      get_result = SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
-                              timeout: 200)
+      target = SNMPSimulator.device_target(device)
+      get_result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                              community: device.community, version: :v2c, timeout: 200)
       
-      bulk_result = SNMPMgr.get_bulk(device.host, device.port, device.community, "1.3.6.1.2.1.1", 
-                                    timeout: 200, max_repetitions: 3)
+      bulk_result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+                                    community: device.community, version: :v2c, timeout: 200, max_repetitions: 3)
       
       assert {:ok, _value} = get_result
       assert {:ok, _} = bulk_result
@@ -123,8 +127,9 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       assert "./test/mibs" in paths
       
       # Test SNMP operation (should work with or without MIB resolution)
-      result = SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
-                          timeout: 200)
+      target = SNMPSimulator.device_target(device)
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+                          community: device.community, timeout: 200)
       
       assert {:ok, _value} = result
     end
@@ -149,8 +154,9 @@ defmodule SNMPMgr.ConfigIntegrationTest do
       assert Keyword.get(merged_opts, :port) == device.port  # Override
       
       # Use merged options in SNMP operation
-      result = SNMPMgr.get(device.host, Keyword.get(merged_opts, :port), 
-                          Keyword.get(merged_opts, :community), "1.3.6.1.2.1.1.1.0",
+      target = SNMPSimulator.device_target(device)
+      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0",
+                          community: Keyword.get(merged_opts, :community),
                           timeout: Keyword.get(merged_opts, :timeout))
       
       assert {:ok, _value} = result

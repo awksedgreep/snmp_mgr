@@ -83,7 +83,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
             end)
           end
         {:error, reason} ->
-          assert reason in [:timeout, :noSuchObject]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView]
       end
     end
   end

@@ -50,7 +50,7 @@ defmodule SNMPMgr.Types do
   def decode_value({:unsigned32, value}), do: value
   def decode_value({:timeticks, value}), do: value
   def decode_value({:ipAddress, {a, b, c, d}}) when a in 0..255 and b in 0..255 and c in 0..255 and d in 0..255 do
-    {a, b, c, d}
+    "#{a}.#{b}.#{c}.#{d}"
   end
   def decode_value({:ipAddress, invalid_tuple}) do
     {:error, {:invalid_ip_address, invalid_tuple}}
@@ -134,12 +134,8 @@ defmodule SNMPMgr.Types do
   end
 
   defp encode_with_inferred_type(value, :string) when is_binary(value) do
-    # Convert ASCII strings to charlists, keep Unicode as binary
-    if ascii_only?(value) do
-      {:ok, {:string, String.to_charlist(value)}}
-    else
-      {:ok, {:string, value}}
-    end
+    # Keep strings as strings for consistency
+    {:ok, {:string, value}}
   end
 
   defp encode_with_inferred_type(value, :integer) when is_integer(value) do
@@ -183,12 +179,8 @@ defmodule SNMPMgr.Types do
   end
 
   defp encode_with_explicit_type(value, :string) when is_binary(value) do
-    # Convert ASCII strings to charlists, keep Unicode as binary
-    if ascii_only?(value) do
-      {:ok, {:string, String.to_charlist(value)}}
-    else
-      {:ok, {:string, value}}
-    end
+    # Keep strings as strings for consistency
+    {:ok, {:string, value}}
   end
 
   defp encode_with_explicit_type(value, :integer) when is_integer(value) do
