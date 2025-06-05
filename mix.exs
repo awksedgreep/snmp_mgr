@@ -4,7 +4,7 @@ defmodule SnmpMgr.MixProject do
   def project do
     [
       app: :snmp_mgr,
-      version: "0.1.3",
+      version: "0.2.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -51,7 +51,7 @@ defmodule SnmpMgr.MixProject do
     [
       main: "readme",
       logo: nil,
-      source_ref: "v0.1.3",
+      source_ref: "v0.2.0",
       source_url: "https://github.com/awksedgreep/snmp_mgr",
       
       extras: [
