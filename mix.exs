@@ -31,6 +31,9 @@ defmodule SnmpMgr.MixProject do
       {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v0.4.0", override: true},
       {:snmp_sim_ex, git: "https://github.com/awksedgreep/snmp_sim_ex", tag: "v0.2.0", override: true},
       
+      # Static analysis
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      
       # Documentation
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
