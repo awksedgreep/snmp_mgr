@@ -75,9 +75,24 @@ defmodule SNMPMgr.PerformanceSnmpLibTest do
                                     community: device.community, timeout: 200, max_repetitions: 5)
       bulk_duration = System.monotonic_time(:millisecond) - bulk_start
       
-      # Performance comparison
+      # Performance comparison with buffer for very fast operations
       assert length(individual_results) == 5
-      assert bulk_duration < individual_duration * 2  # Bulk should be more efficient
+      
+      # Handle cases where operations complete too quickly to measure accurately
+      cond do
+        individual_duration == 0 and bulk_duration == 0 ->
+          # Both operations completed in under 1ms - this is acceptable performance
+          assert true
+        individual_duration == 0 ->
+          # Individual operations too fast to measure - bulk should also be fast
+          assert bulk_duration <= 10  # Bulk should complete within 10ms
+        bulk_duration == 0 ->
+          # Bulk operation too fast to measure - acceptable performance
+          assert true
+        true ->
+          # Normal case: bulk should be more efficient than individual operations
+          assert bulk_duration < individual_duration * 2
+      end
       
       case bulk_result do
         {:ok, bulk_data} when is_list(bulk_data) ->

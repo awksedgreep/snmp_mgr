@@ -1,5 +1,5 @@
 %{
   "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
-  "snmp_lib": {:git, "https://github.com/awksedgreep/snmp_lib", "55572260bab4064a5ef3ef40852d7a97fa6494f9", [tag: "v0.3.0"]},
-  "snmp_sim_ex": {:git, "https://github.com/awksedgreep/snmp_sim_ex", "ffd6e630b9968cd3bd8fa1beafea1bab7ecb3abc", [tag: "v0.1.9"]},
+  "snmp_lib": {:git, "https://github.com/awksedgreep/snmp_lib", "1243ef8b0ef83d3c17c7313923ce791e73db5481", [tag: "v0.4.0"]},
+  "snmp_sim_ex": {:git, "https://github.com/awksedgreep/snmp_sim_ex", "818fb73a5e8ee8f85e0d28080b45972728606b1a", [tag: "v0.2.0"]},
 }

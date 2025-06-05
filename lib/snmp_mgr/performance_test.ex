@@ -64,16 +64,17 @@ defmodule SNMPMgr.PerformanceTest do
     results = %{successful: 0, failed: 0, errors: []}
     
     Enum.reduce(1..iterations, results, fn _i, acc ->
-      case SnmpLib.PDU.build_message(pdu, community, version) do
-        {:ok, message} ->
-          case SnmpLib.PDU.encode_message(message) do
-            {:ok, _encoded} ->
-              %{acc | successful: acc.successful + 1}
-            {:error, reason} ->
-              %{acc | failed: acc.failed + 1, errors: [reason | acc.errors]}
-          end
-        {:error, reason} ->
-          %{acc | failed: acc.failed + 1, errors: [reason | acc.errors]}
+      try do
+        message = SnmpLib.PDU.build_message(pdu, community, version)
+        case SnmpLib.PDU.encode_message(message) do
+          {:ok, _encoded} ->
+            %{acc | successful: acc.successful + 1}
+          {:error, reason} ->
+            %{acc | failed: acc.failed + 1, errors: [reason | acc.errors]}
+        end
+      rescue
+        error ->
+          %{acc | failed: acc.failed + 1, errors: [error | acc.errors]}
       end
     end)
   end
@@ -155,53 +156,6 @@ defmodule SNMPMgr.PerformanceTest do
     {:pdu, pdu_type, request_id, error_status, error_index, erlang_varbinds}
   end
 
-  defp convert_to_erlang_pdu(pdu) do
-    # Convert to Erlang PDU record format
-    request_id = Map.get(pdu, :request_id, 1)
-    error_status = Map.get(pdu, :error_status, 0)
-    error_index = Map.get(pdu, :error_index, 0)
-    varbinds = Map.get(pdu, :varbinds, [])
-    
-    # PDU type
-    pdu_type = case Map.get(pdu, :type) do
-      :get_request -> :"get-request"
-      :get_next_request -> :"get-next-request" 
-      :get_response -> :"get-response"
-      :set_request -> :"set-request"
-      _ -> :"get-request"
-    end
-    
-    # Convert varbinds
-    erlang_varbinds = Enum.with_index(varbinds, 1) |> Enum.map(fn {{oid, type, value}, index} ->
-      erlang_type = case type do
-        :null -> :"NULL"
-        :integer -> :"INTEGER"
-        :string -> :"OCTET STRING"
-        :oid -> :"OBJECT IDENTIFIER"
-        _ -> :"NULL"
-      end
-      
-      erlang_value = case {type, value} do
-        {:null, :null} -> :null
-        {_, val} -> val
-      end
-      
-      {:varbind, oid, erlang_type, erlang_value, index}
-    end)
-    
-    # Create PDU record
-    {:pdu, pdu_type, request_id, error_status, error_index, erlang_varbinds}
-  end
-  
-  defp convert_version_to_erlang(version) do
-    case version do
-      :v1 -> :"version-1"
-      :v2c -> :"version-2"
-      :v2 -> :"version-2"
-      :v3 -> :"version-3"
-      _ -> :"version-1"
-    end
-  end
   
   defp display_results(implementation, time_microseconds, results, iterations) do
     time_ms = time_microseconds / 1000
@@ -248,18 +202,19 @@ defmodule SNMPMgr.PerformanceTest do
     
     # Test pure Elixir
     IO.puts("Pure Elixir Implementation:")
-    case SnmpLib.PDU.build_message(test_pdu, community, version) do
-      {:ok, message} ->
-        IO.puts("  Message built: #{inspect(message)}")
-        case SnmpLib.PDU.encode_message(message) do
-          {:ok, encoded} ->
-            IO.puts("  Encoded successfully: #{byte_size(encoded)} bytes")
-            IO.puts("  First 20 bytes: #{inspect(binary_part(encoded, 0, min(20, byte_size(encoded))))}")
-          {:error, reason} ->
-            IO.puts("  Encoding failed: #{inspect(reason)}")
-        end
-      {:error, reason} ->
-        IO.puts("  Message build failed: #{inspect(reason)}")
+    try do
+      message = SnmpLib.PDU.build_message(test_pdu, community, version)
+      IO.puts("  Message built: #{inspect(message)}")
+      case SnmpLib.PDU.encode_message(message) do
+        {:ok, encoded} ->
+          IO.puts("  Encoded successfully: #{byte_size(encoded)} bytes")
+          IO.puts("  First 20 bytes: #{inspect(binary_part(encoded, 0, min(20, byte_size(encoded))))}")
+        {:error, reason} ->
+          IO.puts("  Encoding failed: #{inspect(reason)}")
+      end
+    rescue
+      error ->
+        IO.puts("  Message build failed: #{inspect(error)}")
     end
     
     IO.puts("")

@@ -2,7 +2,173 @@
 
 A lightweight SNMP client library for Elixir that provides simple, stateless SNMP operations without requiring heavyweight management processes or configurations.
 
-## 🚀 Development Status
+## Quick Start
+
+```elixir
+# Add to your dependencies
+def deps do
+  [
+    {:snmp_mgr, "~> 0.1.0"}
+  ]
+end
+```
+
+```elixir
+# Basic operations
+{:ok, description} = SNMPMgr.get("192.168.1.1", "sysDescr.0", community: "public")
+{:ok, interfaces} = SNMPMgr.walk("switch.local", "ifTable", community: "public")
+{:ok, bulk_data} = SNMPMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
+
+# Set global defaults
+SNMPMgr.Config.set_default_community("monitoring")
+SNMPMgr.Config.set_default_timeout(5000)
+
+# Now use simplified calls
+{:ok, uptime} = SNMPMgr.get("router.local", "sysUpTime.0")
+```
+
+## Documentation
+
+### User Guides
+
+Start here for comprehensive guides on using SNMPMgr:
+
+- **[Getting Started Guide](docs/getting_started.md)** - Installation, basic usage, and common patterns
+
+#### Core Modules
+
+- **[SNMPMgr Guide](docs/snmp_mgr_guide.md)** - Main API module for all SNMP operations (GET, SET, WALK, BULK)
+- **[Config Guide](docs/config_guide.md)** - Configuration management and global defaults
+- **[Types Guide](docs/types_guide.md)** - SNMP data type handling and conversion
+
+#### Utility Modules
+
+- **[MIB Guide](docs/mib_guide.md)** - MIB compilation and symbolic name resolution
+- **[Multi Guide](docs/multi_guide.md)** - Concurrent multi-target SNMP operations
+- **[Table Guide](docs/table_guide.md)** - SNMP table processing and analysis utilities
+
+## Features
+
+- **Enterprise-Ready**: Production-grade streaming engine with high throughput
+- **Protocol Support**: Full SNMPv1 and SNMPv2c support with automatic version handling
+- **MIB Support**: Built-in compiler and symbolic name resolution for all standard MIBs
+- **Bulk Operations**: Efficient GETBULK operations for fast data retrieval
+- **Multi-Target**: Concurrent operations across multiple devices
+- **Table Processing**: Advanced utilities for SNMP table analysis and manipulation
+- **Circuit Breakers**: Fault tolerance with automatic failure recovery
+- **Metrics & Monitoring**: Real-time performance monitoring and statistics
+- **Streaming**: Memory-efficient processing of large datasets
+- **Configuration**: Global defaults with per-request overrides
+
+## Core Operations
+
+### Basic SNMP Operations
+
+```elixir
+# GET operation
+{:ok, value} = SNMPMgr.get("device", "sysDescr.0")
+
+# SET operation  
+{:ok, _} = SNMPMgr.set("device", "sysContact.0", "admin@company.com")
+
+# GET-NEXT operation
+{:ok, {next_oid, value}} = SNMPMgr.get_next("device", "sysDescr")
+
+# WALK operation (tree traversal)
+{:ok, results} = SNMPMgr.walk("device", "system")
+```
+
+### Bulk Operations (SNMPv2c)
+
+```elixir
+# GETBULK operation
+{:ok, results} = SNMPMgr.get_bulk("device", "ifDescr", max_repetitions: 20)
+
+# Bulk table retrieval
+{:ok, table_data} = SNMPMgr.get_bulk("switch", "ifTable", max_repetitions: 50)
+```
+
+### Multi-Target Operations
+
+```elixir
+# Query multiple devices concurrently
+requests = [
+  {"device1", "sysDescr.0"},
+  {"device2", "sysDescr.0"},
+  {"device3", "sysUpTime.0"}
+]
+
+results = SNMPMgr.Multi.get_multi(requests, community: "public")
+```
+
+### Table Processing
+
+```elixir
+# Get and process SNMP tables
+{:ok, table_data} = SNMPMgr.walk("switch", "ifTable")
+{:ok, structured_table} = SNMPMgr.Table.to_table(table_data, [1,3,6,1,2,1,2,2])
+
+# Convert to records with named fields
+column_map = %{2 => :description, 3 => :type, 5 => :speed}
+{:ok, interfaces} = SNMPMgr.Table.to_records(structured_table, column_map)
+```
+
+## Configuration
+
+```elixir
+# Set global defaults
+SNMPMgr.Config.set_default_community("monitoring")
+SNMPMgr.Config.set_default_timeout(10_000)
+SNMPMgr.Config.set_default_version(:v2c)
+
+# Add MIB search paths
+SNMPMgr.Config.add_mib_path("/opt/vendor_mibs")
+
+# Load custom MIBs
+{:ok, objects} = SNMPMgr.MIB.load_mib("VENDOR-SYSTEM-MIB")
+```
+
+## Error Handling
+
+```elixir
+case SNMPMgr.get("device", "sysDescr.0") do
+  {:ok, description} -> 
+    IO.puts("Device: #{description}")
+  {:error, :timeout} -> 
+    IO.puts("Device timeout")
+  {:error, :noSuchObject} -> 
+    IO.puts("Object not found")
+  {:error, reason} -> 
+    IO.puts("SNMP error: #{inspect(reason)}")
+end
+```
+
+## Performance
+
+- **Throughput**: 1000+ requests/second with batching and connection pooling
+- **Memory**: Constant memory usage for large datasets via streaming operations
+- **Concurrency**: Parallel processing across multiple devices with intelligent routing
+- **Efficiency**: GETBULK operations provide up to 10x performance improvement over GETNEXT
+
+## Testing
+
+```bash
+mix test
+```
+
+## Support
+
+For questions, issues, or feature requests:
+
+1. Check the [documentation guides](docs/) first
+2. Review the module-specific guides for detailed examples
+3. Look at the troubleshooting sections in the guides
+
+---
+
+## Development History
+
+### 🚀 Development Status
 
 | Phase | Status | Features |
 |-------|--------|----------|
@@ -16,11 +182,11 @@ A lightweight SNMP client library for Elixir that provides simple, stateless SNM
 **Test Coverage**: 78 tests passing  
 **Performance**: High-throughput streaming engine with intelligent routing
 
-## Phase 1 - Foundation ✅
+### Phase 1 - Foundation ✅
 
 **Status: Complete** 
 
-### Features Implemented
+#### Features Implemented
 
 ✅ **Core API** - Basic `get`, `get_next`, `set`, and `get_async` operations  
 ✅ **Target Parsing** - Support for IP addresses, hostnames, and ports  
@@ -29,11 +195,11 @@ A lightweight SNMP client library for Elixir that provides simple, stateless SNM
 ✅ **Error Handling** - Comprehensive error types and validation  
 ✅ **Test Suite** - Unit tests for all core functionality  
 
-## Phase 2 - MIB Support & Full SNMPv1 ✅
+### Phase 2 - MIB Support & Full SNMPv1 ✅
 
 **Status: Complete**
 
-### Features Implemented
+#### Features Implemented
 
 ✅ **MIB Operations** - Symbolic name resolution and reverse lookup  
 ✅ **Standard MIBs** - Built-in support for RFC1213 (MIB-II) objects  
@@ -43,7 +209,7 @@ A lightweight SNMP client library for Elixir that provides simple, stateless SNM
 ✅ **Table Processing** - Convert walks to structured table data  
 ✅ **Comprehensive Tests** - 47 tests covering all functionality  
 
-### Enhanced Architecture
+#### Enhanced Architecture
 
 - **`SNMPMgr`** - Main API with symbolic name support and table operations
 - **`SNMPMgr.Core`** - Core SNMP operations with configuration integration
@@ -56,7 +222,7 @@ A lightweight SNMP client library for Elixir that provides simple, stateless SNM
 - **`SNMPMgr.OID`** - OID string/list conversion utilities
 - **`SNMPMgr.PDU`** - SNMP PDU encoding/decoding
 
-### Enhanced Usage
+#### Enhanced Usage
 
 ```elixir
 # Symbolic name usage
@@ -81,18 +247,18 @@ SNMPMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
 {:ok, rows} = SNMPMgr.Table.to_rows(pairs)
 ```
 
-### Phase 2 Limitations
+#### Phase 2 Limitations
 
 - Still requires Erlang SNMP modules (`:snmp_pdus`) for actual network operations
 - SNMPv1 only (v2c support in Phase 3)
 - No bulk operations yet (Phase 4)
 - MIB compilation available but requires `:snmpc` module
 
-## Phase 3 - SNMPv2c & GETBULK ✅
+### Phase 3 - SNMPv2c & GETBULK ✅
 
 **Status: Complete**
 
-### Features Implemented
+#### Features Implemented
 
 ✅ **SNMPv2c Protocol** - Full support for SNMP version 2c  
 ✅ **GETBULK Operation** - Efficient bulk data retrieval  
@@ -103,7 +269,7 @@ SNMPMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
 ✅ **Performance Optimizations** - Adaptive bulk sizing and pagination  
 ✅ **Comprehensive Tests** - 63 tests covering all functionality  
 
-### Enhanced Architecture
+#### Enhanced Architecture
 
 - **`SNMPMgr.Bulk`** - Advanced bulk operations with GETBULK
 - **`SNMPMgr.Multi`** - Concurrent multi-target operations  
@@ -112,7 +278,7 @@ SNMPMgr.walk("device.local", [1, 3, 6, 1, 2, 1, 1])
 - **Enhanced `SNMPMgr.Core`** - SNMPv2c PDU support and GETBULK
 - **Enhanced `SNMPMgr.Types`** - v2c exception value handling
 
-### Advanced Usage
+#### Advanced Usage
 
 ```elixir
 # SNMPv2c GETBULK operations
@@ -149,24 +315,24 @@ callback = fn change -> IO.inspect(change) end
 {:ok, monitor} = SNMPMgr.Multi.monitor(targets, callback, interval: 30_000)
 ```
 
-### Performance Improvements
+#### Performance Improvements
 
 - **GETBULK vs GETNEXT**: Up to 10x faster for large table retrieval
 - **Concurrent Operations**: Parallel processing across multiple devices
 - **Adaptive Pagination**: Automatic bulk sizing optimization
 - **Version Fallback**: Graceful degradation from v2c to v1
 
-### Phase 3 Limitations
+#### Phase 3 Limitations
 
 - Still requires Erlang SNMP modules (`:snmp_pdus`) for actual network operations
 - Advanced bulk optimizations in Phase 4
 - Streaming engine in Phase 5
 
-## Phase 4 - Advanced Bulk Operations & Tables ✅
+### Phase 4 - Advanced Bulk Operations & Tables ✅
 
 **Status: Complete**
 
-### Features Implemented
+#### Features Implemented
 
 ✅ **Adaptive Walking** - Intelligent bulk parameter tuning based on device characteristics  
 ✅ **Streaming Operations** - Memory-efficient processing of large datasets  
@@ -175,14 +341,14 @@ callback = fn change -> IO.inspect(change) end
 ✅ **Table Processing** - Filtering, sorting, grouping, and validation  
 ✅ **Performance Optimization** - Real-time parameter adaptation  
 
-### Enhanced Architecture
+#### Enhanced Architecture
 
 - **`SNMPMgr.AdaptiveWalk`** - Intelligent bulk walking with parameter adaptation
 - **`SNMPMgr.Stream`** - Memory-efficient streaming operations for large datasets
 - **Enhanced `SNMPMgr.Table`** - Advanced table analysis and processing utilities
 - **Enhanced `SNMPMgr`** - New adaptive and streaming API functions
 
-### Advanced Usage
+#### Advanced Usage
 
 ```elixir
 # Adaptive bulk walking with automatic parameter tuning
@@ -208,18 +374,18 @@ IO.inspect(analysis.completeness)  # Data completeness ratio
 optimal_size = benchmark.optimal_bulk_size
 ```
 
-### Performance Improvements
+#### Performance Improvements
 
 - **Adaptive Parameters**: Automatic tuning reduces timeouts and optimizes throughput
 - **Streaming Processing**: Constant memory usage for arbitrarily large datasets  
 - **Smart Chunking**: Table-aware data fetching with backpressure control
 - **Real-time Monitoring**: Continuous metric collection with efficient buffering
 
-## Phase 5 - Streaming PDU Engine with Request Routing ✅
+### Phase 5 - Streaming PDU Engine with Request Routing ✅
 
 **Status: Complete**
 
-### Features Implemented
+#### Features Implemented
 
 ✅ **Streaming PDU Engine** - High-performance engine with request queuing and batching  
 ✅ **Intelligent Request Routing** - Load balancing with multiple routing strategies  
@@ -230,7 +396,7 @@ optimal_size = benchmark.optimal_bulk_size
 ✅ **Request Deduplication** - Optimization for repeated requests  
 ✅ **Distributed Architecture** - Scalable multi-engine infrastructure  
 
-### Enhanced Architecture
+#### Enhanced Architecture
 
 - **`SNMPMgr.Engine`** - High-performance streaming PDU engine with request queuing
 - **`SNMPMgr.Router`** - Intelligent request routing with multiple load balancing strategies
@@ -239,7 +405,7 @@ optimal_size = benchmark.optimal_bulk_size
 - **`SNMPMgr.Metrics`** - Comprehensive metrics collection and real-time monitoring
 - **`SNMPMgr.Supervisor`** - Coordinated supervision of all infrastructure components
 
-### Enterprise Usage
+#### Enterprise Usage
 
 ```elixir
 # Start the complete streaming infrastructure
@@ -296,7 +462,7 @@ SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"
 |> Stream.run()
 ```
 
-### Performance Characteristics
+#### Performance Characteristics
 
 - **Throughput**: 1000+ requests/second per engine with batching
 - **Latency**: Sub-millisecond routing overhead with connection pooling
@@ -305,7 +471,7 @@ SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"
 - **Memory**: Constant memory usage for arbitrarily large datasets via streaming
 - **Monitoring**: Real-time metrics with configurable retention and aggregation
 
-### Production Features
+#### Production Features
 
 - **High Availability**: Automatic failover and recovery mechanisms
 - **Load Balancing**: Multiple routing strategies (round-robin, least-connections, weighted, affinity)
@@ -314,7 +480,7 @@ SNMPMgr.record_metric(:histogram, :custom_latency, 150, %{operation: "bulk_walk"
 - **Observability**: Comprehensive metrics, logging, and distributed tracing
 - **Scalability**: Multi-engine architecture with intelligent request distribution
 
-## Architecture Overview
+### Architecture Overview
 
 SNMPMgr now provides a complete enterprise-grade SNMP infrastructure:
 
@@ -324,22 +490,3 @@ SNMPMgr now provides a complete enterprise-grade SNMP infrastructure:
 4. **Phase 5**: Production-ready engine with routing and resilience
 
 The library can handle everything from simple device queries to large-scale network monitoring with thousands of devices and millions of OIDs.  
-
-## Installation
-
-```elixir
-def deps do
-  [
-    {:snmp_mgr, "~> 0.1.0"}
-  ]
-end
-```
-
-## Testing
-
-```bash
-mix test
-```
-
-Note: Some functionality requires Erlang's SNMP application to be available.
-

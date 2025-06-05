@@ -264,10 +264,4 @@ defmodule SNMPMgr.Types do
     end
   end
 
-  # Helper function to check if string contains only ASCII characters
-  defp ascii_only?(string) when is_binary(string) do
-    string
-    |> String.to_charlist()
-    |> Enum.all?(fn char -> char >= 0 and char <= 127 end)
-  end
 end
