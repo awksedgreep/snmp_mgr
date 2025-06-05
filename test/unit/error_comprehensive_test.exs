@@ -1,7 +1,7 @@
-defmodule SNMPMgr.ErrorComprehensiveTest do
+defmodule SnmpMgr.ErrorComprehensiveTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :error
@@ -23,19 +23,19 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       # Test error format consistency across all operation types
       operations = [
         # GET operation with invalid OID
-        {:get, fn -> SNMPMgr.get(target, "invalid.oid", timeout: 100) end},
+        {:get, fn -> SnmpMgr.get(target, "invalid.oid", timeout: 100) end},
         
         # SET operation with invalid OID  
-        {:set, fn -> SNMPMgr.set(target, "invalid.oid", "value", timeout: 100) end},
+        {:set, fn -> SnmpMgr.set(target, "invalid.oid", "value", timeout: 100) end},
         
         # GET-BULK operation with invalid OID
-        {:get_bulk, fn -> SNMPMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end},
+        {:get_bulk, fn -> SnmpMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end},
         
         # GET-NEXT operation with invalid OID
-        {:get_next, fn -> SNMPMgr.get_next(target, "invalid.oid", timeout: 100) end},
+        {:get_next, fn -> SnmpMgr.get_next(target, "invalid.oid", timeout: 100) end},
         
         # WALK operation with invalid OID
-        {:walk, fn -> SNMPMgr.walk(target, "invalid.oid", timeout: 100) end}
+        {:walk, fn -> SnmpMgr.walk(target, "invalid.oid", timeout: 100) end}
       ]
       
       Enum.each(operations, fn {op_type, operation} ->
@@ -60,7 +60,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       ]
       
       Enum.each(unreachable_targets, fn target ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 50)
         
         case result do
@@ -88,7 +88,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       very_short_timeouts = [1, 5, 10]
       
       Enum.each(very_short_timeouts, fn timeout ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: timeout)
         
         case result do
@@ -115,7 +115,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       invalid_communities = ["wrong_community", "", "invalid123"]
       
       Enum.each(invalid_communities, fn community ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: community, timeout: 100)
         
         case result do
@@ -158,7 +158,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       ]
       
       Enum.each(invalid_oids, fn oid ->
-        result = SNMPMgr.get(target, oid, community: device.community, timeout: 100)
+        result = SnmpMgr.get(target, oid, community: device.community, timeout: 100)
         
         case result do
           {:error, reason} ->
@@ -179,11 +179,11 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       
       # Test OID error consistency across different operations
       operations = [
-        fn -> SNMPMgr.get(target, invalid_oid, community: device.community, timeout: 100) end,
-        fn -> SNMPMgr.set(target, invalid_oid, "value", community: device.community, timeout: 100) end,
-        fn -> SNMPMgr.get_bulk(target, invalid_oid, max_repetitions: 3, 
+        fn -> SnmpMgr.get(target, invalid_oid, community: device.community, timeout: 100) end,
+        fn -> SnmpMgr.set(target, invalid_oid, "value", community: device.community, timeout: 100) end,
+        fn -> SnmpMgr.get_bulk(target, invalid_oid, max_repetitions: 3, 
                                community: device.community, timeout: 100) end,
-        fn -> SNMPMgr.walk(target, invalid_oid, community: device.community, timeout: 100) end
+        fn -> SnmpMgr.walk(target, invalid_oid, community: device.community, timeout: 100) end
       ]
       
       Enum.each(operations, fn operation ->
@@ -233,7 +233,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
          [community: device2.community, timeout: 100]}
       ]
       
-      results = SNMPMgr.get_multi(requests)
+      results = SnmpMgr.get_multi(requests)
       
       assert is_list(results)
       assert length(results) == 3
@@ -268,7 +268,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
          [max_repetitions: 3, community: device2.community, timeout: 100]}
       ]
       
-      results = SNMPMgr.get_bulk_multi(requests)
+      results = SnmpMgr.get_bulk_multi(requests)
       
       assert is_list(results)
       assert length(results) == 3
@@ -308,7 +308,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       # Generate multiple errors quickly
       error_operations = Enum.map(1..10, fn i ->
         Task.async(fn ->
-          SNMPMgr.get(target, "invalid.oid.#{i}", 
+          SnmpMgr.get(target, "invalid.oid.#{i}", 
                      community: device.community, timeout: 100)
         end)
       end)
@@ -342,9 +342,9 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       concurrent_errors = Enum.map(1..5, fn i ->
         Task.async(fn ->
           case rem(i, 3) do
-            0 -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50)  # Network error
-            1 -> SNMPMgr.get(target, "invalid.oid.#{i}", timeout: 100)  # OID error
-            2 -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
+            0 -> SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50)  # Network error
+            1 -> SnmpMgr.get(target, "invalid.oid.#{i}", timeout: 100)  # OID error
+            2 -> SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
           end
         end)
       end)
@@ -391,7 +391,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       ]
       
       Enum.each(exception_test_cases, fn {oid, expected_exceptions} ->
-        result = SNMPMgr.get(target, oid, version: :v2c, 
+        result = SnmpMgr.get(target, oid, version: :v2c, 
                             community: device.community, timeout: 100)
         
         case result do
@@ -421,7 +421,7 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
       target = SNMPSimulator.device_target(device)
       
       # Test bulk operations with potential exceptions
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.999", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.999", 
                                max_repetitions: 5, version: :v2c,
                                community: device.community, timeout: 100)
       
@@ -461,25 +461,25 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
     test "enhanced error context for user operations", %{device: device} do
       target = SNMPSimulator.device_target(device)
       
-      # Test that SNMPMgr provides useful error context over raw snmp_lib
+      # Test that SnmpMgr provides useful error context over raw snmp_lib
       error_scenarios = [
         # Network timeout with context
-        {fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end,
+        {fn -> SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end,
          "network operation"},
         
         # Invalid OID with context
-        {fn -> SNMPMgr.get(target, "invalid.oid", community: device.community, timeout: 100) end,
+        {fn -> SnmpMgr.get(target, "invalid.oid", community: device.community, timeout: 100) end,
          "OID validation"},
         
         # Authentication with context
-        {fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100) end,
+        {fn -> SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100) end,
          "authentication"}
       ]
       
       Enum.each(error_scenarios, fn {operation, context} ->
         case operation.() do
           {:error, reason} ->
-            # Should get properly formatted error from SNMPMgr over snmp_lib
+            # Should get properly formatted error from SnmpMgr over snmp_lib
             assert is_atom(reason) or is_tuple(reason),
               "#{context} error should be properly formatted: #{inspect(reason)}"
             
@@ -493,13 +493,13 @@ defmodule SNMPMgr.ErrorComprehensiveTest do
     test "consistent error handling across all API functions", %{device: device} do
       target = SNMPSimulator.device_target(device)
       
-      # Test that all SNMPMgr API functions handle errors consistently
+      # Test that all SnmpMgr API functions handle errors consistently
       api_functions = [
-        {:get, fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end},
-        {:set, fn -> SNMPMgr.set("240.0.0.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 50) end},
-        {:get_bulk, fn -> SNMPMgr.get_bulk("240.0.0.1", "1.3.6.1.2.1.2.2", max_repetitions: 3, timeout: 50) end},
-        {:get_next, fn -> SNMPMgr.get_next("240.0.0.1", "1.3.6.1.2.1.1.1", timeout: 50) end},
-        {:walk, fn -> SNMPMgr.walk("240.0.0.1", "1.3.6.1.2.1.1", timeout: 50) end}
+        {:get, fn -> SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 50) end},
+        {:set, fn -> SnmpMgr.set("240.0.0.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 50) end},
+        {:get_bulk, fn -> SnmpMgr.get_bulk("240.0.0.1", "1.3.6.1.2.1.2.2", max_repetitions: 3, timeout: 50) end},
+        {:get_next, fn -> SnmpMgr.get_next("240.0.0.1", "1.3.6.1.2.1.1.1", timeout: 50) end},
+        {:walk, fn -> SnmpMgr.walk("240.0.0.1", "1.3.6.1.2.1.1", timeout: 50) end}
       ]
       
       Enum.each(api_functions, fn {function_name, operation} ->

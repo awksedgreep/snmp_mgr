@@ -1,7 +1,7 @@
-defmodule SNMPMgr.BulkOperationsTest do
+defmodule SnmpMgr.BulkOperationsTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :bulk_operations
@@ -19,7 +19,7 @@ defmodule SNMPMgr.BulkOperationsTest do
     test "get_bulk/3 uses SnmpLib.Manager.get_bulk", %{device: device} do
       # Test GET-BULK operation through SnmpLib.Manager
       target = "#{device.host}:#{device.port}"
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                                max_repetitions: 5, non_repeaters: 0,
                                community: device.community, version: :v2c, timeout: 200)
       
@@ -46,10 +46,10 @@ defmodule SNMPMgr.BulkOperationsTest do
 
     test "get_bulk enforces SNMPv2c version", %{device: device} do
       # Test that bulk operation defaults to v2c regardless of specified version
-      result_default = SNMPMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.2.2", 
+      result_default = SnmpMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.2.2", 
                                        max_repetitions: 3, community: device.community, timeout: 200)
       
-      result_explicit_v2c = SNMPMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.2.2", 
+      result_explicit_v2c = SnmpMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.2.2", 
                                             max_repetitions: 3, version: :v2c, 
                                             community: device.community, timeout: 200)
       
@@ -70,7 +70,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(repetition_cases, fn {max_reps, description} ->
-        result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+        result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                                  max_repetitions: max_reps, community: device.community, timeout: 200)
         
         case result do
@@ -97,7 +97,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(non_repeater_cases, fn {non_reps, description} ->
-        result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+        result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                                  max_repetitions: 5, non_repeaters: non_reps,
                                  community: device.community, timeout: 200)
         
@@ -118,21 +118,21 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test missing max_repetitions (should default and succeed)
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [community: device.community])
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [community: device.community])
       assert {:ok, _} = result
       
       # Test invalid max_repetitions type (snmp_lib validates this strictly)
       assert_raise ArgumentError, fn ->
-        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: "invalid", community: device.community])
+        SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: "invalid", community: device.community])
       end
       
       # Test invalid non_repeaters type (snmp_lib validates this strictly)
       assert_raise ArgumentError, fn ->
-        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 5, non_repeaters: "invalid", community: device.community])
+        SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 5, non_repeaters: "invalid", community: device.community])
       end
       
       # Test valid parameters work
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 3, non_repeaters: 0, community: device.community])
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", [max_repetitions: 3, non_repeaters: 0, community: device.community])
       assert {:ok, _} = result
     end
   end
@@ -158,7 +158,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(string_oids, fn oid ->
-        result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3, 
+        result = SnmpMgr.get_bulk(target, oid, max_repetitions: 3, 
                                  community: device.community, timeout: 200)
         # Should process OID through SnmpLib.OID and succeed
         assert {:ok, _} = result
@@ -176,7 +176,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(list_oids, fn oid ->
-        result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3,
+        result = SnmpMgr.get_bulk(target, oid, max_repetitions: 3,
                                  community: device.community, timeout: 200)
         # Should process list OID through SnmpLib.OID and succeed
         assert {:ok, _} = result
@@ -194,7 +194,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(symbolic_oids, fn oid ->
-        result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3,
+        result = SnmpMgr.get_bulk(target, oid, max_repetitions: 3,
                                  community: device.community, timeout: 200)
         # MIB resolution may succeed or fail depending on loaded MIBs
         case result do
@@ -231,7 +231,7 @@ defmodule SNMPMgr.BulkOperationsTest do
          [max_repetitions: 3, community: device2.community, timeout: 200]}
       ]
       
-      results = SNMPMgr.get_bulk_multi(requests)
+      results = SnmpMgr.get_bulk_multi(requests)
       
       assert is_list(results)
       assert length(results) == 2
@@ -269,7 +269,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       ]
       
       Enum.each(invalid_oids, fn oid ->
-        result = SNMPMgr.get_bulk(target, oid, max_repetitions: 3,
+        result = SnmpMgr.get_bulk(target, oid, max_repetitions: 3,
                                  community: device.community, timeout: 200)
         
         case result do
@@ -287,7 +287,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test very short timeout
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                                max_repetitions: 10, community: device.community, timeout: 1)
       
       case result do
@@ -301,7 +301,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test with wrong community
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                                max_repetitions: 3, community: "wrong_community", timeout: 200)
       
       case result do
@@ -316,7 +316,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test with OID that might return exceptions
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.999", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.999", 
                                max_repetitions: 5, community: device.community, timeout: 200)
       
       case result do
@@ -357,7 +357,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       start_time = System.monotonic_time(:millisecond)
       
       results = Enum.map(1..5, fn _i ->
-        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+        SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                         max_repetitions: 3, community: device.community, timeout: 200)
       end)
       
@@ -383,13 +383,13 @@ defmodule SNMPMgr.BulkOperationsTest do
       
       # Compare one bulk operation vs multiple individual operations
       {bulk_time, bulk_result} = :timer.tc(fn ->
-        SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+        SnmpMgr.get_bulk(target, "1.3.6.1.2.1.1", 
                         max_repetitions: 5, community: device.community, timeout: 200)
       end)
       
       {individual_time, individual_results} = :timer.tc(fn ->
         Enum.map(1..5, fn i ->
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
                      community: device.community, timeout: 200)
         end)
       end)
@@ -417,7 +417,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       # Test concurrent bulk operations
       tasks = Enum.map(1..3, fn i ->
         Task.async(fn ->
-          SNMPMgr.get_bulk(target, "1.3.6.1.2.1.#{i}", 
+          SnmpMgr.get_bulk(target, "1.3.6.1.2.1.#{i}", 
                           max_repetitions: 3, community: device.community, timeout: 200)
         end)
       end)
@@ -437,7 +437,7 @@ defmodule SNMPMgr.BulkOperationsTest do
     end
   end
 
-  describe "Bulk Operations Integration with SNMPMgr.Bulk Module" do
+  describe "Bulk Operations Integration with SnmpMgr.Bulk Module" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -450,8 +450,8 @@ defmodule SNMPMgr.BulkOperationsTest do
     test "bulk module functions use snmp_lib backend", %{device: device} do
       target = "#{device.host}:#{device.port}"
       
-      # Test that SNMPMgr.Bulk functions delegate to Core which uses snmp_lib
-      case SNMPMgr.Bulk.get_table_bulk(target, "1.3.6.1.2.1.2.2", 
+      # Test that SnmpMgr.Bulk functions delegate to Core which uses snmp_lib
+      case SnmpMgr.Bulk.get_table_bulk(target, "1.3.6.1.2.1.2.2", 
                                         community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # Should get table data through snmp_lib
@@ -467,7 +467,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test bulk table walking
-      case SNMPMgr.Bulk.walk_bulk(target, "1.3.6.1.2.1.1", 
+      case SnmpMgr.Bulk.walk_bulk(target, "1.3.6.1.2.1.1", 
                                    community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # Should walk subtree through snmp_lib bulk operations
@@ -483,7 +483,7 @@ defmodule SNMPMgr.BulkOperationsTest do
       target = "#{device.host}:#{device.port}"
       
       # Test that bulk operations maintain consistent return formats
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.1", 
                                max_repetitions: 3, community: device.community, timeout: 200)
       
       case result do

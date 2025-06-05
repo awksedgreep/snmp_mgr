@@ -10,7 +10,7 @@ defmodule SnmpMgr.MixProject do
       deps: deps(),
       
       # Documentation
-      name: "SNMPMgr",
+      name: "SnmpMgr",
       description: "Enterprise-grade SNMP client library for Elixir",
       package: package(),
       docs: docs()
@@ -21,7 +21,7 @@ defmodule SnmpMgr.MixProject do
   def application do
     [
       extra_applications: [:logger, :snmp],
-      mod: {SNMPMgr.Application, []}
+      mod: {SnmpMgr.Application, []}
     ]
   end
 
@@ -83,15 +83,15 @@ defmodule SnmpMgr.MixProject do
       ],
       
       groups_for_modules: [
-        "Core": [SNMPMgr, SNMPMgr.Core, SNMPMgr.Config, SNMPMgr.Types],
-        "MIB Support": [SNMPMgr.MIB],
-        "Operations": [SNMPMgr.Walk, SNMPMgr.Bulk, SNMPMgr.Multi, SNMPMgr.Table],
-        "Advanced": [SNMPMgr.AdaptiveWalk, SNMPMgr.Stream],
+        "Core": [SnmpMgr, SnmpMgr.Core, SnmpMgr.Config, SnmpMgr.Types],
+        "MIB Support": [SnmpMgr.MIB],
+        "Operations": [SnmpMgr.Walk, SnmpMgr.Bulk, SnmpMgr.Multi, SnmpMgr.Table],
+        "Advanced": [SnmpMgr.AdaptiveWalk, SnmpMgr.Stream],
         "Infrastructure": [
-          SNMPMgr.Engine, SNMPMgr.Router, SNMPMgr.CircuitBreaker, 
-          SNMPMgr.Metrics, SNMPMgr.Supervisor
+          SnmpMgr.Engine, SnmpMgr.Router, SnmpMgr.CircuitBreaker, 
+          SnmpMgr.Metrics, SnmpMgr.Supervisor
         ],
-        "Utilities": [SNMPMgr.Target, SNMPMgr.Errors, SNMPMgr.Application]
+        "Utilities": [SnmpMgr.Target, SnmpMgr.Errors, SnmpMgr.Application]
       ]
     ]
   end

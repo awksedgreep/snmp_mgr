@@ -1,7 +1,7 @@
-defmodule SNMPMgr.PerformanceSnmpLibTest do
+defmodule SnmpMgr.PerformanceSnmpLibTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :performance
@@ -31,7 +31,7 @@ defmodule SNMPMgr.PerformanceSnmpLibTest do
       target = SNMPSimulator.device_target(device)
       tasks = Enum.map(1..@concurrent_operations, fn _i ->
         Task.async(fn ->
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                       community: device.community, timeout: 200)
         end)
       end)
@@ -65,13 +65,13 @@ defmodule SNMPMgr.PerformanceSnmpLibTest do
       individual_start = System.monotonic_time(:millisecond)
       individual_results = Enum.map(1..5, fn i ->
         oid = "#{base_oid}.#{i}.0"
-        SNMPMgr.get(target, oid, community: device.community, timeout: 200)
+        SnmpMgr.get(target, oid, community: device.community, timeout: 200)
       end)
       individual_duration = System.monotonic_time(:millisecond) - individual_start
       
       # Test bulk operation
       bulk_start = System.monotonic_time(:millisecond)
-      bulk_result = SNMPMgr.get_bulk(target, base_oid,
+      bulk_result = SnmpMgr.get_bulk(target, base_oid,
                                     community: device.community, timeout: 200, max_repetitions: 5)
       bulk_duration = System.monotonic_time(:millisecond) - bulk_start
       
@@ -115,7 +115,7 @@ defmodule SNMPMgr.PerformanceSnmpLibTest do
       start_time = System.monotonic_time(:millisecond)
       
       target = SNMPSimulator.device_target(device)
-      case SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+      case SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                        community: device.community, timeout: 500) do
         {:ok, results} when is_list(results) ->
           duration = System.monotonic_time(:millisecond) - start_time
@@ -140,7 +140,7 @@ defmodule SNMPMgr.PerformanceSnmpLibTest do
       # Perform multiple operations
       target = SNMPSimulator.device_target(device)
       Enum.each(1..20, fn _i ->
-        SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                     community: device.community, timeout: 200)
       end)
       

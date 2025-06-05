@@ -1,8 +1,8 @@
-defmodule SNMPMgr.RouterIntegrationTest do
+defmodule SnmpMgr.RouterIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.Router
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.Router
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :router

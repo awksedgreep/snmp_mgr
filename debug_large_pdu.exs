@@ -1,4 +1,4 @@
-alias SNMPMgr.PDU
+alias SnmpMgr.PDU
 
 # Start with a simple case that works
 IO.puts("=== Testing Small PDU (should work) ===")

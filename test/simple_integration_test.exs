@@ -1,7 +1,7 @@
-defmodule SNMPMgr.SimpleIntegrationTest do
+defmodule SnmpMgr.SimpleIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :integration
 
@@ -15,11 +15,11 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Basic Operations with Real Device" do
+  describe "SnmpMgr Basic Operations with Real Device" do
     test "get/3 works with valid community and OID", %{device: device} do
       skip_if_no_device(device)
       
-      result = SNMPMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
                           community: device.community, timeout: 200)
       
       # Must succeed with real data or fail with specific SNMP error
@@ -35,7 +35,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     test "get/3 fails with invalid community", %{device: device} do
       skip_if_no_device(device)
       
-      result = SNMPMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get("#{device.host}:#{device.port}", "1.3.6.1.2.1.1.1.0", 
                           community: "wrong_community", timeout: 200)
       
       # Must fail - invalid community should not work
@@ -45,7 +45,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     test "get_bulk/3 returns structured results", %{device: device} do
       skip_if_no_device(device)
       
-      result = SNMPMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
+      result = SnmpMgr.get_bulk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
                                community: device.community, max_repetitions: 3, timeout: 200)
       
       case result do
@@ -68,7 +68,7 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     test "walk/3 traverses MIB tree properly", %{device: device} do
       skip_if_no_device(device)
       
-      result = SNMPMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
+      result = SnmpMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
                            community: device.community, timeout: 200)
       
       case result do
@@ -88,28 +88,28 @@ defmodule SNMPMgr.SimpleIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Error Handling" do
+  describe "SnmpMgr Error Handling" do
     test "invalid OID format is rejected", %{device: device} do
       skip_if_no_device(device)
       
       # Test with simulator device, not hardcoded IPs
-      assert {:error, _reason} = SNMPMgr.get("#{device.host}:#{device.port}", "invalid.oid", 
+      assert {:error, _reason} = SnmpMgr.get("#{device.host}:#{device.port}", "invalid.oid", 
                                             community: device.community, timeout: 200)
-      assert {:error, _reason} = SNMPMgr.get("#{device.host}:#{device.port}", "", 
+      assert {:error, _reason} = SnmpMgr.get("#{device.host}:#{device.port}", "", 
                                             community: device.community, timeout: 200)
     end
 
     test "invalid host format is rejected" do
       # These don't need device since they test invalid hosts
-      assert {:error, _reason} = SNMPMgr.get("", "1.3.6.1.2.1.1.1.0", timeout: 200)
-      assert {:error, _reason} = SNMPMgr.get("not.a.valid.hostname.that.should.fail", 
+      assert {:error, _reason} = SnmpMgr.get("", "1.3.6.1.2.1.1.1.0", timeout: 200)
+      assert {:error, _reason} = SnmpMgr.get("not.a.valid.hostname.that.should.fail", 
                                             "1.3.6.1.2.1.1.1.0", timeout: 200)
     end
 
     test "timeout is respected" do
       # Use documentation range IP (won't respond), not random IPs
       start_time = System.monotonic_time(:millisecond)
-      result = SNMPMgr.get("192.0.2.254", "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get("192.0.2.254", "1.3.6.1.2.1.1.1.0", 
                           community: "public", timeout: 50)
       end_time = System.monotonic_time(:millisecond)
       

@@ -1,7 +1,7 @@
-defmodule SNMPMgr.FirstTimeUserTest do
+defmodule SnmpMgr.FirstTimeUserTest do
   use ExUnit.Case, async: false
 
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
 
   @moduletag :user_experience
   @moduletag :first_time_user
@@ -25,7 +25,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
 
       # The most basic operation - get system description
       # Should work with minimal configuration
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "public")
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "public")
 
       case result do
         {:ok, description} ->
@@ -56,7 +56,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       target = SNMPSimulator.device_target(device)
 
       # Should work with common MIB names
-      friendly_result = SNMPMgr.get(target, "sysDescr.0", community: "public")
+      friendly_result = SnmpMgr.get(target, "sysDescr.0", community: "public")
 
       case friendly_result do
         {:ok, description} ->
@@ -94,25 +94,25 @@ defmodule SNMPMgr.FirstTimeUserTest do
       test_cases = [
         {
           # Wrong community string
-          fn -> SNMPMgr.get(target, "sysDescr.0", community: "wrong") end,
+          fn -> SnmpMgr.get(target, "sysDescr.0", community: "wrong") end,
           ["community", "authentication", "access denied"],
           "Wrong community string should give authentication hint"
         },
         {
           # Invalid OID format
-          fn -> SNMPMgr.get(target, "not.an.oid", community: "public") end,
+          fn -> SnmpMgr.get(target, "not.an.oid", community: "public") end,
           ["OID", "format", "invalid"],
           "Invalid OID should explain format requirements"
         },
         {
           # Unreachable host
-          fn -> SNMPMgr.get("192.0.2.1:161", "sysDescr.0", community: "public") end,
+          fn -> SnmpMgr.get("192.0.2.1:161", "sysDescr.0", community: "public") end,
           ["timeout", "unreachable", "host", "network"],
           "Network errors should be clearly identified"
         },
         {
           # Missing required parameters
-          fn -> SNMPMgr.get(target, "sysDescr.0", []) end,
+          fn -> SnmpMgr.get(target, "sysDescr.0", []) end,
           ["community", "required", "missing"],
           "Missing parameters should be clearly identified"
         }
@@ -155,13 +155,13 @@ defmodule SNMPMgr.FirstTimeUserTest do
       # A new user wants to monitor basic device information
       monitoring_script = fn ->
         # Step 1: Get device identification
-        {:ok, sys_descr} = SNMPMgr.get(target, "sysDescr.0", community: "public")
+        {:ok, sys_descr} = SnmpMgr.get(target, "sysDescr.0", community: "public")
 
         # Step 2: Get device uptime
-        {:ok, uptime} = SNMPMgr.get(target, "sysUpTime.0", community: "public")
+        {:ok, uptime} = SnmpMgr.get(target, "sysUpTime.0", community: "public")
 
         # Step 3: Get device name
-        {:ok, name} = SNMPMgr.get(target, "sysName.0", community: "public")
+        {:ok, name} = SnmpMgr.get(target, "sysName.0", community: "public")
 
         # Return monitoring data
         %{
@@ -208,7 +208,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       # Example 1: Basic get (should match README)
       readme_example_1 = fn ->
         # This should be exactly what's in the README
-        SNMPMgr.get("#{target}", "1.3.6.1.2.1.1.1.0", community: "public")
+        SnmpMgr.get("#{target}", "1.3.6.1.2.1.1.1.0", community: "public")
       end
 
       case readme_example_1.() do
@@ -233,7 +233,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
 
       # Example 2: Bulk operations (if documented)
       readme_example_2 = fn ->
-        SNMPMgr.walk(target, "1.3.6.1.2.1.1", community: "public", version: :v2c)
+        SnmpMgr.walk(target, "1.3.6.1.2.1.1", community: "public", version: :v2c)
       end
 
       case readme_example_2.() do
@@ -258,7 +258,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       # Measure time for first operation
       start_time = System.monotonic_time(:millisecond)
 
-      result = SNMPMgr.get(target, "sysDescr.0", community: "public")
+      result = SnmpMgr.get(target, "sysDescr.0", community: "public")
 
       end_time = System.monotonic_time(:millisecond)
       duration = end_time - start_time
@@ -291,14 +291,14 @@ defmodule SNMPMgr.FirstTimeUserTest do
       # Simulate a confused new user trying different things
       confused_user_attempts = [
         # Wrong port
-        fn -> SNMPMgr.get("127.0.0.1:9999", "sysDescr.0", community: "public") end,
+        fn -> SnmpMgr.get("127.0.0.1:9999", "sysDescr.0", community: "public") end,
 
         # Wrong protocol
-        fn -> SNMPMgr.get("http://#{SNMPSimulator.device_target(device)}",
+        fn -> SnmpMgr.get("http://#{SNMPSimulator.device_target(device)}",
                          "sysDescr.0", community: "public") end,
 
         # No parameters
-        fn -> SNMPMgr.get(SNMPSimulator.device_target(device), "sysDescr.0", []) end,
+        fn -> SnmpMgr.get(SNMPSimulator.device_target(device), "sysDescr.0", []) end,
       ]
 
       helpful_error_count = 0
@@ -349,7 +349,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       target = SNMPSimulator.device_target(device)
 
       # Stage 1: Beginner - single gets
-      beginner_success = case SNMPMgr.get(target, "sysDescr.0", community: "public") do
+      beginner_success = case SnmpMgr.get(target, "sysDescr.0", community: "public") do
         {:ok, _} -> true
         {:error, :snmp_modules_not_available} -> true
         _ -> false
@@ -357,9 +357,9 @@ defmodule SNMPMgr.FirstTimeUserTest do
 
       # Stage 2: Progressing - multiple related queries
       intermediate_success = case [
-        SNMPMgr.get(target, "sysDescr.0", community: "public"),
-        SNMPMgr.get(target, "sysUpTime.0", community: "public"),
-        SNMPMgr.get(target, "sysName.0", community: "public")
+        SnmpMgr.get(target, "sysDescr.0", community: "public"),
+        SnmpMgr.get(target, "sysUpTime.0", community: "public"),
+        SnmpMgr.get(target, "sysName.0", community: "public")
       ] do
         results when is_list(results) ->
           # Check if most succeeded or failed gracefully
@@ -370,7 +370,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       end
 
       # Stage 3: Advanced - bulk operations
-      advanced_success = case SNMPMgr.walk(target, "1.3.6.1.2.1.1",
+      advanced_success = case SnmpMgr.walk(target, "1.3.6.1.2.1.1",
                                           community: "public", version: :v2c) do
         {:ok, _} -> true
         {:error, :snmp_modules_not_available} -> true
@@ -395,9 +395,9 @@ defmodule SNMPMgr.FirstTimeUserTest do
 
       # All operations should have consistent parameter patterns
       operations = [
-        {:get, fn -> SNMPMgr.get(target, "sysDescr.0", community: "public") end},
-        {:get_next, fn -> SNMPMgr.get_next(target, "1.3.6.1.2.1.1", community: "public") end},
-        {:walk, fn -> SNMPMgr.walk(target, "1.3.6.1.2.1.1", community: "public") end}
+        {:get, fn -> SnmpMgr.get(target, "sysDescr.0", community: "public") end},
+        {:get_next, fn -> SnmpMgr.get_next(target, "1.3.6.1.2.1.1", community: "public") end},
+        {:walk, fn -> SnmpMgr.walk(target, "1.3.6.1.2.1.1", community: "public") end}
       ]
 
       # Test that all operations follow similar patterns
@@ -435,7 +435,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
 
       # Get module documentation
       {:docs_v1, _, :elixir, _, module_doc, _, function_docs} =
-        Code.fetch_docs(SNMPMgr)
+        Code.fetch_docs(SnmpMgr)
 
       # Module should have helpful documentation
       assert module_doc != :none, "Module should have documentation"
@@ -468,7 +468,7 @@ defmodule SNMPMgr.FirstTimeUserTest do
       # This would test that @doc examples are practical and work
       # For now, just verify the structure exists
 
-      {:docs_v1, _, :elixir, _, _, _, function_docs} = Code.fetch_docs(SNMPMgr)
+      {:docs_v1, _, :elixir, _, _, _, function_docs} = Code.fetch_docs(SnmpMgr)
 
       examples_found = for {{:function, name, arity}, _, _, doc, _} <- function_docs,
                           is_map(doc) and Map.has_key?(doc, "en") do

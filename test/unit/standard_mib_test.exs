@@ -1,7 +1,7 @@
-defmodule SNMPMgr.StandardMIBTest do
+defmodule SnmpMgr.StandardMIBTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.MIB
+  alias SnmpMgr.MIB
   
   @moduletag :unit
   @moduletag :mib
@@ -104,9 +104,9 @@ defmodule SNMPMgr.StandardMIBTest do
 
   setup_all do
     # Ensure MIB server is started
-    case GenServer.whereis(SNMPMgr.MIB) do
+    case GenServer.whereis(SnmpMgr.MIB) do
       nil -> 
-        {:ok, _pid} = SNMPMgr.MIB.start_link()
+        {:ok, _pid} = SnmpMgr.MIB.start_link()
         :ok
       _pid -> 
         :ok
@@ -390,7 +390,7 @@ defmodule SNMPMgr.StandardMIBTest do
   end
 
   describe "Standard MIB integration testing" do
-    alias SNMPMgr.TestSupport.SNMPSimulator
+    alias SnmpMgr.TestSupport.SNMPSimulator
     
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
@@ -416,7 +416,7 @@ defmodule SNMPMgr.StandardMIBTest do
       for mib_object <- standard_test_objects do
         case MIB.resolve(mib_object) do
           {:ok, oid} ->
-            case SNMPMgr.get(target, oid, community: device.community) do
+            case SnmpMgr.get(target, oid, community: device.community) do
               {:ok, response} ->
                 # Response can be various types depending on the MIB object
                 assert response != nil,
@@ -459,7 +459,7 @@ defmodule SNMPMgr.StandardMIBTest do
       for if_object <- interface_test_objects do
         case MIB.resolve(if_object) do
           {:ok, oid} ->
-            case SNMPMgr.get(target, oid, community: device.community) do
+            case SnmpMgr.get(target, oid, community: device.community) do
               {:ok, _response} ->
                 assert true, "Interface MIB object '#{if_object}' accessible"
                 

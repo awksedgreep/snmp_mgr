@@ -1,8 +1,8 @@
-defmodule SNMPMgr.TypesIntegrationTest do
+defmodule SnmpMgr.TypesIntegrationTest do
   use ExUnit.Case, async: true
   
-  alias SNMPMgr.{Types}
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.{Types}
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :types
@@ -65,7 +65,7 @@ defmodule SNMPMgr.TypesIntegrationTest do
           
           # Attempt SET operation (may fail due to read-only OID, but tests integration)
           target = SNMPSimulator.device_target(device)
-          result = SNMPMgr.set(target, "1.3.6.1.2.1.1.4.0", "test_value", 
+          result = SnmpMgr.set(target, "1.3.6.1.2.1.1.4.0", "test_value", 
                               community: device.community, timeout: 200)
           
           # SET may fail due to permissions, but should not fail due to type encoding

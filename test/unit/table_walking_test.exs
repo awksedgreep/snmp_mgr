@@ -1,7 +1,7 @@
-defmodule SNMPMgr.TableWalkingTest do
+defmodule SnmpMgr.TableWalkingTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :table_walking
@@ -18,7 +18,7 @@ defmodule SNMPMgr.TableWalkingTest do
 
     test "walk/3 uses snmp_lib for table walking", %{device: device} do
       # Test walking with simulator device following @testing_rules
-      result = SNMPMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
+      result = SnmpMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1", 
                            community: device.community, version: :v2c, timeout: 200)
       
       case result do
@@ -44,11 +44,11 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test v1 walk (should use getnext) - small tree for speed
-      result_v1 = SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+      result_v1 = SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                               version: :v1, community: device.community, timeout: 200)
       
       # Test v2c walk (should use bulk) - small tree for speed
-      result_v2c = SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+      result_v2c = SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                                version: :v2c, community: device.community, timeout: 200)
       
       # Both should work through appropriate snmp_lib mechanisms or return valid errors
@@ -73,7 +73,7 @@ defmodule SNMPMgr.TableWalkingTest do
       ]
       
       Enum.each(oid_formats, fn {oid, description} ->
-        result = SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:ok, results} when is_list(results) ->
@@ -91,7 +91,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test small walk to check ordering - use limited tree
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                            community: device.community, timeout: 200)
       
       case result do
@@ -130,7 +130,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test basic table walking with simulator - use small system table
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                            community: device.community, timeout: 200)
       
       case result do
@@ -163,7 +163,7 @@ defmodule SNMPMgr.TableWalkingTest do
       ]
       
       Enum.each(system_oids, fn oid ->
-        result = SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:ok, results} when is_list(results) ->
@@ -205,7 +205,7 @@ defmodule SNMPMgr.TableWalkingTest do
       ]
       
       Enum.each(invalid_oids, fn oid ->
-        result = SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:error, reason} ->
@@ -222,7 +222,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test very short timeout on system table (should be fast enough)
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                            community: device.community, timeout: 1)
       
       case result do
@@ -236,7 +236,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test with wrong community
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                            community: "wrong_community", timeout: 200)
       
       case result do
@@ -251,7 +251,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test walking beyond available data - use high OID that shouldn't exist
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.999", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.999", 
                            community: device.community, timeout: 200)
       
       case result do
@@ -288,7 +288,7 @@ defmodule SNMPMgr.TableWalkingTest do
       
       # Use small system subtrees to avoid timeout issues
       results = Enum.map(["1.3.6.1.2.1.1", "1.3.6.1.2.1.11"], fn oid ->
-        SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+        SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
       end)
       
       end_time = System.monotonic_time(:millisecond)
@@ -314,12 +314,12 @@ defmodule SNMPMgr.TableWalkingTest do
       
       # Compare bulk walking (v2c) vs individual walking (v1) on small tree
       {bulk_time, bulk_result} = :timer.tc(fn ->
-        SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+        SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                     version: :v2c, community: device.community, timeout: 200)
       end)
       
       {individual_time, individual_result} = :timer.tc(fn ->
-        SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+        SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                     version: :v1, community: device.community, timeout: 200)
       end)
       
@@ -353,7 +353,7 @@ defmodule SNMPMgr.TableWalkingTest do
       # Test concurrent small table walking operations
       tasks = Enum.map(["1.3.6.1.2.1.1", "1.3.6.1.2.1.11"], fn oid ->
         Task.async(fn ->
-          SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+          SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
         end)
       end)
       
@@ -381,7 +381,7 @@ defmodule SNMPMgr.TableWalkingTest do
       
       # Perform small table walking operations
       results = Enum.map(1..3, fn _i ->
-        SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+        SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                     community: device.community, timeout: 200)
       end)
       
@@ -397,7 +397,7 @@ defmodule SNMPMgr.TableWalkingTest do
     end
   end
 
-  describe "Integration with SNMPMgr Table Functions" do
+  describe "Integration with SnmpMgr Table Functions" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -411,7 +411,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test basic walk functionality with snmp_lib backend
-      result = SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+      result = SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                            community: device.community, timeout: 200)
       
       case result do
@@ -436,7 +436,7 @@ defmodule SNMPMgr.TableWalkingTest do
       target = "#{device.host}:#{device.port}"
       
       # Test that table operations maintain consistent return formats
-      walk_result = SNMPMgr.walk(target, "1.3.6.1.2.1.1.1", 
+      walk_result = SnmpMgr.walk(target, "1.3.6.1.2.1.1.1", 
                                  community: device.community, timeout: 200)
       
       # Should return consistent format regardless of snmp_lib internal changes
@@ -468,7 +468,7 @@ defmodule SNMPMgr.TableWalkingTest do
       ]
       
       Enum.each(edge_cases, fn {oid, description} ->
-        result = SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:ok, results} when is_list(results) ->

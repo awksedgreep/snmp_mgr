@@ -1,13 +1,13 @@
 #!/usr/bin/env elixir
 
-# SNMPMgr Comprehensive Test Runner
+# SnmpMgr Comprehensive Test Runner
 # 
 # This script demonstrates how to run the comprehensive testing plan
-# for achieving 80% test coverage across all aspects of SNMPMgr.
+# for achieving 80% test coverage across all aspects of SnmpMgr.
 
-defmodule SNMPMgr.TestRunner do
+defmodule SnmpMgr.TestRunner do
   @moduledoc """
-  Comprehensive test runner for SNMPMgr library.
+  Comprehensive test runner for SnmpMgr library.
   
   This module provides functions to run different phases of the testing plan,
   collect metrics, and generate reports for open-source quality assurance.
@@ -15,7 +15,7 @@ defmodule SNMPMgr.TestRunner do
 
   def main(args \\ []) do
     IO.puts("""
-    🧪 SNMPMgr Comprehensive Test Suite
+    🧪 SnmpMgr Comprehensive Test Suite
     ===================================
     
     This test runner executes the phased testing plan to achieve 80% coverage
@@ -131,12 +131,12 @@ defmodule SNMPMgr.TestRunner do
     test_commands = [
       # Protocol tests
       {"Unit Tests - PDU", "mix test test/unit/pdu_test.exs"},
-      {"Unit Tests - Types", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Types\""},
-      {"Unit Tests - OID", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.OID\""},
-      {"Unit Tests - Errors", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Errors\""},
+      {"Unit Tests - Types", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Types\""},
+      {"Unit Tests - OID", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.OID\""},
+      {"Unit Tests - Errors", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Errors\""},
       
       # Low-level functionality
-      {"Target Parsing", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Target\""},
+      {"Target Parsing", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Target\""},
     ]
     
     run_test_commands(test_commands)
@@ -147,8 +147,8 @@ defmodule SNMPMgr.TestRunner do
     IO.puts("Testing MIB system and configuration management...")
     
     test_commands = [
-      {"MIB Resolution", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.MIB\""},
-      {"Configuration", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Config\""},
+      {"MIB Resolution", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.MIB\""},
+      {"Configuration", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Config\""},
     ]
     
     run_test_commands(test_commands)
@@ -162,7 +162,7 @@ defmodule SNMPMgr.TestRunner do
       {"Basic Operations", "mix test test/snmp_mgr_test.exs --only \"version handling\""},
       {"Multi-target Operations", "mix test test/snmp_mgr_test.exs --only \"multi-target\""},
       {"Simple Integration", "mix test test/simple_integration_test.exs --include needs_simulator"},
-      {"Bulk Operations", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Bulk\""},
+      {"Bulk Operations", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Bulk\""},
     ]
     
     run_test_commands(test_commands)
@@ -173,10 +173,10 @@ defmodule SNMPMgr.TestRunner do
     IO.puts("Testing engine, router, and connection pooling...")
     
     test_commands = [
-      {"Engine System", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Engine\""},
-      {"Router System", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Router\""},
-      {"Connection Pool", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Pool\""},
-      {"Circuit Breaker", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.CircuitBreaker\""},
+      {"Engine System", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Engine\""},
+      {"Router System", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Router\""},
+      {"Connection Pool", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Pool\""},
+      {"Circuit Breaker", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.CircuitBreaker\""},
     ]
     
     run_test_commands(test_commands)
@@ -188,7 +188,7 @@ defmodule SNMPMgr.TestRunner do
     
     test_commands = [
       {"First-time User Experience", "mix test test/user_experience/first_time_user_test.exs"},
-      {"Table Analysis", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Table\""},
+      {"Table Analysis", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Table\""},
       {"Comprehensive Integration", "mix test test/integration_test.exs --include integration"},
     ]
     
@@ -200,7 +200,7 @@ defmodule SNMPMgr.TestRunner do
     IO.puts("Testing performance, reliability, and security...")
     
     test_commands = [
-      {"Metrics System", "mix test test/snmp_mgr_test.exs --only \"SNMPMgr.Metrics\""},
+      {"Metrics System", "mix test test/snmp_mgr_test.exs --only \"SnmpMgr.Metrics\""},
       {"Performance Tests", "mix test --include performance"},
       {"Memory Usage", "mix test --include memory"},
       {"Load Testing", "mix test --include load"},
@@ -273,7 +273,7 @@ defmodule SNMPMgr.TestRunner do
     
     👥 User Experience Test Results:
     
-    These tests validate that SNMPMgr provides excellent user experience:
+    These tests validate that SnmpMgr provides excellent user experience:
     ✅ First-time users can succeed quickly
     ✅ Error messages are helpful and actionable  
     ✅ API is consistent and intuitive
@@ -372,7 +372,7 @@ defmodule SNMPMgr.TestRunner do
     📊 COMPREHENSIVE TEST REPORT
     ============================
     
-    SNMPMgr Library Test Coverage Analysis
+    SnmpMgr Library Test Coverage Analysis
     """)
     
     total_duration = Enum.reduce(results, 0, fn {_, _, _, duration}, acc -> acc + duration end)
@@ -414,14 +414,14 @@ defmodule SNMPMgr.TestRunner do
     4. Gather community feedback on API usability
     5. Document deployment and production considerations
     
-    🚀 SNMPMgr is ready for open-source community use!
+    🚀 SnmpMgr is ready for open-source community use!
     """)
   end
 end
 
 # Run the test runner if called directly
 if System.argv() != [] do
-  SNMPMgr.TestRunner.main(System.argv())
+  SnmpMgr.TestRunner.main(System.argv())
 else
-  SNMPMgr.TestRunner.main([])
+  SnmpMgr.TestRunner.main([])
 end

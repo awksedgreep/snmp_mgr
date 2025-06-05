@@ -1,8 +1,8 @@
-defmodule SNMPMgr.MIBIntegrationTest do
+defmodule SnmpMgr.MIBIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.MIB
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.MIB
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :mib
@@ -19,9 +19,9 @@ defmodule SNMPMgr.MIBIntegrationTest do
   end
 
   setup do
-    case GenServer.whereis(SNMPMgr.MIB) do
+    case GenServer.whereis(SnmpMgr.MIB) do
       nil -> 
-        {:ok, _pid} = SNMPMgr.MIB.start_link()
+        {:ok, _pid} = SnmpMgr.MIB.start_link()
         :ok
       _pid -> 
         :ok
@@ -43,7 +43,7 @@ defmodule SNMPMgr.MIBIntegrationTest do
             # Use resolved OID in SNMP operation
             oid_string = oid |> Enum.join(".") |> then(&("#{&1}.0"))
             target = SNMPSimulator.device_target(device)
-            result = SNMPMgr.get(target, oid_string, community: device.community, timeout: 200)
+            result = SnmpMgr.get(target, oid_string, community: device.community, timeout: 200)
             
             assert {:ok, _} = result
             
@@ -59,7 +59,7 @@ defmodule SNMPMgr.MIBIntegrationTest do
       
       # Get a value first
       target = SNMPSimulator.device_target(device)
-      case SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community, timeout: 200) do
+      case SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", community: device.community, timeout: 200) do
         {:ok, _value} ->
           # Try reverse lookup on the OID we requested
           case MIB.reverse_lookup("1.3.6.1.2.1.1.1.0") do
@@ -92,7 +92,7 @@ defmodule SNMPMgr.MIBIntegrationTest do
       
       for oid <- standard_oids do
         target = SNMPSimulator.device_target(device)
-        result = SNMPMgr.get(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.get(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:ok, _value} ->
@@ -117,7 +117,7 @@ defmodule SNMPMgr.MIBIntegrationTest do
       
       # Perform SNMP walk
       target = SNMPSimulator.device_target(device)
-      case SNMPMgr.walk(target, root_oid, community: device.community, timeout: 200) do
+      case SnmpMgr.walk(target, root_oid, community: device.community, timeout: 200) do
         {:ok, results} when is_list(results) ->
           # For each result, test MIB integration
           limited_results = Enum.take(results, 3)  # Limit to first 3 for test efficiency

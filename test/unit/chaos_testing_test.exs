@@ -1,7 +1,7 @@
-defmodule SNMPMgr.ChaosTestingTest do
+defmodule SnmpMgr.ChaosTestingTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :chaos
@@ -31,7 +31,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       
       # Rapid-fire operations to test resilience
       results = Enum.map(1..@chaos_operations, fn _i ->
-        SNMPMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
+        SnmpMgr.get(device.host, device.port, device.community, "1.3.6.1.2.1.1.1.0", 
                     timeout: @operation_timeout)
       end)
       
@@ -61,7 +61,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       ]
       
       results = Enum.map(mixed_operations, fn {community, oid} ->
-        result = SNMPMgr.get(device.host, device.port, community, oid, timeout: @operation_timeout)
+        result = SnmpMgr.get(device.host, device.port, community, oid, timeout: @operation_timeout)
         
         # Brief recovery wait
         Process.sleep(@recovery_wait)
@@ -86,7 +86,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       
       # Multiple bulk operations in succession
       bulk_results = Enum.map(1..3, fn _i ->
-        result = SNMPMgr.get_bulk(device.host, device.port, device.community, "1.3.6.1.2.1.1",
+        result = SnmpMgr.get_bulk(device.host, device.port, device.community, "1.3.6.1.2.1.1",
                                  timeout: @operation_timeout, max_repetitions: 3)
         
         # Brief pause between operations
@@ -116,7 +116,7 @@ defmodule SNMPMgr.ChaosTestingTest do
       tasks = Enum.map(1..@chaos_operations, fn i ->
         Task.async(fn ->
           community = if rem(i, 2) == 0, do: device.community, else: "invalid_community"
-          SNMPMgr.get(device.host, device.port, community, "1.3.6.1.2.1.1.1.0", 
+          SnmpMgr.get(device.host, device.port, community, "1.3.6.1.2.1.1.1.0", 
                       timeout: @operation_timeout)
         end)
       end)

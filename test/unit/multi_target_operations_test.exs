@@ -1,7 +1,7 @@
-defmodule SNMPMgr.MultiTargetIntegrationTest do
+defmodule SnmpMgr.MultiTargetIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :multi_target_operations
@@ -31,7 +31,7 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
       target = SNMPSimulator.device_target(device)
       tasks = Enum.map(oids, fn oid ->
         Task.async(fn ->
-          SNMPMgr.get(target, oid, community: device.community, timeout: 200)
+          SnmpMgr.get(target, oid, community: device.community, timeout: 200)
         end)
       end)
       
@@ -63,14 +63,14 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
       target = SNMPSimulator.device_target(device)
       results = Enum.map(operations, fn
         {:get, oid} ->
-          SNMPMgr.get(target, oid, community: device.community, timeout: 200)
+          SnmpMgr.get(target, oid, community: device.community, timeout: 200)
           
         {:get_bulk, oid} ->
-          SNMPMgr.get_bulk(target, oid, 
+          SnmpMgr.get_bulk(target, oid, 
                           community: device.community, timeout: 200, max_repetitions: 3)
           
         {:walk, oid} ->
-          SNMPMgr.walk(target, oid, community: device.community, timeout: 200)
+          SnmpMgr.walk(target, oid, community: device.community, timeout: 200)
       end)
       
       # All operations should succeed with the SNMP simulator
@@ -106,7 +106,7 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
       
       target = SNMPSimulator.device_target(device)
       results = Enum.map(repetition_counts, fn count ->
-        SNMPMgr.get_bulk(target, base_oid,
+        SnmpMgr.get_bulk(target, base_oid,
                         community: device.community, timeout: 200, max_repetitions: count)
       end)
       
@@ -134,7 +134,7 @@ defmodule SNMPMgr.MultiTargetIntegrationTest do
       
       target = SNMPSimulator.device_target(device)
       results = Enum.map(table_oids, fn oid ->
-        case SNMPMgr.walk(target, oid, community: device.community, timeout: 200) do
+        case SnmpMgr.walk(target, oid, community: device.community, timeout: 200) do
           {:ok, data} when is_list(data) ->
             # Limit results for test efficiency
             limited_data = Enum.take(data, 5)

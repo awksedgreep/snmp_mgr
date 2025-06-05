@@ -1,7 +1,7 @@
-defmodule SNMPMgr.ErrorHandlingRetryTest do
+defmodule SnmpMgr.ErrorHandlingRetryTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :error_handling
@@ -26,7 +26,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(unreachable_targets, fn target ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 100)
         
         case result do
@@ -55,7 +55,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(wrong_port_targets, fn target ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 200)
         
         case result do
@@ -83,7 +83,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(invalid_hostnames, fn hostname ->
-        result = SNMPMgr.get(hostname, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(hostname, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 2000)
         
         case result do
@@ -121,7 +121,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       invalid_communities = ["wrong_community", "", "invalid123"]
       
       Enum.each(invalid_communities, fn community ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: community, timeout: 200)
         
         case result do
@@ -153,7 +153,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(invalid_oids, fn oid ->
-        result = SNMPMgr.get(target, oid, community: device.community, timeout: 200)
+        result = SnmpMgr.get(target, oid, community: device.community, timeout: 200)
         
         case result do
           {:error, reason} ->
@@ -181,7 +181,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(set_error_cases, fn {oid, value, description} ->
-        result = SNMPMgr.set(target, oid, value, 
+        result = SnmpMgr.set(target, oid, value, 
                             community: device.community, timeout: 200)
         
         case result do
@@ -217,8 +217,8 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
         full_opts = opts ++ [community: device.community, timeout: 200]
         
         result = case operation do
-          :get -> SNMPMgr.get(target, oid, full_opts)
-          :get_bulk -> SNMPMgr.get_bulk(target, oid, full_opts)
+          :get -> SnmpMgr.get(target, oid, full_opts)
+          :get_bulk -> SnmpMgr.get_bulk(target, oid, full_opts)
         end
         
         case result do
@@ -262,7 +262,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       Enum.each(timeout_cases, fn {timeout, description} ->
         start_time = System.monotonic_time(:millisecond)
         
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: timeout)
         
         end_time = System.monotonic_time(:millisecond)
@@ -297,7 +297,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(invalid_timeouts, fn {timeout, description} ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: timeout)
         
         case result do
@@ -324,7 +324,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       concurrent_timeouts = Enum.map(1..5, fn i ->
         Task.async(fn ->
           timeout = i * 10  # 10, 20, 30, 40, 50ms
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
                      community: device.community, timeout: timeout)
         end)
       end)
@@ -363,7 +363,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       Enum.each(retry_cases, fn {retry_count, description} ->
         start_time = System.monotonic_time(:millisecond)
         
-        result = SNMPMgr.get(unreachable_target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(unreachable_target, "1.3.6.1.2.1.1.1.0", 
                             timeout: 200, retries: retry_count)
         
         end_time = System.monotonic_time(:millisecond)
@@ -399,7 +399,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       ]
       
       Enum.each(invalid_retries, fn {retries, description} ->
-        result = SNMPMgr.get("192.0.2.254:161", "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get("192.0.2.254:161", "1.3.6.1.2.1.1.1.0", 
                             timeout: 200, retries: retries)
         
         case result do
@@ -423,7 +423,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       # Test that retries don't happen too aggressively
       start_time = System.monotonic_time(:millisecond)
       
-      result = SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", 
                           timeout: 100, retries: 3)
       
       end_time = System.monotonic_time(:millisecond)
@@ -483,7 +483,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
          [community: device2.community, timeout: 200]}
       ]
       
-      results = SNMPMgr.get_multi(mixed_requests)
+      results = SnmpMgr.get_multi(mixed_requests)
       
       assert is_list(results)
       assert length(results) == 3
@@ -525,7 +525,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
          [max_repetitions: 3, community: device2.community, timeout: 200]}
       ]
       
-      results = SNMPMgr.get_bulk_multi(bulk_requests)
+      results = SnmpMgr.get_bulk_multi(bulk_requests)
       
       assert is_list(results)
       assert length(results) == 3
@@ -552,9 +552,9 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       concurrent_errors = Enum.map(1..10, fn i ->
         Task.async(fn ->
           case rem(i, 3) do
-            0 -> SNMPMgr.get("240.0.0.1:161", "1.3.6.1.2.1.1.1.0", timeout: 100)  # Network error
-            1 -> SNMPMgr.get("192.0.2.1:161", "invalid.oid", timeout: 100)  # OID error
-            2 -> SNMPMgr.get("203.0.113.1:161", "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
+            0 -> SnmpMgr.get("240.0.0.1:161", "1.3.6.1.2.1.1.1.0", timeout: 100)  # Network error
+            1 -> SnmpMgr.get("192.0.2.1:161", "invalid.oid", timeout: 100)  # OID error
+            2 -> SnmpMgr.get("203.0.113.1:161", "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100)  # Auth error
           end
         end)
       end)
@@ -585,7 +585,7 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       # Generate many errors through snmp_lib
       error_operations = Enum.map(1..20, fn i ->
         spawn(fn ->
-          SNMPMgr.get("240.0.0.#{rem(i, 10) + 1}", "1.3.6.1.2.1.1.1.0", timeout: 100)
+          SnmpMgr.get("240.0.0.#{rem(i, 10) + 1}", "1.3.6.1.2.1.1.1.0", timeout: 100)
         end)
       end)
       
@@ -619,15 +619,15 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       # Test that error context is preserved through snmp_lib
       error_scenarios = [
         # Network error with target context
-        {fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100) end,
+        {fn -> SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100) end,
          "network operation"},
         
         # OID error with OID context
-        {fn -> SNMPMgr.get(target, "invalid.oid", community: device.community, timeout: 100) end,
+        {fn -> SnmpMgr.get(target, "invalid.oid", community: device.community, timeout: 100) end,
          "OID validation"},
         
         # Authentication error with auth context
-        {fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100) end,
+        {fn -> SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", community: "wrong", timeout: 100) end,
          "authentication"}
       ]
       
@@ -649,10 +649,10 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       target = SNMPSimulator.device_target(device)
       
       # Simulate recovery by first using short timeout, then normal timeout
-      first_attempt = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      first_attempt = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                                   community: device.community, timeout: 1)
       
-      second_attempt = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      second_attempt = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                                    community: device.community, timeout: 200)
       
       case {first_attempt, second_attempt} do
@@ -679,11 +679,11 @@ defmodule SNMPMgr.ErrorHandlingRetryTest do
       
       # Test error reporting consistency across all API functions
       api_error_tests = [
-        {:get, fn -> SNMPMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100) end},
-        {:set, fn -> SNMPMgr.set("240.0.0.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 100) end},
-        {:get_bulk, fn -> SNMPMgr.get_bulk("240.0.0.1", "1.3.6.1.2.1.2.2", max_repetitions: 3, timeout: 100) end},
-        {:get_next, fn -> SNMPMgr.get_next("240.0.0.1", "1.3.6.1.2.1.1.1", timeout: 100) end},
-        {:walk, fn -> SNMPMgr.walk("240.0.0.1", "1.3.6.1.2.1.1", timeout: 100) end}
+        {:get, fn -> SnmpMgr.get("240.0.0.1", "1.3.6.1.2.1.1.1.0", timeout: 100) end},
+        {:set, fn -> SnmpMgr.set("240.0.0.1", "1.3.6.1.2.1.1.6.0", "test", timeout: 100) end},
+        {:get_bulk, fn -> SnmpMgr.get_bulk("240.0.0.1", "1.3.6.1.2.1.2.2", max_repetitions: 3, timeout: 100) end},
+        {:get_next, fn -> SnmpMgr.get_next("240.0.0.1", "1.3.6.1.2.1.1.1", timeout: 100) end},
+        {:walk, fn -> SnmpMgr.walk("240.0.0.1", "1.3.6.1.2.1.1", timeout: 100) end}
       ]
       
       Enum.each(api_error_tests, fn {api_function, operation} ->

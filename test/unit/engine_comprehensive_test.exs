@@ -1,8 +1,8 @@
-defmodule SNMPMgr.EngineComprehensiveTest do
+defmodule SnmpMgr.EngineComprehensiveTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.{Engine, Pool, Router, CircuitBreaker, Metrics}
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.{Engine, Pool, Router, CircuitBreaker, Metrics}
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :engine
@@ -21,10 +21,10 @@ defmodule SNMPMgr.EngineComprehensiveTest do
 
   setup_all do
     # Check if full engine infrastructure is available for testing
-    case {GenServer.whereis(SNMPMgr.CircuitBreaker), GenServer.whereis(SNMPMgr.Router)} do
+    case {GenServer.whereis(SnmpMgr.CircuitBreaker), GenServer.whereis(SnmpMgr.Router)} do
       {nil, nil} ->
         # Start the engine infrastructure if not running
-        case SNMPMgr.start_engine(name: :engine_test_supervisor) do
+        case SnmpMgr.start_engine(name: :engine_test_supervisor) do
           {:ok, _pid} -> 
             # Wait for router to be available
             Process.sleep(100)
@@ -47,7 +47,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
   describe "engine initialization and configuration" do
     test "validates engine startup with default configuration", %{skip_engine_tests: skip} do
       if skip, do: ExUnit.skip("Engine infrastructure not available")
-      case SNMPMgr.start_engine() do
+      case SnmpMgr.start_engine() do
         {:ok, pid} ->
           assert is_pid(pid), "Engine should start with valid PID"
           
@@ -73,7 +73,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         metrics: [window_size: 120]
       ]
       
-      case SNMPMgr.start_engine(custom_config) do
+      case SnmpMgr.start_engine(custom_config) do
         {:ok, pid} ->
           assert is_pid(pid), "Engine should start with custom config"
           
@@ -110,7 +110,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
     end
 
     test "validates engine configuration retrieval" do
-      case SNMPMgr.get_engine_stats() do
+      case SnmpMgr.get_engine_stats() do
         {:ok, stats} ->
           assert is_map(stats), "Engine stats should be a map"
           
@@ -144,7 +144,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         community: "public"
       }
       
-      case SNMPMgr.engine_request(request) do
+      case SnmpMgr.engine_request(request) do
         {:ok, result} ->
           case result do
             %{response: response} when is_binary(response) ->
@@ -174,7 +174,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       opts = [priority: :high, batch_id: "test_batch"]
       
-      case SNMPMgr.engine_request(request, opts) do
+      case SnmpMgr.engine_request(request, opts) do
         {:ok, result} ->
           assert is_map(result), "Engine should return structured result with options"
           
@@ -205,7 +205,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
           _ -> request
         end
         
-        case SNMPMgr.engine_request(request) do
+        case SnmpMgr.engine_request(request) do
           {:ok, result} ->
             assert is_map(result), "Engine should handle #{type} requests"
             
@@ -228,7 +228,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       end
       
       results = for request <- requests do
-        SNMPMgr.engine_request(request)
+        SnmpMgr.engine_request(request)
       end
       
       # All requests should complete
@@ -254,7 +254,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         %{type: :get, target: "192.0.2.1:161", oid: @test_oids.system_name, community: "public"}
       ]
       
-      case SNMPMgr.engine_batch(batch_requests) do
+      case SnmpMgr.engine_batch(batch_requests) do
         {:ok, results} ->
           assert is_list(results), "Batch should return list of results"
           assert length(results) == 3, "Batch should return result for each request"
@@ -288,7 +288,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       start_time = :erlang.monotonic_time(:microsecond)
       
-      case SNMPMgr.engine_batch(optimized_batch) do
+      case SnmpMgr.engine_batch(optimized_batch) do
         {:ok, results} ->
           end_time = :erlang.monotonic_time(:microsecond)
           elapsed_time = end_time - start_time
@@ -312,7 +312,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         %{type: :get, target: "192.168.1.1", oid: @test_oids.system_name, community: "public"}
       ]
       
-      case SNMPMgr.engine_batch(mixed_batch) do
+      case SnmpMgr.engine_batch(mixed_batch) do
         {:ok, results} ->
           assert is_list(results), "Mixed batch should return results"
           assert length(results) == 3, "Mixed batch should handle all targets"
@@ -334,7 +334,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         }
       end
       
-      case SNMPMgr.engine_batch(large_batch, [max_batch_size: 25]) do
+      case SnmpMgr.engine_batch(large_batch, [max_batch_size: 25]) do
         {:ok, results} ->
           assert length(results) == 100, "Large batch should be processed in chunks"
           
@@ -360,7 +360,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
             request_id: "concurrent_#{i}"
           }
           
-          SNMPMgr.engine_request(request)
+          SnmpMgr.engine_request(request)
         end)
       end
       
@@ -394,7 +394,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         }
         
         {latency, _result} = :timer.tc(fn ->
-          SNMPMgr.engine_request(request)
+          SnmpMgr.engine_request(request)
         end)
         
         latency
@@ -424,7 +424,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         }
       end
       
-      _results = SNMPMgr.engine_batch(requests)
+      _results = SnmpMgr.engine_batch(requests)
       
       :erlang.garbage_collect()
       memory_after = :erlang.memory(:total)
@@ -451,7 +451,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       # Submit all at once to test queue behavior
       start_time = :erlang.monotonic_time(:millisecond)
-      results = SNMPMgr.engine_batch(queue_test_requests)
+      results = SnmpMgr.engine_batch(queue_test_requests)
       end_time = :erlang.monotonic_time(:millisecond)
       
       case results do
@@ -479,7 +479,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         retries: 0
       }
       
-      case SNMPMgr.engine_request(unreachable_request) do
+      case SnmpMgr.engine_request(unreachable_request) do
         {:ok, result} ->
           case result do
             %{error: error_reason} ->
@@ -508,7 +508,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       ]
       
       for {malformed_request, i} <- Enum.with_index(malformed_requests) do
-        case SNMPMgr.engine_request(malformed_request) do
+        case SnmpMgr.engine_request(malformed_request) do
           {:ok, result} ->
             case result do
               %{error: error_reason} ->
@@ -536,7 +536,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       start_time = :erlang.monotonic_time(:millisecond)
       
-      case SNMPMgr.engine_request(timeout_request) do
+      case SnmpMgr.engine_request(timeout_request) do
         {:ok, result} ->
           end_time = :erlang.monotonic_time(:millisecond)
           elapsed_time = end_time - start_time
@@ -574,7 +574,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       end
       
       # Submit requests that will likely fail
-      results = SNMPMgr.engine_batch(cleanup_requests)
+      results = SnmpMgr.engine_batch(cleanup_requests)
       
       # Give time for cleanup
       Process.sleep(100)
@@ -612,10 +612,10 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         }
       end
       
-      _results = SNMPMgr.engine_batch(test_requests)
+      _results = SnmpMgr.engine_batch(test_requests)
       
       # Check that metrics were collected
-      case SNMPMgr.get_engine_stats() do
+      case SnmpMgr.get_engine_stats() do
         {:ok, stats} ->
           # Should have some request metrics
           if Map.has_key?(stats, :metrics) do
@@ -644,7 +644,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
 
     test "validates engine performance metrics accuracy" do
       # Submit known requests and verify metrics
-      before_stats = case SNMPMgr.get_engine_stats() do
+      before_stats = case SnmpMgr.get_engine_stats() do
         {:ok, stats} -> stats
         {:error, _} -> %{}
       end
@@ -656,12 +656,12 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         community: "public"
       }
       
-      _result = SNMPMgr.engine_request(test_request)
+      _result = SnmpMgr.engine_request(test_request)
       
       # Wait for metrics to update
       Process.sleep(50)
       
-      after_stats = case SNMPMgr.get_engine_stats() do
+      after_stats = case SnmpMgr.get_engine_stats() do
         {:ok, stats} -> stats
         {:error, _} -> %{}
       end
@@ -706,7 +706,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         community: device.community
       }
       
-      case SNMPMgr.engine_request(real_request) do
+      case SnmpMgr.engine_request(real_request) do
         {:ok, result} ->
           case result do
             %{response: response} when is_binary(response) ->
@@ -734,7 +734,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
         %{type: :get, target: target, oid: @test_oids.if_number, community: device.community}
       ]
       
-      case SNMPMgr.engine_batch(real_batch) do
+      case SnmpMgr.engine_batch(real_batch) do
         {:ok, results} ->
           assert length(results) == 3, "Engine should process real device batch"
           
@@ -772,7 +772,7 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       end
       
       # Submit requests that should trigger circuit breaker
-      results = SNMPMgr.engine_batch(failing_requests)
+      results = SnmpMgr.engine_batch(failing_requests)
       
       case results do
         {:ok, batch_results} ->
@@ -799,14 +799,14 @@ defmodule SNMPMgr.EngineComprehensiveTest do
       
       # Function to make request through engine with circuit breaker
       make_protected_request = fn ->
-        SNMPMgr.with_circuit_breaker(protected_target, fn ->
+        SnmpMgr.with_circuit_breaker(protected_target, fn ->
           request = %{
             type: :get,
             target: protected_target,
             oid: @test_oids.system_descr,
             community: "public"
           }
-          SNMPMgr.engine_request(request)
+          SnmpMgr.engine_request(request)
         end)
       end
       

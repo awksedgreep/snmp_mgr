@@ -1,12 +1,12 @@
-defmodule SNMPMgr.EngineIntegrationTest do
+defmodule SnmpMgr.EngineIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :integration
   @moduletag :engine_integration
 
-  describe "SNMPMgr SnmpLib Backend Integration" do
+  describe "SnmpMgr SnmpLib Backend Integration" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -20,7 +20,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       target = SNMPSimulator.device_target(device)
       
       # Test complete flow: API -> Core -> SnmpLib.Manager -> Response
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                           community: device.community, timeout: 100)
       
       case result do
@@ -60,7 +60,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       Enum.each(operations, fn
         {:get, target, oid, opts} ->
-          result = SNMPMgr.get(target, oid, opts)
+          result = SnmpMgr.get(target, oid, opts)
           case result do
             {:ok, _} -> :ok
             {:error, reason} when reason in [:timeout, :gen_err, :no_such_name, :endOfMibView] -> :ok
@@ -68,7 +68,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           end
           
         {:set, target, oid, value, opts} ->
-          result = SNMPMgr.set(target, oid, value, opts)
+          result = SnmpMgr.set(target, oid, value, opts)
           case result do
             {:ok, _} -> :ok
             {:error, reason} when reason in [:not_writable, :read_only, :no_access, :gen_err] -> :ok
@@ -76,7 +76,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           end
           
         {:get_bulk, target, oid, opts} ->
-          result = SNMPMgr.get_bulk(target, oid, opts)
+          result = SnmpMgr.get_bulk(target, oid, opts)
           case result do
             {:ok, data} when is_list(data) -> :ok
             {:error, :endOfMibView} -> :ok  # Very common with simulators for bulk operations
@@ -85,7 +85,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           end
           
         {:get_next, target, oid, opts} ->
-          result = SNMPMgr.get_next(target, oid, opts)
+          result = SnmpMgr.get_next(target, oid, opts)
           case result do
             {:ok, _} -> :ok
             {:error, reason} when reason in [:timeout, :gen_err, :end_of_mib_view, :endOfMibView] -> :ok
@@ -93,7 +93,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           end
           
         {:walk, target, oid, opts} ->
-          result = SNMPMgr.walk(target, oid, opts)
+          result = SnmpMgr.walk(target, oid, opts)
           case result do
             {:ok, data} when is_list(data) -> :ok
             {:error, :endOfMibView} -> :ok  # Very common with simulators
@@ -109,7 +109,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Test concurrent operations to validate snmp_lib handles concurrency
       tasks = Enum.map(1..5, fn i ->
         Task.async(fn ->
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.#{i}.0", 
                      community: device.community, timeout: 100)
         end)
       end)
@@ -134,19 +134,19 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Test mixed operations concurrently through snmp_lib
       concurrent_operations = [
         Task.async(fn ->
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                      community: device.community, timeout: 100)
         end),
         Task.async(fn ->
-          SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+          SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                           max_repetitions: 3, community: device.community, timeout: 100)
         end),
         Task.async(fn ->
-          SNMPMgr.walk(target, "1.3.6.1.2.1.1", 
+          SnmpMgr.walk(target, "1.3.6.1.2.1.1", 
                       community: device.community, timeout: 150)
         end),
         Task.async(fn ->
-          SNMPMgr.get_next(target, "1.3.6.1.2.1.1.1", 
+          SnmpMgr.get_next(target, "1.3.6.1.2.1.1.1", 
                           community: device.community, timeout: 100)
         end)
       ]
@@ -166,7 +166,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Multi-Target Integration" do
+  describe "SnmpMgr Multi-Target Integration" do
     setup do
       # Create multiple devices for multi-target testing
       {:ok, device1} = SNMPSimulator.create_test_device()
@@ -192,7 +192,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
          [community: device2.community, timeout: 100]}
       ]
       
-      results = SNMPMgr.get_multi(requests)
+      results = SnmpMgr.get_multi(requests)
       
       assert is_list(results)
       assert length(results) == 2
@@ -216,7 +216,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
          [max_repetitions: 3, community: device2.community, timeout: 100]}
       ]
       
-      results = SNMPMgr.get_bulk_multi(requests)
+      results = SnmpMgr.get_bulk_multi(requests)
       
       assert is_list(results)
       assert length(results) == 2
@@ -249,8 +249,8 @@ defmodule SNMPMgr.EngineIntegrationTest do
       ]
       
       # Process both types through snmp_lib
-      get_results = SNMPMgr.get_multi(get_requests)
-      bulk_results = SNMPMgr.get_bulk_multi(bulk_requests)
+      get_results = SnmpMgr.get_multi(get_requests)
+      bulk_results = SnmpMgr.get_bulk_multi(bulk_requests)
       
       # Both should work through snmp_lib integration
       assert length(get_results) == 2
@@ -266,13 +266,13 @@ defmodule SNMPMgr.EngineIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Configuration Integration with SnmpLib" do
+  describe "SnmpMgr Configuration Integration with SnmpLib" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
       
       on_exit(fn -> 
-        SNMPMgr.Config.reset()
+        SnmpMgr.Config.reset()
         SNMPSimulator.stop_device(device)
       end)
       
@@ -283,12 +283,12 @@ defmodule SNMPMgr.EngineIntegrationTest do
       target = SNMPSimulator.device_target(device)
       
       # Set configuration that should be passed to snmp_lib
-      SNMPMgr.Config.set_default_community(device.community)
-      SNMPMgr.Config.set_default_timeout(100)
-      SNMPMgr.Config.set_default_version(:v2c)
+      SnmpMgr.Config.set_default_community(device.community)
+      SnmpMgr.Config.set_default_timeout(100)
+      SnmpMgr.Config.set_default_version(:v2c)
       
       # Operation should use these defaults through snmp_lib
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0")
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0")
       
       # Should process with configured defaults through snmp_lib
       case result do
@@ -302,11 +302,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
       target = SNMPSimulator.device_target(device)
       
       # Set one default
-      SNMPMgr.Config.set_default_timeout(200)
-      SNMPMgr.Config.set_default_community("default_community")
+      SnmpMgr.Config.set_default_timeout(200)
+      SnmpMgr.Config.set_default_community("default_community")
       
       # Override with request options
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                           community: device.community, timeout: 100, version: :v1)
       
       # Should process with overridden options through snmp_lib
@@ -324,9 +324,9 @@ defmodule SNMPMgr.EngineIntegrationTest do
       versions = [:v1, :v2c]
       
       Enum.each(versions, fn version ->
-        SNMPMgr.Config.set_default_version(version)
+        SnmpMgr.Config.set_default_version(version)
         
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 100)
         
         # Should process with specified version through snmp_lib
@@ -339,7 +339,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Performance Integration" do
+  describe "SnmpMgr Performance Integration" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -356,7 +356,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       start_time = System.monotonic_time(:millisecond)
       
       results = Enum.map(1..10, fn i ->
-        SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+        SnmpMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
                    community: device.community, timeout: 100)
       end)
       
@@ -396,7 +396,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
           current_time = System.monotonic_time(:millisecond)
           if current_time - start_time < duration_ms do
             spawn(fn ->
-              SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+              SnmpMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
                          community: device.community, timeout: 100)
             end)
             
@@ -417,7 +417,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       assert request_count >= duration_ms / request_interval / 2
       
       # Verify snmp_lib can still process requests
-      final_result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      final_result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                                  community: device.community, timeout: 100)
       assert match?({:ok, _}, final_result) or match?({:error, _}, final_result)
     end
@@ -432,14 +432,14 @@ defmodule SNMPMgr.EngineIntegrationTest do
       # Generate significant load through snmp_lib
       Enum.each(1..50, fn i ->
         spawn(fn ->
-          SNMPMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
+          SnmpMgr.get(target, "1.3.6.1.2.1.1.#{rem(i, 5) + 1}.0", 
                      community: device.community, timeout: 100)
         end)
         
         if rem(i, 10) == 0 do
           # Also test bulk operations
           spawn(fn ->
-            SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
+            SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", 
                             max_repetitions: 3, community: device.community, timeout: 100)
           end)
         end
@@ -458,7 +458,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Error Handling Integration" do
+  describe "SnmpMgr Error Handling Integration" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
@@ -476,7 +476,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       ]
       
       Enum.each(error_targets, fn target ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: 50)
         
         case result do
@@ -496,7 +496,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       timeouts = [1, 10, 50]
       
       Enum.each(timeouts, fn timeout ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: device.community, timeout: timeout)
         
         # Should handle timeouts properly through snmp_lib
@@ -515,7 +515,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       invalid_communities = ["wrong_community", "", "invalid"]
       
       Enum.each(invalid_communities, fn community ->
-        result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                             community: community, timeout: 100)
         
         # Should handle authentication errors properly through snmp_lib
@@ -538,7 +538,7 @@ defmodule SNMPMgr.EngineIntegrationTest do
       ]
       
       Enum.each(invalid_oids, fn oid ->
-        result = SNMPMgr.get(target, oid, community: device.community, timeout: 100)
+        result = SnmpMgr.get(target, oid, community: device.community, timeout: 100)
         
         case result do
           {:error, reason} ->
@@ -552,13 +552,13 @@ defmodule SNMPMgr.EngineIntegrationTest do
     end
   end
 
-  describe "SNMPMgr Components Integration Test" do
+  describe "SnmpMgr Components Integration Test" do
     setup do
       {:ok, device} = SNMPSimulator.create_test_device()
       :ok = SNMPSimulator.wait_for_device_ready(device)
       
       on_exit(fn -> 
-        SNMPMgr.Config.reset()
+        SnmpMgr.Config.reset()
         SNMPSimulator.stop_device(device)
       end)
       
@@ -568,18 +568,18 @@ defmodule SNMPMgr.EngineIntegrationTest do
     test "all components work together with snmp_lib", %{device: device} do
       target = SNMPSimulator.device_target(device)
       
-      # Test that all SNMPMgr components integrate properly with snmp_lib
+      # Test that all SnmpMgr components integrate properly with snmp_lib
       
       # 1. Configuration affects snmp_lib operations
-      SNMPMgr.Config.set_default_community(device.community)
-      SNMPMgr.Config.set_default_timeout(100)
+      SnmpMgr.Config.set_default_community(device.community)
+      SnmpMgr.Config.set_default_timeout(100)
       
       # 2. Core operation through snmp_lib with MIB resolution
-      result1 = SNMPMgr.get(target, "sysDescr.0")
+      result1 = SnmpMgr.get(target, "sysDescr.0")
       assert match?({:ok, _}, result1) or match?({:error, _}, result1)
       
       # 3. Bulk operation through SnmpLib.Manager
-      result2 = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.2.2", max_repetitions: 3)
+      result2 = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.2.2", max_repetitions: 3)
       assert match?({:ok, _}, result2) or match?({:error, _}, result2)
       
       # 4. Multi-target operation through snmp_lib
@@ -587,11 +587,11 @@ defmodule SNMPMgr.EngineIntegrationTest do
         {target, "1.3.6.1.2.1.1.1.0", []},
         {target, "1.3.6.1.2.1.1.3.0", []}
       ]
-      results = SNMPMgr.get_multi(requests)
+      results = SnmpMgr.get_multi(requests)
       assert is_list(results) and length(results) == 2
       
       # 5. Walk operation through snmp_lib
-      result3 = SNMPMgr.walk(target, "1.3.6.1.2.1.1")
+      result3 = SnmpMgr.walk(target, "1.3.6.1.2.1.1")
       assert match?({:ok, _}, result3) or match?({:error, _}, result3)
       
       # All operations should complete properly through snmp_lib integration
@@ -603,10 +603,10 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # Test that error formats are consistent across different operations
       operations = [
-        fn -> SNMPMgr.get(target, "invalid.oid", timeout: 100) end,
-        fn -> SNMPMgr.set(target, "invalid.oid", "value", timeout: 100) end,
-        fn -> SNMPMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end,
-        fn -> SNMPMgr.walk(target, "invalid.oid", timeout: 100) end
+        fn -> SnmpMgr.get(target, "invalid.oid", timeout: 100) end,
+        fn -> SnmpMgr.set(target, "invalid.oid", "value", timeout: 100) end,
+        fn -> SnmpMgr.get_bulk(target, "invalid.oid", max_repetitions: 3, timeout: 100) end,
+        fn -> SnmpMgr.walk(target, "invalid.oid", timeout: 100) end
       ]
       
       Enum.each(operations, fn operation ->
@@ -626,9 +626,9 @@ defmodule SNMPMgr.EngineIntegrationTest do
       
       # Test that return values maintain consistent format through snmp_lib
       operations = [
-        fn -> SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        fn -> SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                          community: device.community, timeout: 100) end,
-        fn -> SNMPMgr.get_next(target, "1.3.6.1.2.1.1.1", 
+        fn -> SnmpMgr.get_next(target, "1.3.6.1.2.1.1.1", 
                               community: device.community, timeout: 100) end
       ]
       

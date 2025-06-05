@@ -1,8 +1,8 @@
-defmodule SNMPMgr.SNMPv2cExceptionValuesTest do
+defmodule SnmpMgr.SNMPv2cExceptionValuesTest do
   use ExUnit.Case, async: true
   
-  alias SNMPMgr.Types
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.Types
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :types
@@ -58,7 +58,7 @@ defmodule SNMPMgr.SNMPv2cExceptionValuesTest do
       skip_if_no_device(device)
       
       # Test walking to end of MIB - should handle endOfMibView exception
-      case SNMPMgr.walk(device.host, "1.3.6.1.2.1.1", 
+      case SnmpMgr.walk(device.host, "1.3.6.1.2.1.1", 
                        community: device.community, timeout: 200, version: :v2c) do
         {:ok, results} when is_list(results) ->
           # Walk should complete without errors, even if endOfMibView encountered
@@ -74,7 +74,7 @@ defmodule SNMPMgr.SNMPv2cExceptionValuesTest do
       skip_if_no_device(device)
       
       # Test GET on non-existent OID - should handle noSuchObject/noSuchInstance
-      case SNMPMgr.get(device.host, "1.3.6.1.2.1.99.99.99.0", 
+      case SnmpMgr.get(device.host, "1.3.6.1.2.1.99.99.99.0", 
                       community: device.community, timeout: 200) do
         {:ok, result} ->
           # If we get a result, it should be properly decoded

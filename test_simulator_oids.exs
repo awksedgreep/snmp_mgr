@@ -10,7 +10,7 @@ Application.ensure_all_started(:snmp_sim_ex)
 Application.ensure_all_started(:snmp_mgr)
 
 # Start a simple device
-{:ok, device} = SNMPMgr.TestSupport.SNMPSimulator.create_test_device(port: 30001)
+{:ok, device} = SnmpMgr.TestSupport.SNMPSimulator.create_test_device(port: 30001)
 
 # Give it a moment to start
 Process.sleep(1000)
@@ -32,7 +32,7 @@ test_oids = [
 ]
 
 for {name, oid} <- test_oids do
-  case SNMPMgr.get(target, oid, community: device.community, timeout: 2000) do
+  case SnmpMgr.get(target, oid, community: device.community, timeout: 2000) do
     {:ok, value} -> 
       IO.puts("✓ #{name} (#{oid}) = #{inspect(value)}")
     {:error, reason} -> 
@@ -42,4 +42,4 @@ for {name, oid} <- test_oids do
 end
 
 # Clean up
-SNMPMgr.TestSupport.SNMPSimulator.stop_device(device)
+SnmpMgr.TestSupport.SNMPSimulator.stop_device(device)

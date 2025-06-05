@@ -1,7 +1,7 @@
-defmodule SNMPMgr.CustomMIBTest do
+defmodule SnmpMgr.CustomMIBTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.{MIB, Config}
+  alias SnmpMgr.{MIB, Config}
   
   @moduletag :unit
   @moduletag :mib
@@ -105,9 +105,9 @@ defmodule SNMPMgr.CustomMIBTest do
 
   setup_all do
     # Ensure MIB server is started
-    case GenServer.whereis(SNMPMgr.MIB) do
+    case GenServer.whereis(SnmpMgr.MIB) do
       nil -> 
-        {:ok, _pid} = SNMPMgr.MIB.start_link()
+        {:ok, _pid} = SnmpMgr.MIB.start_link()
         :ok
       _pid -> 
         :ok

@@ -1,8 +1,8 @@
-defmodule SNMPMgr.MetricsIntegrationTest do
+defmodule SnmpMgr.MetricsIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias SNMPMgr.{Metrics, Config}
-  alias SNMPMgr.TestSupport.SNMPSimulator
+  alias SnmpMgr.{Metrics, Config}
+  alias SnmpMgr.TestSupport.SNMPSimulator
   
   @moduletag :unit
   @moduletag :metrics
@@ -36,7 +36,7 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       
       # Perform SNMP GET with metrics collection
       target = SNMPSimulator.device_target(device)
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                           community: device.community, timeout: 200, metrics: metrics)
       
       assert {:ok, _value} = result
@@ -61,7 +61,7 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       
       # Perform SNMP GET to invalid OID with short timeout
       target = SNMPSimulator.device_target(device)
-      result = SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      result = SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                           community: "invalid_community", timeout: 100, metrics: metrics)
       
       assert {:error, _reason} = result
@@ -91,7 +91,7 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       oids = ["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.2.0", "1.3.6.1.2.1.1.3.0"]
       
       Enum.each(oids, fn oid ->
-        SNMPMgr.get(target, oid, 
+        SnmpMgr.get(target, oid, 
                     community: device.community, timeout: 200, metrics: metrics)
       end)
       
@@ -118,10 +118,10 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       
       # Perform different SNMP operations
       target = SNMPSimulator.device_target(device)
-      SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+      SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                   community: device.community, timeout: 200, metrics: metrics)
       
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.1", 
                                community: device.community, timeout: 200, max_repetitions: 3, metrics: metrics)
       
       current_metrics = Metrics.get_metrics(metrics)
@@ -154,7 +154,7 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       
       # Perform bulk operation with metrics collection
       target = SNMPSimulator.device_target(device)
-      result = SNMPMgr.get_bulk(target, "1.3.6.1.2.1.1", 
+      result = SnmpMgr.get_bulk(target, "1.3.6.1.2.1.1", 
                                community: device.community, timeout: 200, max_repetitions: 5, metrics: metrics)
       
       current_metrics = Metrics.get_metrics(metrics)
@@ -200,7 +200,7 @@ defmodule SNMPMgr.MetricsIntegrationTest do
       
       # Perform operations on multiple targets
       Enum.each(targets, fn target ->
-        SNMPMgr.get(target, "1.3.6.1.2.1.1.1.0", 
+        SnmpMgr.get(target, "1.3.6.1.2.1.1.1.0", 
                     community: device.community, timeout: 200, metrics: metrics)
       end)
       
