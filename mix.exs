@@ -4,11 +4,11 @@ defmodule SnmpMgr.MixProject do
   def project do
     [
       app: :snmp_mgr,
-      version: "0.2.0",
+      version: "1.0.1",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      
+
       # Documentation
       name: "SnmpMgr",
       description: "Enterprise-grade SNMP client library for Elixir",
@@ -28,12 +28,12 @@ defmodule SnmpMgr.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v0.4.0", override: true},
-      {:snmp_sim_ex, git: "https://github.com/awksedgreep/snmp_sim_ex", tag: "v0.2.0", override: true},
-      
+      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v1.0.1", override: true},
+      {:snmp_sim, git: "https://github.com/awksedgreep/snmp_sim.git", tag: "v1.0.2", override: true},
+
       # Static analysis
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      
+
       # Documentation
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
@@ -54,25 +54,25 @@ defmodule SnmpMgr.MixProject do
     [
       main: "readme",
       logo: nil,
-      source_ref: "v0.2.0",
+      source_ref: "v1.0.1",
       source_url: "https://github.com/awksedgreep/snmp_mgr",
-      
+
       extras: [
         "README.md",
         "docs/getting_started.md",
-        "docs/snmp_mgr_guide.md", 
+        "docs/snmp_mgr_guide.md",
         "docs/config_guide.md",
         "docs/types_guide.md",
         "docs/mib_guide.md",
         "docs/multi_guide.md",
         "docs/table_guide.md"
       ],
-      
+
       groups_for_extras: [
         "Getting Started": ["docs/getting_started.md"],
         "Core Modules": [
           "docs/snmp_mgr_guide.md",
-          "docs/config_guide.md", 
+          "docs/config_guide.md",
           "docs/types_guide.md"
         ],
         "Utility Modules": [
@@ -81,14 +81,14 @@ defmodule SnmpMgr.MixProject do
           "docs/table_guide.md"
         ]
       ],
-      
+
       groups_for_modules: [
         "Core": [SnmpMgr, SnmpMgr.Core, SnmpMgr.Config, SnmpMgr.Types],
         "MIB Support": [SnmpMgr.MIB],
         "Operations": [SnmpMgr.Walk, SnmpMgr.Bulk, SnmpMgr.Multi, SnmpMgr.Table],
         "Advanced": [SnmpMgr.AdaptiveWalk, SnmpMgr.Stream],
         "Infrastructure": [
-          SnmpMgr.Engine, SnmpMgr.Router, SnmpMgr.CircuitBreaker, 
+          SnmpMgr.Engine, SnmpMgr.Router, SnmpMgr.CircuitBreaker,
           SnmpMgr.Metrics, SnmpMgr.Supervisor
         ],
         "Utilities": [SnmpMgr.Target, SnmpMgr.Errors, SnmpMgr.Application]

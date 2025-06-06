@@ -6,7 +6,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
   SnmpMgr functionality with actual SNMP responses.
   """
   
-  alias SNMPSimEx.Device
+  alias SnmpSim.Device
   
   @default_community "public"
   @test_port_start 30000
@@ -29,7 +29,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
     community = Keyword.get(opts, :community, @default_community)
     device_type = Keyword.get(opts, :device_type, :test_device)
     
-    # Note: Profile creation is handled by SNMPSimEx internally
+    # Note: Profile creation is handled by SnmpSim internally
     
     device_config = %{
       port: port,
@@ -70,7 +70,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
     community = Keyword.get(opts, :community, @default_community)
     interface_count = Keyword.get(opts, :interface_count, 24)
     
-    # Note: Profile creation is handled by SNMPSimEx internally
+    # Note: Profile creation is handled by SnmpSim internally
     
     device_config = %{
       port: port,
@@ -108,7 +108,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
     community = Keyword.get(opts, :community, @default_community)
     route_count = Keyword.get(opts, :route_count, 100)
     
-    # Note: Profile creation is handled by SNMPSimEx internally
+    # Note: Profile creation is handled by SnmpSim internally
     
     device_config = %{
       port: port,
@@ -236,7 +236,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
   # Private helper functions
   
   defp start_device_with_profile(device_config) do
-    # Use SNMPSimEx Device module to start the device
+    # Use SnmpSim Device module to start the device
     Device.start_link(device_config)
   end
   
@@ -258,6 +258,6 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
     end
   end
   
-  # Note: Profile creation is now handled internally by SNMPSimEx.Device
+  # Note: Profile creation is now handled internally by SnmpSim.Device
   # The device mock initialization provides basic system MIB data for testing
 end
