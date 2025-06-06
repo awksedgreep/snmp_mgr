@@ -8,7 +8,7 @@
   "makeup_elixir": {:hex, :makeup_elixir, "1.0.1", "e928a4f984e795e41e3abd27bfc09f51db16ab8ba1aebdba2b3a575437efafc2", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}, {:nimble_parsec, "~> 1.2.3 or ~> 1.3", [hex: :nimble_parsec, repo: "hexpm", optional: false]}], "hexpm", "7284900d412a3e5cfd97fdaed4f5ed389b8f2b4cb49efc0eb3bd10e2febf9507"},
   "makeup_erlang": {:hex, :makeup_erlang, "1.0.2", "03e1804074b3aa64d5fad7aa64601ed0fb395337b982d9bcf04029d68d51b6a7", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}], "hexpm", "af33ff7ef368d5893e4a267933e7744e46ce3cf1f61e2dccf53a111ed3aa3727"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.4.2", "8efba0122db06df95bfaa78f791344a89352ba04baedd3849593bfce4d0dc1c6", [:mix], [], "hexpm", "4b21398942dda052b403bbe1da991ccd03a053668d147d53fb8c4e0efe09c973"},
-  "snmp_lib": {:git, "https://github.com/awksedgreep/snmp_lib", "9da9bd7f625ac0270d8a771f2fdb657dca75aab3", [tag: "v1.0.2"]},
-  "snmp_sim": {:git, "https://github.com/awksedgreep/snmp_sim.git", "efebfdd9a216ba9b2b04ecccce69c835c359a75f", [tag: "v1.0.2"]},
+  "snmp_lib": {:git, "https://github.com/awksedgreep/snmp_lib", "f7ed33337006d5f7b942b3aa4be0841046bf0a15", [tag: "v1.0.3"]},
+  "snmp_sim": {:git, "https://github.com/awksedgreep/snmp_sim.git", "2ebfb503abfdba4da3aa7ed605d17d9b56bd2e6e", [tag: "v1.0.4"]},
   "snmp_sim_ex": {:git, "https://github.com/awksedgreep/snmp_sim_ex", "818fb73a5e8ee8f85e0d28080b45972728606b1a", [tag: "v0.2.0"]},
 }

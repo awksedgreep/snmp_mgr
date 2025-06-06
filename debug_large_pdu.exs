@@ -14,7 +14,7 @@ case PDU.encode_message(small_message) do
     IO.puts("Small PDU encoded successfully: #{byte_size(small_encoded)} bytes")
     case PDU.decode_message(small_encoded) do
       {:ok, small_decoded} ->
-        IO.puts("Small PDU decoded successfully: #{length(small_decoded.pdu.varbinds)} varbinds")
+        IO.puts("Small PDU decoded successfully: #{length(small_decoded.pdu["varbinds"])} varbinds")
       {:error, reason} ->
         IO.puts("Small PDU decode failed: #{inspect(reason)}")
     end
@@ -46,7 +46,7 @@ for size <- test_sizes do
       
       case PDU.decode_message(large_encoded) do
         {:ok, large_decoded} ->
-          IO.puts("#{size} varbinds decoded successfully: #{length(large_decoded.pdu.varbinds)} varbinds")
+          IO.puts("#{size} varbinds decoded successfully: #{length(large_decoded.pdu["varbinds"])} varbinds")
         {:error, reason} ->
           IO.puts("#{size} varbinds decode failed: #{inspect(reason)}")
           

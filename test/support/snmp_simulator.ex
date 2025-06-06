@@ -12,12 +12,12 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
   @test_port_start 30000
   
   @doc """
-  Creates a simple test device with basic system MIB data.
+  Creates a basic test device for SNMP operations.
   
   ## Options
   - `:port` - UDP port for the device (default: assigns automatically)
   - `:community` - SNMP community string (default: "public")
-  - `:device_type` - Type of device to simulate (default: :test_device)
+  - `:device_type` - Type of device to simulate (default: :cable_modem)
   
   ## Examples
   
@@ -27,7 +27,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
   def create_test_device(opts \\ []) do
     port = Keyword.get(opts, :port, get_available_port())
     community = Keyword.get(opts, :community, @default_community)
-    device_type = Keyword.get(opts, :device_type, :test_device)
+    device_type = Keyword.get(opts, :device_type, :cable_modem)
     
     # Note: Profile creation is handled by SnmpSim internally
     
@@ -35,7 +35,8 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       port: port,
       device_type: device_type,
       device_id: "test_device_#{port}",
-      community: community
+      community: community,
+      walk_file: "priv/walks/cable_modem.walk"
     }
     
     case start_device_with_profile(device_config) do
@@ -76,7 +77,8 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       port: port,
       device_type: :switch,
       device_id: "switch_#{port}",
-      community: community
+      community: community,
+      walk_file: "priv/walks/cable_modem.walk"
     }
     
     case start_device_with_profile(device_config) do
@@ -114,7 +116,8 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       port: port,
       device_type: :router,
       device_id: "router_#{port}",
-      community: community
+      community: community,
+      walk_file: "priv/walks/cable_modem.walk"
     }
     
     case start_device_with_profile(device_config) do
@@ -147,7 +150,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
   """
   def create_device_fleet(opts \\ []) do
     count = Keyword.get(opts, :count, 10)
-    device_type = Keyword.get(opts, :device_type, :test_device)
+    device_type = Keyword.get(opts, :device_type, :cable_modem)
     port_start = Keyword.get(opts, :port_start, @test_port_start)
     community = Keyword.get(opts, :community, @default_community)
     

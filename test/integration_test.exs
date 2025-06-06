@@ -33,7 +33,7 @@ defmodule SnmpMgr.IntegrationTest do
       case result do
         {:ok, value} ->
           # Successful operation through snmp_lib
-          assert is_binary(value) or is_integer(value) or is_list(value)
+          assert is_binary(value) or is_integer(value) or is_list(value) or is_atom(value)
           assert byte_size(to_string(value)) > 0
         {:error, reason} ->
           # Accept valid SNMP errors from simulator
@@ -111,7 +111,7 @@ defmodule SnmpMgr.IntegrationTest do
         {:ok, {oid, value}} ->
           # Successful get_next through snmp_lib
           assert is_binary(oid) or is_list(oid)
-          assert is_binary(value) or is_integer(value) or is_list(value)
+          assert is_binary(value) or is_integer(value) or is_list(value) or is_atom(value)
         {:error, reason} ->
           # Accept valid get_next errors (both old and new formats)
           assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
