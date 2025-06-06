@@ -68,6 +68,24 @@ get_next(target, oid, opts \\ [])
 # Starting from a symbolic name
 {:ok, {oid, val}} = SnmpMgr.get_next("device.local", "sysDescr",
                                     community: "public")
+
+#### SNMP Version Compatibility
+
+SnmpMgr automatically handles SNMP version differences for optimal performance:
+
+- **SNMP v1**: Uses proper GETNEXT PDUs for `get_next/3` operations
+- **SNMP v2c/v3**: Uses GETBULK PDUs with `max_repetitions=1` for efficiency
+
+This ensures compatibility with legacy SNMP v1 devices while maintaining performance with modern devices.
+
+```elixir
+# Works seamlessly with SNMP v1 devices
+{:ok, {next_oid, value}} = SnmpMgr.get_next("legacy-device", "1.3.6.1.2.1.1",
+                                          community: "public", version: :v1)
+
+# Automatically uses GETBULK for SNMP v2c devices  
+{:ok, {next_oid, value}} = SnmpMgr.get_next("modern-device", "1.3.6.1.2.1.1",
+                                          community: "public", version: :v2c)
 ```
 
 ### BULK Operations
@@ -168,7 +186,22 @@ walk(target, oid, opts \\ [])
 Enum.each(system_info, fn {oid, value} ->
   IO.puts("#{oid}: #{value}")
 end)
+
+#### Enhanced SNMP v1 Walk Support
+
+Walk operations now work seamlessly with SNMP v1 devices using proper GETNEXT PDUs:
+
+```elixir
+# SNMP v1 walk - uses GETNEXT PDUs internally
+{:ok, legacy_data} = SnmpMgr.walk("legacy-device", "1.3.6.1.2.1.2.2",
+                                 community: "public", version: :v1)
+
+# SNMP v2c walk - uses efficient GETBULK operations  
+{:ok, modern_data} = SnmpMgr.walk("modern-device", "1.3.6.1.2.1.2.2",
+                                 community: "public", version: :v2c)
 ```
+
+Both approaches return the same format, ensuring compatibility across SNMP versions.
 
 ### Multi-Target Operations
 

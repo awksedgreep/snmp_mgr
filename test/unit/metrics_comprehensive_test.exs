@@ -172,7 +172,7 @@ defmodule SnmpMgr.MetricsIntegrationTest do
             # Metrics collection may not be fully integrated yet - acceptable for testing
             assert true
           end
-        {:error, reason} when reason in [:endOfMibView, :noSuchObject, :timeout] ->
+        {:error, reason} when reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout] ->
           # If operation failed with expected errors, metrics may or may not be recorded
           # This is acceptable behavior for simulator testing
           assert true

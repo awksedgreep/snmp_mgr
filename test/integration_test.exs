@@ -37,7 +37,7 @@ defmodule SnmpMgr.IntegrationTest do
           assert byte_size(to_string(value)) > 0
         {:error, reason} ->
           # Accept valid SNMP errors from simulator
-          assert reason in [:timeout, :noSuchObject, :noSuchInstance, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :noSuchInstance, :endOfMibView, :end_of_mib_view]
       end
     end
 
@@ -96,7 +96,7 @@ defmodule SnmpMgr.IntegrationTest do
           assert true
         {:error, reason} ->
           # Accept valid walk errors
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
 
@@ -113,8 +113,8 @@ defmodule SnmpMgr.IntegrationTest do
           assert is_binary(oid) or is_list(oid)
           assert is_binary(value) or is_integer(value) or is_list(value)
         {:error, reason} ->
-          # Accept valid get_next errors
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          # Accept valid get_next errors (both old and new formats)
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
   end
@@ -400,7 +400,7 @@ defmodule SnmpMgr.IntegrationTest do
       # Should process v2c requests through snmp_lib
       case result do
         {:ok, _} -> assert true
-        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView] -> assert true
+        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] -> assert true
         {:error, _other} -> assert true  # Other errors acceptable
       end
     end
@@ -416,7 +416,7 @@ defmodule SnmpMgr.IntegrationTest do
       # Should handle v2c bulk through snmp_lib
       case result_v2c do
         {:ok, _} -> assert true
-        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView] -> assert true
+        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] -> assert true
         {:error, _other} -> assert true  # Other errors acceptable
       end
     end
@@ -433,13 +433,13 @@ defmodule SnmpMgr.IntegrationTest do
       # Both should work through appropriate snmp_lib mechanisms
       case result_v1 do
         {:ok, _} -> assert true
-        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView] -> assert true
+        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] -> assert true
         {:error, _other} -> assert true  # Other errors acceptable
       end
       
       case result_v2c do
         {:ok, _} -> assert true
-        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView] -> assert true
+        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] -> assert true
         {:error, _other} -> assert true  # Other errors acceptable
       end
     end
@@ -545,7 +545,7 @@ defmodule SnmpMgr.IntegrationTest do
       result3 = SnmpMgr.walk("#{device.host}:#{device.port}", "1.3.6.1.2.1.1")
       case result3 do
         {:ok, _} -> assert true
-        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView] -> assert true
+        {:error, reason} when reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] -> assert true
         {:error, _other} -> assert true  # Other errors acceptable
       end
       

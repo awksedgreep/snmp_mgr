@@ -98,7 +98,7 @@ defmodule SnmpMgr.PerformanceSnmpLibTest do
         {:ok, bulk_data} when is_list(bulk_data) ->
           # Bulk data may be empty if simulator has limited data
           assert is_list(bulk_data)
-        {:error, reason} when reason in [:endOfMibView, :noSuchObject, :timeout] ->
+        {:error, reason} when reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout] ->
           # Acceptable errors from simulator with limited MIB data
           assert true
         {:error, _reason} ->

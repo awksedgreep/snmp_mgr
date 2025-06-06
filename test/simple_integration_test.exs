@@ -83,7 +83,7 @@ defmodule SnmpMgr.SimpleIntegrationTest do
             end)
           end
         {:error, reason} ->
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
   end

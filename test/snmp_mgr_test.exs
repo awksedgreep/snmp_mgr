@@ -74,7 +74,7 @@ defmodule SnmpMgrTest do
           end)
         {:error, reason} ->
           # Accept valid SNMP errors that can occur with simulator
-          assert reason in [:timeout, :noSuchObject, :gen_err, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :gen_err, :endOfMibView, :end_of_mib_view]
       end
     end
   end

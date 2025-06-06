@@ -90,11 +90,12 @@ defmodule SnmpMgr.CoreOperationsTest do
         {:ok, {oid, value}} ->
           # Successful get_next through snmp_lib
           assert is_binary(oid) or is_list(oid)
-          assert is_binary(value) or is_integer(value) or is_list(value)
+          # Value can be various types including atoms for special SNMP values
+          assert is_binary(value) or is_integer(value) or is_list(value) or is_atom(value)
 
         {:error, reason} ->
           # Accept valid get_next errors
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
   end

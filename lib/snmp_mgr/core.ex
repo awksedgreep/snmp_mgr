@@ -1,7 +1,7 @@
 defmodule SnmpMgr.Core do
   @moduledoc """
   Core SNMP operations using Erlang's SNMP PDU functions directly.
-  
+
   This module handles the low-level SNMP PDU encoding/decoding and UDP communication
   without requiring the heavyweight :snmpm manager process.
   """
@@ -18,24 +18,24 @@ defmodule SnmpMgr.Core do
   def send_get_request(target, oid, opts \\ []) do
     # Parse target to extract host and port
     {host, updated_opts} = case SnmpMgr.Target.parse(target) do
-      {:ok, %{host: host, port: port}} -> 
+      {:ok, %{host: host, port: port}} ->
         # Use parsed port, overriding any default
         opts_with_port = Keyword.put(opts, :port, port)
         {host, opts_with_port}
-      {:error, _reason} -> 
+      {:error, _reason} ->
         # Failed to parse, use as-is
         {target, opts}
     end
-    
+
     # Convert oid to proper format
     oid_parsed = case parse_oid(oid) do
       {:ok, oid_list} -> oid_list
       {:error, _} -> oid
     end
-    
+
     # Map options to snmp_lib format
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
-    
+
     # Use SnmpLib.Manager for the actual operation
     try do
       case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
@@ -48,8 +48,10 @@ defmodule SnmpMgr.Core do
   end
 
   @doc """
-  Sends an SNMP GETNEXT request and returns the response.
-  Note: SnmpLib.Manager doesn't have direct GETNEXT support, so we fall back to bulk with max_repetitions=1
+  Sends a GETNEXT request to retrieve the next OID in the MIB tree.
+  
+  Now uses the proper SnmpLib.Manager.get_next/3 function which handles
+  version-specific logic (GETNEXT for v1, GETBULK for v2c+) correctly.
   """
   @spec send_get_next_request(target(), oid(), opts()) :: snmp_result()
   def send_get_next_request(target, oid, opts \\ []) do
@@ -70,37 +72,18 @@ defmodule SnmpMgr.Core do
       {:error, _} -> oid
     end
     
-    # Map options to snmp_lib format and force max_repetitions=1 for GETNEXT behavior
-    # Also force version to :v2c since we're using get_bulk
+    # Map options to snmp_lib format
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
-    snmp_lib_opts = [{:max_repetitions, 1}, {:version, :v2c} | snmp_lib_opts]
     
-    # Use SnmpLib.Manager.get_bulk with single repetition to simulate GETNEXT
+    # Use the new SnmpLib.Manager.get_next function which properly handles version logic
     try do
-      case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
-        {:ok, []} -> 
-          # Empty results indicate end of MIB or no next object
-          {:error, :endOfMibView}
-        {:ok, [{next_oid, value}]} -> 
-          # Single result with proper format
-          {:ok, {next_oid, value}}
-        {:ok, [result | _]} -> 
-          # Multiple results, take first and ensure proper format
-          case result do
-            {oid, value} -> {:ok, {oid, value}}
-            _ -> {:error, :invalid_response}
-          end
-        {:ok, results} when is_list(results) -> 
-          # Fallback for any other list format
-          case List.first(results) do
-            {oid, value} -> {:ok, {oid, value}}
-            nil -> {:error, :endOfMibView}
-            _ -> {:error, :invalid_response}
-          end
+      case SnmpLib.Manager.get_next(host, oid_parsed, snmp_lib_opts) do
+        {:ok, {next_oid, value}} -> {:ok, {next_oid, value}}
         {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
       end
     rescue
-      e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+      error in [RuntimeError, ErlangError] ->
+        {:error, {:exception, Exception.message(error)}}
     end
   end
 
@@ -111,30 +94,30 @@ defmodule SnmpMgr.Core do
   def send_set_request(target, oid, value, opts \\ []) do
     # Parse target to extract host and port
     {host, updated_opts} = case SnmpMgr.Target.parse(target) do
-      {:ok, %{host: host, port: port}} -> 
+      {:ok, %{host: host, port: port}} ->
         # Use parsed port, overriding any default
         opts_with_port = Keyword.put(opts, :port, port)
         {host, opts_with_port}
-      {:error, _reason} -> 
+      {:error, _reason} ->
         # Failed to parse, use as-is
         {target, opts}
     end
-    
+
     # Convert oid to proper format
     oid_parsed = case parse_oid(oid) do
       {:ok, oid_list} -> oid_list
       {:error, _} -> oid
     end
-    
+
     # Convert value to snmp_lib format
     typed_value = case SnmpMgr.Types.encode_value(value, opts) do
       {:ok, tv} -> tv
       {:error, _} -> value
     end
-    
+
     # Map options to snmp_lib format
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
-    
+
     # Use SnmpLib.Manager for the actual operation
     try do
       case SnmpLib.Manager.set(host, oid_parsed, typed_value, snmp_lib_opts) do
@@ -152,29 +135,29 @@ defmodule SnmpMgr.Core do
   @spec send_get_bulk_request(target(), oid(), opts()) :: snmp_result()
   def send_get_bulk_request(target, oid, opts \\ []) do
     version = Keyword.get(opts, :version, :v2c)
-    
+
     case version do
       :v2c ->
         # Parse target to extract host and port
         {host, updated_opts} = case SnmpMgr.Target.parse(target) do
-          {:ok, %{host: host, port: port}} -> 
+          {:ok, %{host: host, port: port}} ->
             # Use parsed port, overriding any default
             opts_with_port = Keyword.put(opts, :port, port)
             {host, opts_with_port}
-          {:error, _reason} -> 
+          {:error, _reason} ->
             # Failed to parse, use as-is
             {target, opts}
         end
-        
+
         # Convert oid to proper format
         oid_parsed = case parse_oid(oid) do
           {:ok, oid_list} -> oid_list
           {:error, _} -> oid
         end
-        
+
         # Map options to snmp_lib format
         snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
-        
+
         # Use SnmpLib.Manager for the actual operation
         try do
           case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
@@ -184,7 +167,7 @@ defmodule SnmpMgr.Core do
         rescue
           e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
         end
-      
+
       _ ->
         {:error, :getbulk_requires_v2c}
     end
@@ -197,12 +180,12 @@ defmodule SnmpMgr.Core do
   def send_get_request_async(target, oid, opts \\ []) do
     caller = self()
     ref = make_ref()
-    
+
     spawn(fn ->
       result = send_get_request(target, oid, opts)
       send(caller, {ref, result})
     end)
-    
+
     ref
   end
 
@@ -213,12 +196,12 @@ defmodule SnmpMgr.Core do
   def send_get_bulk_request_async(target, oid, opts \\ []) do
     caller = self()
     ref = make_ref()
-    
+
     spawn(fn ->
       result = send_get_bulk_request(target, oid, opts)
       send(caller, {ref, result})
     end)
-    
+
     ref
   end
 
@@ -228,7 +211,7 @@ defmodule SnmpMgr.Core do
   defp map_options_to_snmp_lib(opts) do
     # Map SnmpMgr options to SnmpLib.Manager options
     mapped = []
-    
+
     mapped = if community = Keyword.get(opts, :community), do: [{:community, community} | mapped], else: mapped
     mapped = if timeout = Keyword.get(opts, :timeout), do: [{:timeout, timeout} | mapped], else: mapped
     mapped = if retries = Keyword.get(opts, :retries), do: [{:retries, retries} | mapped], else: mapped
@@ -236,10 +219,10 @@ defmodule SnmpMgr.Core do
     mapped = if port = Keyword.get(opts, :port), do: [{:port, port} | mapped], else: mapped
     mapped = if max_repetitions = Keyword.get(opts, :max_repetitions), do: [{:max_repetitions, max_repetitions} | mapped], else: mapped
     mapped = if non_repeaters = Keyword.get(opts, :non_repeaters), do: [{:non_repeaters, non_repeaters} | mapped], else: mapped
-    
+
     mapped
   end
-  
+
   @spec map_error_from_snmp_lib(term()) :: term()
   defp map_error_from_snmp_lib(reason) do
     # Map SnmpLib errors back to SnmpMgr error format for backward compatibility

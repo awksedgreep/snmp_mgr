@@ -36,7 +36,7 @@ defmodule SnmpMgr.TableWalkingTest do
           
         {:error, reason} ->
           # Accept valid SNMP errors from simulator
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
 
@@ -54,12 +54,12 @@ defmodule SnmpMgr.TableWalkingTest do
       # Both should work through appropriate snmp_lib mechanisms or return valid errors
       case result_v1 do
         {:ok, _} -> assert true
-        {:error, reason} -> assert reason in [:endOfMibView, :noSuchObject, :timeout]
+        {:error, reason} -> assert reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout]
       end
       
       case result_v2c do
         {:ok, _} -> assert true  
-        {:error, reason} -> assert reason in [:endOfMibView, :noSuchObject, :timeout]
+        {:error, reason} -> assert reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout]
       end
     end
 
@@ -80,7 +80,7 @@ defmodule SnmpMgr.TableWalkingTest do
             assert true, "#{description} walk succeeded through snmp_lib"
           {:error, reason} ->
             # Should get proper error format for valid SNMP errors
-            assert reason in [:timeout, :noSuchObject, :endOfMibView] or 
+            assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view] or 
                    is_atom(reason) or is_tuple(reason),
               "#{description} error: #{inspect(reason)}"
         end
@@ -148,7 +148,7 @@ defmodule SnmpMgr.TableWalkingTest do
           
         {:error, reason} ->
           # Accept valid errors from simulator
-          assert reason in [:timeout, :noSuchObject, :endOfMibView]
+          assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
       end
     end
 
@@ -179,7 +179,7 @@ defmodule SnmpMgr.TableWalkingTest do
             
           {:error, reason} ->
             # Accept valid SNMP errors
-            assert reason in [:timeout, :noSuchObject, :endOfMibView]
+            assert reason in [:timeout, :noSuchObject, :endOfMibView, :end_of_mib_view]
         end
       end)
     end
@@ -259,7 +259,7 @@ defmodule SnmpMgr.TableWalkingTest do
           # Should handle end of MIB gracefully - empty list is valid
           assert true
           
-        {:error, reason} when reason in [:endOfMibView, :noSuchObject] ->
+        {:error, reason} when reason in [:endOfMibView, :end_of_mib_view, :noSuchObject] ->
           # Expected for non-existent subtrees
           assert true
           
@@ -302,7 +302,7 @@ defmodule SnmpMgr.TableWalkingTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> assert true  # Operation succeeded
-          {:error, reason} when reason in [:timeout, :endOfMibView, :noSuchObject] -> 
+          {:error, reason} when reason in [:timeout, :endOfMibView, :end_of_mib_view, :noSuchObject] -> 
             assert true  # Acceptable errors from simulator
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end
@@ -337,12 +337,12 @@ defmodule SnmpMgr.TableWalkingTest do
           # If either fails, just verify they return proper error formats
           case bulk_result do
             {:ok, _} -> assert true
-            {:error, reason} -> assert reason in [:endOfMibView, :noSuchObject, :timeout]
+            {:error, reason} -> assert reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout]
           end
           
           case individual_result do
             {:ok, _} -> assert true
-            {:error, reason} -> assert reason in [:endOfMibView, :noSuchObject, :timeout]
+            {:error, reason} -> assert reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout]
           end
       end
     end
@@ -365,7 +365,7 @@ defmodule SnmpMgr.TableWalkingTest do
       Enum.each(results, fn result ->
         case result do
           {:ok, _} -> assert true  # Operation succeeded
-          {:error, reason} when reason in [:timeout, :endOfMibView, :noSuchObject] -> 
+          {:error, reason} when reason in [:timeout, :endOfMibView, :end_of_mib_view, :noSuchObject] -> 
             assert true  # Acceptable errors from simulator
           {:error, reason} -> flunk("Unexpected error: #{inspect(reason)}")
         end

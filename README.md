@@ -8,7 +8,7 @@ A lightweight SNMP client library for Elixir that provides simple, stateless SNM
 # Add to your dependencies
 def deps do
   [
-    {:snmp_mgr, "~> 0.1.0"}
+    {:snmp_mgr, "~> 1.0.2"}
   ]
 end
 ```
@@ -50,7 +50,8 @@ Start here for comprehensive guides on using SnmpMgr:
 ## Features
 
 - **Enterprise-Ready**: Production-grade streaming engine with high throughput
-- **Protocol Support**: Full SNMPv1 and SNMPv2c support with automatic version handling
+- **Enhanced SNMP v1 Support**: Full compatibility with legacy SNMP v1 devices using proper GETNEXT PDUs
+- **Protocol Support**: Complete SNMPv1, SNMPv2c support with automatic version-specific optimizations
 - **MIB Support**: Built-in compiler and symbolic name resolution for all standard MIBs
 - **Bulk Operations**: Efficient GETBULK operations for fast data retrieval
 - **Multi-Target**: Concurrent operations across multiple devices

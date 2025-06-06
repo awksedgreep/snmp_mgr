@@ -426,7 +426,7 @@ defmodule SnmpMgr.StandardMIBTest do
                 # Expected in test environment
                 assert true, "SNMP modules not available for standard MIB integration test"
                 
-              {:error, reason} when reason in [:noSuchObject, :noSuchInstance, :endOfMibView, :timeout] ->
+              {:error, reason} when reason in [:noSuchObject, :noSuchInstance, :endOfMibView, :end_of_mib_view, :timeout] ->
                 # These errors are acceptable for simulator testing
                 assert true
                 

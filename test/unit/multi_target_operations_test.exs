@@ -85,7 +85,7 @@ defmodule SnmpMgr.MultiTargetIntegrationTest do
           {:ok, data} when is_binary(data) or is_integer(data) -> 
             # GET operations return strings or integers
             assert true
-          {:error, reason} when reason in [:endOfMibView, :noSuchObject, :timeout] ->
+          {:error, reason} when reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout] ->
             # Expected simulator errors are acceptable
             assert true
           {:error, reason} -> 
@@ -159,7 +159,7 @@ defmodule SnmpMgr.MultiTargetIntegrationTest do
       # Verify all results have proper format
       Enum.each(results, fn
         {:ok, _data} -> assert true
-        {:error, reason} when reason in [:endOfMibView, :noSuchObject, :timeout] ->
+        {:error, reason} when reason in [:endOfMibView, :end_of_mib_view, :noSuchObject, :timeout] ->
           assert true
         {:error, reason} -> 
           flunk("Unexpected table walk error: #{inspect(reason)}")
