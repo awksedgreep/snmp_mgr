@@ -54,7 +54,7 @@ defmodule SnmpMgr.MixProject do
     [
       main: "readme",
       logo: nil,
-      source_ref: "v1.0.1",
+      source_ref: "v1.0.2",
       source_url: "https://github.com/awksedgreep/snmp_mgr",
 
       extras: [
