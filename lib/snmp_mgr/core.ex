@@ -39,7 +39,50 @@ defmodule SnmpMgr.Core do
     # Use SnmpLib.Manager for the actual operation
     try do
       case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
-        {:ok, value} -> {:ok, value}
+        {:ok, {_type, value}} -> {:ok, value}
+        {:ok, value} -> {:ok, value}  # Fallback for older versions
+        {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
+      end
+    rescue
+      e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+    end
+  end
+
+  @doc """
+  Sends a GET request and returns the result in 3-tuple format.
+  
+  This function returns `{oid_string, type, value}` for consistency with
+  other operations like walk, bulk, etc.
+  """
+  @spec send_get_request_with_type(target(), oid(), opts()) :: {:ok, {String.t(), atom(), any()}} | {:error, any()}
+  def send_get_request_with_type(target, oid, opts \\ []) do
+    # Parse target to extract host and port
+    {host, updated_opts} = case SnmpMgr.Target.parse(target) do
+      {:ok, %{host: host, port: port}} -> 
+        # Use parsed port, overriding any default
+        opts_with_port = Keyword.put(opts, :port, port)
+        {host, opts_with_port}
+      {:error, _reason} -> 
+        # Failed to parse, use as-is
+        {target, opts}
+    end
+    
+    # Convert oid to proper format and keep original for response
+    {oid_parsed, oid_string} = case parse_oid(oid) do
+      {:ok, oid_list} -> {oid_list, Enum.join(oid_list, ".")}
+      {:error, _} -> {oid, to_string(oid)}
+    end
+    
+    # Map options to snmp_lib format
+    snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
+    
+    try do
+      case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
+        {:ok, {type, value}} -> {:ok, {oid_string, type, value}}
+        {:ok, value} -> 
+          # Handle case where snmp_lib returns just value without type (older versions)
+          inferred_type = infer_snmp_type(value)
+          {:ok, {oid_string, inferred_type, value}}
         {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
       end
     rescue
@@ -78,7 +121,8 @@ defmodule SnmpMgr.Core do
     # Use the new SnmpLib.Manager.get_next function which properly handles version logic
     try do
       case SnmpLib.Manager.get_next(host, oid_parsed, snmp_lib_opts) do
-        {:ok, {next_oid, value}} -> {:ok, {next_oid, value}}
+        {:ok, {next_oid, _type, value}} -> {:ok, {next_oid, value}}
+        {:ok, {next_oid, value}} -> {:ok, {next_oid, value}}  # Fallback for older versions
         {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
       end
     rescue
@@ -244,15 +288,10 @@ defmodule SnmpMgr.Core do
     # Map SnmpLib errors back to SnmpMgr error format for backward compatibility
     case reason do
       :timeout -> :timeout
-      :host_unreachable -> :host_unreachable
-      :network_unreachable -> :network_unreachable
-      :connection_refused -> :connection_refused
-      :invalid_community -> :authentication_error
-      :decode_error -> :decode_error
-      :no_such_name -> :no_such_name
-      :no_such_object -> :no_such_object
-      :no_such_instance -> :no_such_instance
-      {:snmp_error, code} -> {:snmp_error, code}
+      :nxdomain -> {:network_error, :hostname_resolution_failed}
+      {:error, :nxdomain} -> {:network_error, :hostname_resolution_failed}
+      {:error, :timeout} -> :timeout
+      {:error, reason} -> {:network_error, reason}
       other -> other
     end
   end
@@ -288,4 +327,16 @@ defmodule SnmpMgr.Core do
     end
   end
   defp try_mib_resolution(_), do: {:error, :invalid_input}
+
+  # Helper function to infer SNMP type from value when type is not provided
+  defp infer_snmp_type(value) when is_binary(value), do: :octet_string
+  defp infer_snmp_type(value) when is_integer(value) and value >= 0, do: :integer
+  defp infer_snmp_type(value) when is_integer(value), do: :integer
+  defp infer_snmp_type({:timeticks, _}), do: :timeticks
+  defp infer_snmp_type({:counter32, _}), do: :counter32
+  defp infer_snmp_type({:counter64, _}), do: :counter64
+  defp infer_snmp_type({:gauge32, _}), do: :gauge32
+  defp infer_snmp_type({:unsigned32, _}), do: :unsigned32
+  defp infer_snmp_type(:null), do: :null
+  defp infer_snmp_type(_), do: :unknown
 end

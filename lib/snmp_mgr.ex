@@ -6,6 +6,10 @@ defmodule SnmpMgr do
   without requiring heavyweight management processes or configurations.
   """
 
+  @type target :: binary() | tuple() | map()
+  @type oid :: binary() | list()
+  @type opts :: keyword()
+
   @doc """
   Performs an SNMP GET request.
 
@@ -26,6 +30,31 @@ defmodule SnmpMgr do
   def get(target, oid, opts \\ []) do
     merged_opts = SnmpMgr.Config.merge_opts(opts)
     SnmpMgr.Core.send_get_request(target, oid, merged_opts)
+  end
+
+  @doc """
+  Performs an SNMP GET request and returns the result in 3-tuple format.
+  
+  This function returns the same format as walk, bulk, and other operations:
+  `{oid_string, type, value}` for consistency across the library.
+
+  ## Parameters
+  - `target` - The target device (e.g., "192.168.1.1:161" or "device.local")
+  - `oid` - The OID to retrieve (string format)
+  - `opts` - Options including :community, :timeout, :retries
+
+  ## Examples
+
+      # Note: This function makes actual network calls and is not suitable for doctests
+      {:ok, {oid, type, value}} = SnmpMgr.get_with_type("device.local:161", "sysDescr.0", community: "public")
+      # {:ok, {"1.3.6.1.2.1.1.1.0", :octet_string, "Linux server 5.4.0-42-generic"}}
+
+      {:ok, {oid, type, uptime}} = SnmpMgr.get_with_type("router.local", "sysUpTime.0")
+      # {:ok, {"1.3.6.1.2.1.1.3.0", :timeticks, 123456789}}
+  """
+  def get_with_type(target, oid, opts \\ []) do
+    merged_opts = SnmpMgr.Config.merge_opts(opts)
+    SnmpMgr.Core.send_get_request_with_type(target, oid, merged_opts)
   end
 
   @doc """
@@ -574,6 +603,108 @@ defmodule SnmpMgr do
       :counter -> SnmpMgr.Metrics.counter(metrics, metric_name, value, tags)
       :gauge -> SnmpMgr.Metrics.gauge(metrics, metric_name, value, tags)
       :histogram -> SnmpMgr.Metrics.histogram(metrics, metric_name, value, tags)
+    end
+  end
+
+  @doc """
+  Performs an SNMP GET operation and returns a formatted value.
+  
+  This is a convenience function that combines `get_with_type/3` and automatic
+  formatting based on the SNMP type. Returns just the formatted value since
+  the OID is already known.
+  
+  ## Examples
+  
+      # Get system uptime with automatic formatting
+      {:ok, formatted_uptime} = SnmpMgr.get_pretty("192.168.1.1", "1.3.6.1.2.1.1.3.0")
+      # Returns: "14 days 15 hours 55 minutes 13 seconds"
+      
+  """
+  @spec get_pretty(target(), oid(), opts()) :: {:ok, String.t()} | {:error, any()}
+  def get_pretty(target, oid, opts \\ []) do
+    case get_with_type(target, oid, opts) do
+      {:ok, {_oid, type, value}} ->
+        formatted_value = SnmpMgr.Format.format_by_type(type, value)
+        {:ok, formatted_value}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Performs an SNMP WALK operation and returns formatted results.
+  
+  Returns a list of {oid, formatted_value} tuples where values are automatically
+  formatted based on their SNMP types.
+  
+  ## Examples
+  
+      # Walk system group with automatic formatting
+      {:ok, results} = SnmpMgr.walk_pretty("192.168.1.1", "1.3.6.1.2.1.1")
+      # Returns: [{"1.3.6.1.2.1.1.3.0", "14 days 15 hours"}, ...]
+      
+  """
+  @spec walk_pretty(target(), oid(), opts()) :: {:ok, [{String.t(), String.t()}]} | {:error, any()}
+  def walk_pretty(target, oid, opts \\ []) do
+    case SnmpMgr.Walk.walk(target, oid, opts) do
+      {:ok, results} ->
+        formatted_results = Enum.map(results, fn {oid, type, value} ->
+          formatted_value = SnmpMgr.Format.format_by_type(type, value)
+          {oid, formatted_value}
+        end)
+        {:ok, formatted_results}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Performs an SNMP BULK operation and returns formatted results.
+  
+  Returns a list of {oid, formatted_value} tuples where values are automatically
+  formatted based on their SNMP types.
+  
+  ## Examples
+  
+      # Bulk operation with automatic formatting
+      {:ok, results} = SnmpMgr.bulk_pretty("192.168.1.1", "1.3.6.1.2.1.2.2", max_repetitions: 10)
+      # Returns: [{"1.3.6.1.2.1.2.2.1.2.1", "eth0"}, ...]
+      
+  """
+  @spec bulk_pretty(target(), oid(), opts()) :: {:ok, [{String.t(), String.t()}]} | {:error, any()}
+  def bulk_pretty(target, oid, opts \\ []) do
+    case SnmpMgr.Bulk.get_bulk(target, oid, opts) do
+      {:ok, results} ->
+        formatted_results = Enum.map(results, fn {oid, type, value} ->
+          formatted_value = SnmpMgr.Format.format_by_type(type, value)
+          {oid, formatted_value}
+        end)
+        {:ok, formatted_results}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Performs an SNMP BULK WALK operation and returns formatted results.
+  
+  Returns a list of {oid, formatted_value} tuples where values are automatically
+  formatted based on their SNMP types.
+  
+  ## Examples
+  
+      # Bulk walk interface table with automatic formatting
+      {:ok, results} = SnmpMgr.bulk_walk_pretty("192.168.1.1", "1.3.6.1.2.1.2.2")
+      # Returns: [{"1.3.6.1.2.1.2.2.1.2.1", "eth0"}, {"1.3.6.1.2.1.2.2.1.5.1", "1 Gbps"}, ...]
+      
+  """
+  @spec bulk_walk_pretty(target(), oid(), opts()) :: {:ok, [{String.t(), String.t()}]} | {:error, any()}
+  def bulk_walk_pretty(target, oid, opts \\ []) do
+    case SnmpMgr.AdaptiveWalk.bulk_walk(target, oid, opts) do
+      {:ok, results} ->
+        formatted_results = Enum.map(results, fn {oid, type, value} ->
+          formatted_value = SnmpMgr.Format.format_by_type(type, value)
+          {oid, formatted_value}
+        end)
+        {:ok, formatted_results}
+      {:error, reason} -> {:error, reason}
     end
   end
 

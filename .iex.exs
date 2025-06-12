@@ -3,7 +3,7 @@
 
 # Import commonly used modules
 import SnmpMgr
-import SnmpMgr.{Walk, Bulk, Table, Multi, Config, Types, MIB}
+import SnmpMgr.{Walk, Bulk, Table, Multi, Config, Types, MIB, Format}
 
 # Aliases for convenience
 alias SnmpMgr.{Core, Target, Errors, Metrics, Stream, Engine}
@@ -66,6 +66,20 @@ defmodule IEx.Helpers.Snmp do
     SnmpMgr.get(target, oid, Keyword.merge(default_opts, opts))
   end
 
+  @doc "Quick GET with 3-tuple format (oid, type, value)"
+  def qget_typed(target, oid_name, opts \\ []) do
+    oid = oid(oid_name) || oid_name
+    default_opts = [community: "public", timeout: 5000]
+    SnmpMgr.get_with_type(target, oid, Keyword.merge(default_opts, opts))
+  end
+
+  @doc "Quick GET with automatic formatting"
+  def qget_pretty(target, oid_name, opts \\ []) do
+    oid = oid(oid_name) || oid_name
+    default_opts = [community: "public", timeout: 5000]
+    SnmpMgr.get_pretty(target, oid, Keyword.merge(default_opts, opts))
+  end
+
   @doc "Quick WALK with common settings"
   def qwalk(target, oid_name, opts \\ []) do
     oid = oid(oid_name) || oid_name
@@ -123,23 +137,14 @@ defmodule IEx.Helpers.Snmp do
   @doc "Show device uptime in human readable format"
   def uptime(target, opts \\ []) do
     case qget(target, "sysUpTime", opts) do
+      {:ok, {_oid, :timeticks, ticks}} ->
+        {:ok, SnmpMgr.Format.uptime(ticks)}
+      
       {:ok, {:timeticks, ticks}} ->
-        seconds = div(ticks, 100)
-        days = div(seconds, 86400)
-        hours = div(rem(seconds, 86400), 3600)
-        minutes = div(rem(seconds, 3600), 60)
-        secs = rem(seconds, 60)
-        
-        {:ok, "#{days} days, #{hours} hours, #{minutes} minutes, #{secs} seconds"}
+        {:ok, SnmpMgr.Format.uptime(ticks)}
       
       {:ok, ticks} when is_integer(ticks) ->
-        seconds = div(ticks, 100)
-        days = div(seconds, 86400)
-        hours = div(rem(seconds, 86400), 3600)
-        minutes = div(rem(seconds, 3600), 60)
-        secs = rem(seconds, 60)
-        
-        {:ok, "#{days} days, #{hours} hours, #{minutes} minutes, #{secs} seconds"}
+        {:ok, SnmpMgr.Format.uptime(ticks)}
       
       error -> error
     end
@@ -199,7 +204,7 @@ defmodule IEx.Helpers.Snmp do
       oids()                          - List all common OIDs
       oid(name)                       - Get OID by name
       help()                          - Show this help
-    
+      
     Example Usage:
       qget("192.168.1.1", "sysDescr")
       qwalk("switch.local", "ifTable", community: "private")
@@ -213,6 +218,12 @@ defmodule IEx.Helpers.Snmp do
       
     """)
   end
+
+  # Delegate to SnmpMgr.Format functions for convenience
+  defdelegate format_ip(value), to: SnmpMgr.Format, as: :ip_address
+  defdelegate format_bytes(value), to: SnmpMgr.Format, as: :bytes
+  defdelegate format_speed(value), to: SnmpMgr.Format, as: :speed
+  defdelegate format_mac(value), to: SnmpMgr.Format, as: :mac_address
 end
 
 # Import the helper functions into the console

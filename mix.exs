@@ -28,7 +28,7 @@ defmodule SnmpMgr.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v1.0.5", override: true},
+      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v1.0.6", override: true},
       {:snmp_sim, git: "https://github.com/awksedgreep/snmp_sim.git", tag: "v1.0.15", override: true},
 
       # Static analysis

@@ -30,10 +30,14 @@ defmodule SnmpMgr.BulkOperationsTest do
           
           # Validate result structure from snmp_lib - each result must be valid
           Enum.each(results, fn
+            {oid, type, value} ->
+              assert is_binary(oid) or is_list(oid)
+              assert is_atom(type)
+              assert is_binary(value) or is_integer(value) or is_atom(value)
             {oid, value} ->
+              # Fallback for older format
               assert is_binary(oid) or is_list(oid)
               assert is_binary(value) or is_integer(value) or is_atom(value)
-              assert oid != nil and value != nil
             other ->
               flunk("Unexpected bulk result format: #{inspect(other)}")
           end)
@@ -490,9 +494,14 @@ defmodule SnmpMgr.BulkOperationsTest do
         {:ok, results} when is_list(results) ->
           # Validate structure consistency with snmp_lib
           Enum.each(results, fn
-            {oid, value} ->
+            {oid, type, value} ->
               assert is_binary(oid) or is_list(oid)
+              assert is_atom(type)
               assert is_binary(value) or is_integer(value) or is_atom(value) or is_list(value) or is_nil(value)
+            {oid, value} ->
+              # Fallback for older format
+              assert is_binary(oid) or is_list(oid)
+              assert is_binary(value) or is_integer(value) or is_atom(value)
             other ->
               flunk("Inconsistent result format: #{inspect(other)}")
           end)

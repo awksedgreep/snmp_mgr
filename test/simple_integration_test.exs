@@ -51,18 +51,31 @@ defmodule SnmpMgr.SimpleIntegrationTest do
       case result do
         {:ok, results} ->
           assert is_list(results)
-          # If we get results, they must be valid OID-value pairs
+          # If we get results, they must be valid OID-type-value tuples
           if length(results) > 0 do
-            Enum.each(results, fn {oid, value} ->
-              # OID can be either a string or a list in map-based format
-              assert is_binary(oid) or is_list(oid)
-              
-              # If it's a string, it should contain dots
-              if is_binary(oid) do
-                assert String.contains?(oid, ".")
-              end
-              
-              assert value != nil
+            Enum.each(results, fn 
+              {oid, type, value} ->
+                # OID can be either a string or a list in map-based format
+                assert is_binary(oid) or is_list(oid)
+                
+                # If it's a string, it should contain dots
+                if is_binary(oid) do
+                  assert String.contains?(oid, ".")
+                end
+                
+                assert is_atom(type)
+                assert value != nil
+              {oid, value} ->
+                # Fallback for older format
+                assert is_binary(oid) or is_list(oid)
+                
+                if is_binary(oid) do
+                  assert String.contains?(oid, ".")
+                end
+                
+                assert value != nil
+              other ->
+                flunk("Unexpected result format: #{inspect(other)}")
             end)
           end
         {:error, reason} ->
@@ -82,16 +95,29 @@ defmodule SnmpMgr.SimpleIntegrationTest do
           assert is_list(results)
           if length(results) > 0 do
             # Walk results must be valid and in tree order
-            Enum.each(results, fn {oid, value} ->
-              # OID can be either a string or a list in map-based format
-              assert is_binary(oid) or is_list(oid)
-              
-              # If it's a string, it should contain dots
-              if is_binary(oid) do
-                assert String.contains?(oid, ".")
-              end
-              
-              assert value != nil
+            Enum.each(results, fn 
+              {oid, type, value} ->
+                # OID can be either a string or a list in map-based format
+                assert is_binary(oid) or is_list(oid)
+                
+                # If it's a string, it should contain dots
+                if is_binary(oid) do
+                  assert String.contains?(oid, ".")
+                end
+                
+                assert is_atom(type)
+                assert value != nil
+              {oid, value} ->
+                # Fallback for older format
+                assert is_binary(oid) or is_list(oid)
+                
+                if is_binary(oid) do
+                  assert String.contains?(oid, ".")
+                end
+                
+                assert value != nil
+              other ->
+                flunk("Unexpected result format: #{inspect(other)}")
             end)
           end
         {:error, reason} ->
