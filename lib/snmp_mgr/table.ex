@@ -2,41 +2,41 @@ defmodule SnmpMgr.Table do
   @moduledoc """
   Table processing utilities for SNMP table data.
   
-  Provides functions to convert flat OID/value lists into structured
+  Provides functions to convert flat OID/type/value lists into structured
   table representations and perform table analysis operations.
   """
 
   @doc """
-  Converts flat OID/value pairs to a structured table format.
+  Converts flat OID/type/value tuples to a structured table format.
 
-  Takes a list of {oid_string, value} tuples from a table walk
+  Takes a list of {oid_string, type, value} tuples from a table walk
   and converts them into a structured table with rows and columns.
 
   ## Parameters
-  - `oid_value_pairs` - List of {oid_string, value} tuples
+  - `oid_type_value_tuples` - List of {oid_string, type, value} tuples
   - `table_oid` - The base table OID (used to determine table structure)
 
   ## Examples
 
-      iex> pairs = [
-      ...>   {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},
-      ...>   {"1.3.6.1.2.1.2.2.1.2.2", "eth1"},
-      ...>   {"1.3.6.1.2.1.2.2.1.3.1", 6},
-      ...>   {"1.3.6.1.2.1.2.2.1.3.2", 6}
+      iex> tuples = [
+      ...>   {"1.3.6.1.2.1.2.2.1.2.1", :string, "eth0"},
+      ...>   {"1.3.6.1.2.1.2.2.1.2.2", :string, "eth1"},
+      ...>   {"1.3.6.1.2.1.2.2.1.3.1", :integer, 6},
+      ...>   {"1.3.6.1.2.1.2.2.1.3.2", :integer, 6}
       ...> ]
-      iex> SnmpMgr.Table.to_table(pairs, [1, 3, 6, 1, 2, 1, 2, 2])
+      iex> SnmpMgr.Table.to_table(tuples, [1, 3, 6, 1, 2, 1, 2, 2])
       {:ok, %{
         1 => %{2 => "eth0", 3 => 6},
         2 => %{2 => "eth1", 3 => 6}
       }}
   """
-  def to_table(oid_value_pairs, table_oid) when is_list(table_oid) do
+  def to_table(oid_type_value_tuples, table_oid) when is_list(table_oid) do
     table_oid_length = length(table_oid)
     
     try do
       table_data = 
-        oid_value_pairs
-        |> Enum.map(fn {oid_string, value} ->
+        oid_type_value_tuples
+        |> Enum.map(fn {oid_string, _type, value} ->
           case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} ->
               if List.starts_with?(oid_list, table_oid) and length(oid_list) > table_oid_length + 2 do
@@ -75,9 +75,9 @@ defmodule SnmpMgr.Table do
     end
   end
 
-  def to_table(oid_value_pairs, table_oid) when is_binary(table_oid) do
+  def to_table(oid_type_value_tuples, table_oid) when is_binary(table_oid) do
     case SnmpLib.OID.string_to_list(table_oid) do
-      {:ok, oid_list} -> to_table(oid_value_pairs, oid_list)
+      {:ok, oid_list} -> to_table(oid_type_value_tuples, oid_list)
       error -> error
     end
   end
@@ -86,25 +86,25 @@ defmodule SnmpMgr.Table do
   Converts table data to a map keyed by a specific column.
 
   ## Parameters
-  - `oid_value_pairs` - List of {oid_string, value} tuples
+  - `oid_type_value_tuples` - List of {oid_string, type, value} tuples
   - `key_column` - Column number to use as the key
 
   ## Examples
 
-      iex> pairs = [
-      ...>   {"1.3.6.1.2.1.2.2.1.1.1", 1},
-      ...>   {"1.3.6.1.2.1.2.2.1.2.1", "eth0"},
-      ...>   {"1.3.6.1.2.1.2.2.1.1.2", 2},
-      ...>   {"1.3.6.1.2.1.2.2.1.2.2", "eth1"}
+      iex> tuples = [
+      ...>   {"1.3.6.1.2.1.2.2.1.1.1", :integer, 1},
+      ...>   {"1.3.6.1.2.1.2.2.1.2.1", :string, "eth0"},
+      ...>   {"1.3.6.1.2.1.2.2.1.1.2", :integer, 2},
+      ...>   {"1.3.6.1.2.1.2.2.1.2.2", :string, "eth1"}
       ...> ]
-      iex> SnmpMgr.Table.to_map(pairs, 1)
+      iex> SnmpMgr.Table.to_map(tuples, 1)
       {:ok, %{
         1 => %{ifIndex: 1, ifDescr: "eth0"},
         2 => %{ifIndex: 2, ifDescr: "eth1"}
       }}
   """
-  def to_map(oid_value_pairs, key_column) do
-    case to_rows(oid_value_pairs) do
+  def to_map(oid_type_value_tuples, key_column) do
+    case to_rows(oid_type_value_tuples) do
       {:ok, rows} ->
         try do
           mapped_data = 
@@ -121,16 +121,16 @@ defmodule SnmpMgr.Table do
   end
 
   @doc """
-  Converts OID/value pairs to a list of row maps.
+  Converts OID/type/value tuples to a list of row maps.
 
   Each row is a map where keys are column numbers and values are the data values.
   """
-  def to_rows(oid_value_pairs) do
+  def to_rows(oid_type_value_tuples) do
     try do
       # Group by index (last part of OID)
       rows = 
-        oid_value_pairs
-        |> Enum.map(fn {oid_string, value} ->
+        oid_type_value_tuples
+        |> Enum.map(fn {oid_string, _type, value} ->
           case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 3 ->
               # Extract column and index from the end of the OID
@@ -164,11 +164,11 @@ defmodule SnmpMgr.Table do
     {:ok, Map.keys(table_data)}
   end
 
-  def get_indexes(oid_value_pairs) when is_list(oid_value_pairs) do
+  def get_indexes(oid_type_value_tuples) when is_list(oid_type_value_tuples) do
     try do
       indexes = 
-        oid_value_pairs
-        |> Enum.map(fn {oid_string, _value} ->
+        oid_type_value_tuples
+        |> Enum.map(fn {oid_string, _type, _value} ->
           case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 1 ->
               List.last(oid_list)
@@ -198,11 +198,11 @@ defmodule SnmpMgr.Table do
     {:ok, columns}
   end
 
-  def get_columns(oid_value_pairs) when is_list(oid_value_pairs) do
+  def get_columns(oid_type_value_tuples) when is_list(oid_type_value_tuples) do
     try do
       columns = 
-        oid_value_pairs
-        |> Enum.map(fn {oid_string, _value} ->
+        oid_type_value_tuples
+        |> Enum.map(fn {oid_string, _type, _value} ->
           case SnmpLib.OID.string_to_list(oid_string) do
             {:ok, oid_list} when length(oid_list) >= 2 ->
               # Get second-to-last element (column number)
@@ -283,7 +283,7 @@ defmodule SnmpMgr.Table do
 
   ## Examples
 
-      iex> table = %{1 => %{2 => "eth0", 3 => 6}, 2 => %{2 => "eth1", 3 => 6}}
+      iex> table = %{1 => %{2 => "eth0", 3 => 100}, 2 => %{2 => "eth1", 3 => 200}}
       iex> SnmpMgr.Table.analyze(table)
       {:ok, %{
         row_count: 2,

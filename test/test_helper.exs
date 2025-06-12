@@ -8,7 +8,7 @@ Logger.configure(level: :error)
 Code.require_file("support/snmp_simulator.ex", __DIR__)
 
 # Start SnmpSim for all tests that need it
-case Application.ensure_all_started(:snmp_sim_ex) do
+case Application.ensure_all_started(:snmp_sim) do
   {:ok, _} ->
     IO.puts("SnmpSim available for testing")
   {:error, _} ->

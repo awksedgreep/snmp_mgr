@@ -216,19 +216,22 @@ defmodule SnmpMgr.Bulk do
   defp filter_table_results(results, root_oid) do
     in_scope_results = 
       results
-      |> Enum.filter(fn {oid_string, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
-          _ -> false
-        end
+      |> Enum.filter(fn 
+        # Handle 3-tuple format (preferred - from snmp_lib v1.0.5+)
+        {oid_list, _type, _value} -> List.starts_with?(oid_list, root_oid)
+        # Handle 2-tuple format (backward compatibility)
+        {oid_list, _value} -> List.starts_with?(oid_list, root_oid)
+      end)
+      |> Enum.map(fn 
+        # Convert 3-tuple to standardized format with oid_string
+        {oid_list, type, value} -> {Enum.join(oid_list, "."), type, value}
+        # Convert 2-tuple to standardized format with type inference
+        {oid_list, value} -> {Enum.join(oid_list, "."), infer_snmp_type(value), value}
       end)
     
     next_oid = case List.last(results) do
-      {oid_string, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> oid_list
-          _ -> nil
-        end
+      {oid_list, _type, _value} -> oid_list
+      {oid_list, _value} -> oid_list
       _ -> nil
     end
     
@@ -267,4 +270,15 @@ defmodule SnmpMgr.Bulk do
   end
   defp resolve_oid(oid) when is_list(oid), do: {:ok, oid}
   defp resolve_oid(_), do: {:error, :invalid_oid_format}
+
+  defp infer_snmp_type(value) when is_binary(value), do: :octet_string
+  defp infer_snmp_type(value) when is_integer(value) and value >= 0, do: :integer
+  defp infer_snmp_type(value) when is_integer(value), do: :integer
+  defp infer_snmp_type({:timeticks, _}), do: :timeticks
+  defp infer_snmp_type({:counter32, _}), do: :counter32
+  defp infer_snmp_type({:counter64, _}), do: :counter64
+  defp infer_snmp_type({:gauge32, _}), do: :gauge32
+  defp infer_snmp_type({:unsigned32, _}), do: :unsigned32
+  defp infer_snmp_type(:null), do: :null
+  defp infer_snmp_type(_), do: :unknown
 end

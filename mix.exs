@@ -4,7 +4,7 @@ defmodule SnmpMgr.MixProject do
   def project do
     [
       app: :snmp_mgr,
-      version: "1.0.5",
+      version: "1.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -28,8 +28,8 @@ defmodule SnmpMgr.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v1.0.4", override: true},
-      {:snmp_sim, git: "https://github.com/awksedgreep/snmp_sim.git", tag: "v1.0.4", override: true},
+      {:snmp_lib, git: "https://github.com/awksedgreep/snmp_lib", tag: "v1.0.5", override: true},
+      {:snmp_sim, git: "https://github.com/awksedgreep/snmp_sim.git", tag: "v1.0.15", override: true},
 
       # Static analysis
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},

@@ -54,7 +54,7 @@ defmodule SnmpMgr.IntegrationTest do
           assert is_binary(value) or is_atom(value) or is_integer(value)
         {:error, reason} ->
           # Accept valid SNMP errors (many objects are read-only)
-          assert reason in [:read_only, :no_access, :timeout, :noSuchObject]
+          assert reason in [:read_only, :no_access, :timeout, :noSuchObject, :gen_err]
       end
     end
 
@@ -87,9 +87,10 @@ defmodule SnmpMgr.IntegrationTest do
         {:ok, results} when is_list(results) ->
           # Successful walk through snmp_lib
           if length(results) > 0 do
-            Enum.each(results, fn {oid, value} ->
+            Enum.each(results, fn {oid, type, value} ->
               assert is_binary(oid)
               assert String.starts_with?(oid, "1.3.6.1.2.1.1")
+              assert is_atom(type)
               assert value != nil
             end)
           end

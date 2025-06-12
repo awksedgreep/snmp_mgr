@@ -181,7 +181,7 @@ defmodule SnmpMgr.Stream do
   ## Examples
 
       # Only fetch interface names (column 2)
-      filter_fn = fn {oid, _value} ->
+      filter_fn = fn {oid, _type, _value} ->
         case SnmpLib.OID.string_to_list(oid) do
           {:ok, oid_list} -> List.last(oid_list, 2) |> hd() == 2
           _ -> false
@@ -443,14 +443,27 @@ defmodule SnmpMgr.Stream do
   defp filter_stream_results(results, root_oid) do
     in_scope_results = 
       results
-      |> Enum.filter(fn {oid_string, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
-          _ -> false
-        end
+      |> Enum.filter(fn 
+        # Handle 3-tuple format (preferred)
+        {oid_string, _type, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
+        # Handle 2-tuple format (backward compatibility)
+        {oid_string, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
       end)
     
     next_oid = case List.last(results) do
+      {oid_string, _type, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} -> oid_list
+          _ -> nil
+        end
       {oid_string, _value} ->
         case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> oid_list

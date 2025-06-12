@@ -29,16 +29,16 @@ defmodule SnmpMgr.AdaptiveWalk do
       {:ok, results} = SnmpMgr.AdaptiveWalk.bulk_walk("switch.local", "ifTable")
       # Automatically adjusts bulk size for optimal performance:
       # [
-      #   {"1.3.6.1.2.1.2.2.1.2.1", "FastEthernet0/1"},
-      #   {"1.3.6.1.2.1.2.2.1.2.2", "FastEthernet0/2"},
-      #   {"1.3.6.1.2.1.2.2.1.2.3", "GigabitEthernet0/1"},
+      #   {"1.3.6.1.2.1.2.2.1.2.1", :octet_string, "FastEthernet0/1"},
+      #   {"1.3.6.1.2.1.2.2.1.2.2", :octet_string, "FastEthernet0/2"},
+      #   {"1.3.6.1.2.1.2.2.1.2.3", :octet_string, "GigabitEthernet0/1"},
       #   # ... optimally retrieved with adaptive bulk sizing
       # ]
       
       # With custom options:
       {:ok, results} = SnmpMgr.AdaptiveWalk.bulk_walk("router.local", "sysDescr", 
         adaptive_tuning: true, max_entries: 100, performance_threshold: 50)
-      # [{"1.3.6.1.2.1.1.1.0", "Cisco IOS Software, Version 15.1"}]
+      # [{"1.3.6.1.2.1.1.1.0", :octet_string, "Cisco IOS Software, Version 15.1"}]
   """
   def bulk_walk(target, root_oid, opts \\ []) do
     adaptive_tuning = Keyword.get(opts, :adaptive_tuning, true)
@@ -73,10 +73,10 @@ defmodule SnmpMgr.AdaptiveWalk do
       {:ok, table_data} = SnmpMgr.AdaptiveWalk.table_walk("switch.local", "ifTable", max_entries: 1000)
       # Efficiently walks large tables with automatic optimization:
       # [
-      #   {"1.3.6.1.2.1.2.2.1.1.1", 1},           # ifIndex.1
-      #   {"1.3.6.1.2.1.2.2.1.2.1", "Ethernet1"}, # ifDescr.1
-      #   {"1.3.6.1.2.1.2.2.1.3.1", 6},           # ifType.1 (ethernetCsmacd)
-      #   {"1.3.6.1.2.1.2.2.1.5.1", 1000000000},  # ifSpeed.1 (1 Gbps)
+      #   {"1.3.6.1.2.1.2.2.1.1.1", :integer, 1},           # ifIndex.1
+      #   {"1.3.6.1.2.1.2.2.1.2.1", :octet_string, "Ethernet1"}, # ifDescr.1
+      #   {"1.3.6.1.2.1.2.2.1.3.1", :integer, 6},           # ifType.1 (ethernetCsmacd)
+      #   {"1.3.6.1.2.1.2.2.1.5.1", :gauge32, 1000000000},  # ifSpeed.1 (1 Gbps)
       #   # ... continues with adaptive pagination for large tables
       # ]
       
@@ -347,14 +347,27 @@ defmodule SnmpMgr.AdaptiveWalk do
   defp filter_scope_results(results, root_oid) do
     in_scope_results = 
       results
-      |> Enum.filter(fn {oid_string, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
-          _ -> false
-        end
+      |> Enum.filter(fn 
+        # Handle 3-tuple format (preferred - from snmp_lib v1.0.5+)
+        {oid_string, _type, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
+        # Handle 2-tuple format (backward compatibility)
+        {oid_string, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
       end)
     
     next_oid = case List.last(results) do
+      {oid_string, _type, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} -> oid_list
+          _ -> nil
+        end
       {oid_string, _value} ->
         case SnmpLib.OID.string_to_list(oid_string) do
           {:ok, oid_list} -> oid_list

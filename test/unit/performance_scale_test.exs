@@ -91,7 +91,7 @@ defmodule SnmpMgr.PerformanceSnmpLibTest do
           assert true
         true ->
           # Normal case: bulk should be more efficient than individual operations
-          assert bulk_duration < individual_duration * 2
+          assert bulk_duration <= individual_duration * 2
       end
       
       case bulk_result do

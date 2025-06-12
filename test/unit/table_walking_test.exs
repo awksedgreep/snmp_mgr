@@ -25,10 +25,11 @@ defmodule SnmpMgr.TableWalkingTest do
         {:ok, walk_data} when is_list(walk_data) ->
           # Successful walk through snmp_lib - validate real data
           if length(walk_data) > 0 do
-            # Each result must be valid OID-value pair
-            Enum.each(walk_data, fn {oid, value} ->
+            # Each result must be valid OID-type-value tuple
+            Enum.each(walk_data, fn {oid, type, value} ->
               assert is_binary(oid)
               assert String.starts_with?(oid, "1.3.6.1.2.1.1")
+              assert is_atom(type)
               assert value != nil
             end)
           end
@@ -97,7 +98,7 @@ defmodule SnmpMgr.TableWalkingTest do
       case result do
         {:ok, walk_data} when length(walk_data) > 1 ->
           # Verify ordering of string OIDs
-          oids = Enum.map(walk_data, fn {oid, _value} -> oid end)
+          oids = Enum.map(walk_data, fn {oid, _type, _value} -> oid end)
           
           # Check that OIDs are properly ordered
           sorted_oids = Enum.sort(oids, fn oid1, oid2 ->
@@ -138,9 +139,10 @@ defmodule SnmpMgr.TableWalkingTest do
           # Validate that we got valid table data
           if length(table_data) > 0 do
             # Each entry should be within system table scope
-            Enum.each(table_data, fn {oid, value} ->
+            Enum.each(table_data, fn {oid, type, value} ->
               assert is_binary(oid)
               assert String.starts_with?(oid, "1.3.6.1.2.1.1")
+              assert is_atom(type)
               assert value != nil
             end)
           end
@@ -169,9 +171,10 @@ defmodule SnmpMgr.TableWalkingTest do
           {:ok, results} when is_list(results) ->
             # Should get results within the specified subtree
             if length(results) > 0 do
-              Enum.each(results, fn {result_oid, value} ->
+              Enum.each(results, fn {result_oid, type, value} ->
                 assert is_binary(result_oid)
                 assert String.starts_with?(result_oid, oid)
+                assert is_atom(type)
                 assert value != nil
               end)
             end
@@ -419,9 +422,10 @@ defmodule SnmpMgr.TableWalkingTest do
           # Should get valid walk results through snmp_lib
           if length(results) > 0 do
             # Validate first result structure
-            {oid, value} = List.first(results)
+            {oid, type, value} = List.first(results)
             assert is_binary(oid)
             assert String.starts_with?(oid, "1.3.6.1.2.1.1.1")
+            assert is_atom(type)
             assert value != nil
           end
           assert true
@@ -442,11 +446,12 @@ defmodule SnmpMgr.TableWalkingTest do
       # Should return consistent format regardless of snmp_lib internal changes
       case walk_result do
         {:ok, walk_data} ->
-          # Walk should return list of {oid, value} tuples
+          # Walk should return list of {oid, type, value} tuples
           assert is_list(walk_data)
           if length(walk_data) > 0 do
-            Enum.each(walk_data, fn {oid, value} ->
+            Enum.each(walk_data, fn {oid, type, value} ->
               assert is_binary(oid) or is_list(oid)
+              assert is_atom(type)
               assert value != nil
             end)
           end

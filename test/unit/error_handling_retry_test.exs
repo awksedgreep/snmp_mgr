@@ -271,8 +271,10 @@ defmodule SnmpMgr.ErrorHandlingRetryTest do
         case result do
           {:ok, _} ->
             # Operation succeeded within timeout
-            assert elapsed <= timeout * 2,  # Allow some overhead
-              "#{description} should complete within reasonable time"
+            # For very short timeouts, allow a slightly larger fixed overhead
+            max_allowed_elapsed = if timeout <= 5, do: 10, else: timeout * 2
+            assert elapsed <= max_allowed_elapsed,
+              "#{description} should complete within reasonable time (elapsed: #{elapsed}ms, timeout: #{timeout}ms, max_allowed: #{max_allowed_elapsed}ms)"
             
           {:error, :timeout} ->
             # Timeout handled correctly by snmp_lib

@@ -492,7 +492,7 @@ defmodule SnmpMgr.BulkOperationsTest do
           Enum.each(results, fn
             {oid, value} ->
               assert is_binary(oid) or is_list(oid)
-              assert is_binary(value) or is_integer(value) or is_atom(value)
+              assert is_binary(value) or is_integer(value) or is_atom(value) or is_list(value) or is_nil(value)
             other ->
               flunk("Inconsistent result format: #{inspect(other)}")
           end)

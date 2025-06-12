@@ -36,7 +36,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       device_type: device_type,
       device_id: "test_device_#{port}",
       community: community,
-      walk_file: "priv/walks/cable_modem.walk"
+      walk_file: Path.expand(Path.join(__DIR__, "../../priv/walks/cable_modem.walk"))
     }
     
     case start_device_with_profile(device_config) do
@@ -78,7 +78,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       device_type: :switch,
       device_id: "switch_#{port}",
       community: community,
-      walk_file: "priv/walks/cable_modem.walk"
+      walk_file: Path.expand(Path.join(__DIR__, "../../priv/walks/cable_modem.walk"))
     }
     
     case start_device_with_profile(device_config) do
@@ -117,7 +117,7 @@ defmodule SnmpMgr.TestSupport.SNMPSimulator do
       device_type: :router,
       device_id: "router_#{port}",
       community: community,
-      walk_file: "priv/walks/cable_modem.walk"
+      walk_file: Path.expand(Path.join(__DIR__, "../../priv/walks/cable_modem.walk"))
     }
     
     case start_device_with_profile(device_config) do

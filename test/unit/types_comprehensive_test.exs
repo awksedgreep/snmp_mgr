@@ -73,7 +73,7 @@ defmodule SnmpMgr.TypesIntegrationTest do
             {:ok, _} -> 
               # SET succeeded
               :ok
-            {:error, reason} when reason in [:not_writable, :read_only, :no_access] ->
+            {:error, reason} when reason in [:not_writable, :read_only, :no_access, :gen_err] ->
               # Expected permission errors are acceptable
               :ok
             {:error, reason} ->

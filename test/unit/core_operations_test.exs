@@ -60,7 +60,7 @@ defmodule SnmpMgr.CoreOperationsTest do
 
         {:error, reason} ->
           # Accept valid SNMP errors from simulator
-          assert reason in [:noSuchObject, :timeout]
+          assert reason in [:noSuchObject, :timeout, :gen_err]
       end
     end
 

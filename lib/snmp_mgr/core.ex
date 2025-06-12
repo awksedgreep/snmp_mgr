@@ -161,7 +161,23 @@ defmodule SnmpMgr.Core do
         # Use SnmpLib.Manager for the actual operation
         try do
           case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
-            {:ok, results} -> {:ok, results}
+            {:ok, results} -> 
+              # Process the results to extract varbinds in 3-tuple format
+              processed_results = case results do
+                # Map format (snmp_lib v1.0.5+)
+                %{"varbinds" => varbinds} when is_list(varbinds) ->
+                  varbinds
+                
+                # Direct list format (older versions)
+                results when is_list(results) ->
+                  results
+                
+                # Other formats
+                _other ->
+                  []
+              end
+              
+              {:ok, processed_results}
             {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
           end
         rescue
