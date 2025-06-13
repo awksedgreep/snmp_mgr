@@ -460,22 +460,18 @@ defmodule SnmpMgr.Engine do
   
   defp build_snmp_message(request) do
     # Use existing PDU building functionality
-    try do
-      case request.type do
-        :get ->
-          pdu = SnmpLib.PDU.build_get_request(request.oid, request.request_id)
-          message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
-          SnmpLib.PDU.encode_message(message)
-        :get_bulk ->
-          max_rep = Map.get(request, :max_repetitions, 10)
-          pdu = SnmpLib.PDU.build_get_bulk_request(request.oid, request.request_id, 0, max_rep)
-          message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
-          SnmpLib.PDU.encode_message(message)
-        _ ->
-          {:error, {:unsupported_request_type, request.type}}
-      end
-    rescue
-      error -> {:error, error}
+    case request.type do
+      :get ->
+        pdu = SnmpLib.PDU.build_get_request(request.oid, request.request_id)
+        message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
+        SnmpLib.PDU.encode_message(message)
+      :get_bulk ->
+        max_rep = Map.get(request, :max_repetitions, 10)
+        pdu = SnmpLib.PDU.build_get_bulk_request(request.oid, request.request_id, 0, max_rep)
+        message = SnmpLib.PDU.build_message(pdu, request.community || "public", :v2c)
+        SnmpLib.PDU.encode_message(message)
+      _ ->
+        {:error, {:unsupported_request_type, request.type}}
     end
   end
   

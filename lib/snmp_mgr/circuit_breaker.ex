@@ -375,6 +375,7 @@ defmodule SnmpMgr.CircuitBreaker do
         
         # If enough successes, close the circuit
         if updated.success_count >= 3 do
+          Logger.info("Closing circuit breaker for #{target} after successful recovery")
           %{updated | 
             state: :closed,
             failure_count: 0,
@@ -551,122 +552,74 @@ defmodule SnmpMgr.CircuitBreaker do
   defp execute_with_breaker(state, target, breaker, fun, timeout) do
     start_time = System.monotonic_time(:millisecond)
     
-    try do
-      # Execute with timeout
-      task = Task.async(fun)
-      
-      case Task.yield(task, timeout) do
-        {:ok, result} ->
-          end_time = System.monotonic_time(:millisecond)
-          _execution_time = end_time - start_time
-          
-          # Record success
-          new_breaker = case breaker.state do
-            :half_open ->
-              updated = %{breaker | 
-                success_count: breaker.success_count + 1,
-                last_success_time: end_time,
-                half_open_calls: breaker.half_open_calls + 1
-              }
-              
-              # If enough successes in half-open, close circuit
-              if updated.success_count >= 3 do
-                Logger.info("Closing circuit breaker for #{target} after successful recovery")
-                %{updated | 
-                  state: :closed,
-                  failure_count: 0,
-                  half_open_calls: 0
-                }
-              else
-                updated
-              end
+    # Execute with timeout
+    task = Task.async(fun)
+    
+    case Task.yield(task, timeout) do
+      {:ok, result} ->
+        end_time = System.monotonic_time(:millisecond)
+        _execution_time = end_time - start_time
+        
+        # Record success
+        new_breaker = case breaker.state do
+          :half_open ->
+            updated = %{breaker | 
+              success_count: breaker.success_count + 1,
+              last_success_time: end_time,
+              half_open_calls: breaker.half_open_calls + 1
+            }
             
-            _ ->
-              %{breaker | 
-                success_count: breaker.success_count + 1,
-                last_success_time: end_time
+            # If enough successes in half-open, close circuit
+            if updated.success_count >= 3 do
+              Logger.info("Closing circuit breaker for #{target} after successful recovery")
+              %{updated | 
+                state: :closed,
+                failure_count: 0,
+                half_open_calls: 0
               }
-          end
+            else
+              updated
+            end
           
-          new_breakers = Map.put(state.breakers, target, new_breaker)
-          metrics = update_metrics(state.metrics, :successes, 1)
-          
-          new_state = %{state | breakers: new_breakers, metrics: metrics}
-          
-          {:reply, {:ok, result}, new_state}
-        
-        nil ->
-          # Timeout
-          Task.shutdown(task)
-          
-          new_breaker = %{breaker | 
-            failure_count: breaker.failure_count + 1,
-            last_failure_time: System.monotonic_time(:millisecond),
-            last_failure_reason: :timeout
-          }
-          
-          # Check if we should open circuit
-          new_breaker = if new_breaker.failure_count >= state.failure_threshold do
-            Logger.warning("Opening circuit breaker for #{target} due to timeout")
-            %{new_breaker | state: :open}
-          else
-            new_breaker
-          end
-          
-          new_breakers = Map.put(state.breakers, target, new_breaker)
-          metrics = update_metrics(state.metrics, :timeouts, 1)
-          metrics = update_metrics(metrics, :failures, 1)
-          
-          new_state = %{state | breakers: new_breakers, metrics: metrics}
-          
-          {:reply, {:error, :timeout}, new_state}
-      end
-    catch
-      :exit, reason ->
-        # Function crashed
-        new_breaker = %{breaker | 
-          failure_count: breaker.failure_count + 1,
-          last_failure_time: System.monotonic_time(:millisecond),
-          last_failure_reason: reason
-        }
-        
-        # Check if we should open circuit
-        new_breaker = if new_breaker.failure_count >= state.failure_threshold do
-          Logger.warning("Opening circuit breaker for #{target} due to crash: #{inspect(reason)}")
-          %{new_breaker | state: :open}
-        else
-          new_breaker
+          _ ->
+            %{breaker | 
+              success_count: breaker.success_count + 1,
+              last_success_time: end_time
+            }
         end
         
         new_breakers = Map.put(state.breakers, target, new_breaker)
-        metrics = update_metrics(state.metrics, :failures, 1)
+        metrics = update_metrics(state.metrics, :successes, 1)
         
         new_state = %{state | breakers: new_breakers, metrics: metrics}
         
-        {:reply, {:error, reason}, new_state}
+        {:reply, {:ok, result}, new_state}
       
-      kind, reason ->
-        # Other error
+      nil ->
+        # Timeout or task crashed
+        Task.shutdown(task)
+        
         new_breaker = %{breaker | 
           failure_count: breaker.failure_count + 1,
           last_failure_time: System.monotonic_time(:millisecond),
-          last_failure_reason: {kind, reason}
+          last_failure_reason: :timeout_or_crash
         }
         
         # Check if we should open circuit
         new_breaker = if new_breaker.failure_count >= state.failure_threshold do
-          Logger.warning("Opening circuit breaker for #{target} due to error: #{inspect({kind, reason})}")
+          Logger.warning("Opening circuit breaker for #{target} due to timeout or crash")
           %{new_breaker | state: :open}
         else
           new_breaker
         end
         
         new_breakers = Map.put(state.breakers, target, new_breaker)
-        metrics = update_metrics(state.metrics, :failures, 1)
+        metrics = update_metrics(state.metrics, :timeouts, 1)
+        metrics = update_metrics(metrics, :failures, 1)
         
         new_state = %{state | breakers: new_breakers, metrics: metrics}
         
-        {:reply, {:error, {kind, reason}}, new_state}
+        {:reply, {:error, :timeout_or_crash}, new_state}
     end
   end
   

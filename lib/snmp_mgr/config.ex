@@ -229,12 +229,11 @@ defmodule SnmpMgr.Config do
       nil -> 
         # Config server not running, use defaults
         @default_config
-      _pid -> 
-        # Config server running, get current config
-        try do
-          get_all()
-        catch
-          :exit, _ -> @default_config
+      pid when is_pid(pid) -> 
+        # Config server running, get current config with timeout
+        case GenServer.call(pid, :get_all, 1000) do
+          config when is_map(config) -> config
+          _ -> @default_config
         end
     end
     

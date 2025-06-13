@@ -33,46 +33,42 @@ defmodule SnmpMgr.Table do
   def to_table(oid_type_value_tuples, table_oid) when is_list(table_oid) do
     table_oid_length = length(table_oid)
     
-    try do
-      table_data = 
-        oid_type_value_tuples
-        |> Enum.map(fn {oid_string, _type, value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} ->
-              if List.starts_with?(oid_list, table_oid) and length(oid_list) > table_oid_length + 2 do
-                # Extract: table_oid + [1] + column + index_parts
-                rest = Enum.drop(oid_list, table_oid_length)
-                case rest do
-                  [1, column | [_ | _] = index_parts] ->
-                    index = if length(index_parts) == 1 do
-                      hd(index_parts)
-                    else
-                      index_parts
-                    end
-                    {index, column, value}
-                  _ -> nil
-                end
-              else
-                nil
+    table_data = 
+      oid_type_value_tuples
+      |> Enum.map(fn {oid_string, _type, value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} ->
+            if List.starts_with?(oid_list, table_oid) and length(oid_list) > table_oid_length + 2 do
+              # Extract: table_oid + [1] + column + index_parts
+              rest = Enum.drop(oid_list, table_oid_length)
+              case rest do
+                [1, column | [_ | _] = index_parts] ->
+                  index = if length(index_parts) == 1 do
+                    hd(index_parts)
+                  else
+                    index_parts
+                  end
+                  {index, column, value}
+                _ -> nil
               end
-            {:error, _} -> nil
-          end
-        end)
-        |> Enum.filter(&(&1 != nil))
-        |> Enum.group_by(fn {index, _column, _value} -> index end)
-        |> Enum.map(fn {index, entries} ->
-          columns = 
-            entries
-            |> Enum.map(fn {_index, column, value} -> {column, value} end)
-            |> Enum.into(%{})
-          {index, columns}
-        end)
-        |> Enum.into(%{})
+            else
+              nil
+            end
+          {:error, _} -> nil
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.group_by(fn {index, _column, _value} -> index end)
+      |> Enum.map(fn {index, entries} ->
+        columns = 
+          entries
+          |> Enum.map(fn {_index, column, value} -> {column, value} end)
+          |> Enum.into(%{})
+        {index, columns}
+      end)
+      |> Enum.into(%{})
 
-      {:ok, table_data}
-    rescue
-      error -> {:error, {:table_processing_error, error}}
-    end
+    {:ok, table_data}
   end
 
   def to_table(oid_type_value_tuples, table_oid) when is_binary(table_oid) do
@@ -80,6 +76,39 @@ defmodule SnmpMgr.Table do
       {:ok, oid_list} -> to_table(oid_type_value_tuples, oid_list)
       error -> error
     end
+  end
+
+  @doc """
+  Converts OID/type/value tuples to a list of row maps.
+
+  Each row is a map where keys are column numbers and values are the data values.
+  """
+  def to_rows(oid_type_value_tuples) do
+    # Group by index (last part of OID)
+    rows = 
+      oid_type_value_tuples
+      |> Enum.map(fn {oid_string, _type, value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} when length(oid_list) >= 3 ->
+            # Extract column and index from the end of the OID
+            # Format: ...table.1.column.index
+            [index | rest] = Enum.reverse(oid_list)
+            [column | _] = rest
+            {index, column, value}
+          _ -> nil
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.group_by(fn {index, _column, _value} -> index end)
+      |> Enum.map(fn {index, entries} ->
+        row = 
+          entries
+          |> Enum.map(fn {_index, column, value} -> {column, value} end)
+          |> Enum.into(%{})
+        Map.put(row, :index, index)
+      end)
+
+    {:ok, rows}
   end
 
   @doc """
@@ -106,54 +135,13 @@ defmodule SnmpMgr.Table do
   def to_map(oid_type_value_tuples, key_column) do
     case to_rows(oid_type_value_tuples) do
       {:ok, rows} ->
-        try do
-          mapped_data = 
-            rows
-            |> Enum.filter(fn row -> Map.has_key?(row, key_column) end)
-            |> Enum.map(fn row -> {Map.get(row, key_column), row} end)
-            |> Enum.into(%{})
-          {:ok, mapped_data}
-        rescue
-          error -> {:error, {:mapping_error, error}}
-        end
+        mapped_data = 
+          rows
+          |> Enum.filter(fn row -> Map.has_key?(row, key_column) end)
+          |> Enum.map(fn row -> {Map.get(row, key_column), row} end)
+          |> Enum.into(%{})
+        {:ok, mapped_data}
       error -> error
-    end
-  end
-
-  @doc """
-  Converts OID/type/value tuples to a list of row maps.
-
-  Each row is a map where keys are column numbers and values are the data values.
-  """
-  def to_rows(oid_type_value_tuples) do
-    try do
-      # Group by index (last part of OID)
-      rows = 
-        oid_type_value_tuples
-        |> Enum.map(fn {oid_string, _type, value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} when length(oid_list) >= 3 ->
-              # Extract column and index from the end of the OID
-              # Format: ...table.1.column.index
-              [index | rest] = Enum.reverse(oid_list)
-              [column | _] = rest
-              {index, column, value}
-            _ -> nil
-          end
-        end)
-        |> Enum.filter(&(&1 != nil))
-        |> Enum.group_by(fn {index, _column, _value} -> index end)
-        |> Enum.map(fn {index, entries} ->
-          row = 
-            entries
-            |> Enum.map(fn {_index, column, value} -> {column, value} end)
-            |> Enum.into(%{})
-          Map.put(row, :index, index)
-        end)
-
-      {:ok, rows}
-    rescue
-      error -> {:error, {:row_processing_error, error}}
     end
   end
 
@@ -165,24 +153,20 @@ defmodule SnmpMgr.Table do
   end
 
   def get_indexes(oid_type_value_tuples) when is_list(oid_type_value_tuples) do
-    try do
-      indexes = 
-        oid_type_value_tuples
-        |> Enum.map(fn {oid_string, _type, _value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} when length(oid_list) >= 1 ->
-              List.last(oid_list)
-            _ -> nil
-          end
-        end)
-        |> Enum.filter(&(&1 != nil))
-        |> Enum.uniq()
-        |> Enum.sort()
+    indexes = 
+      oid_type_value_tuples
+      |> Enum.map(fn {oid_string, _type, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} when length(oid_list) >= 1 ->
+            List.last(oid_list)
+          _ -> nil
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.uniq()
+      |> Enum.sort()
 
-      {:ok, indexes}
-    rescue
-      error -> {:error, {:index_extraction_error, error}}
-    end
+    {:ok, indexes}
   end
 
   @doc """
@@ -199,25 +183,21 @@ defmodule SnmpMgr.Table do
   end
 
   def get_columns(oid_type_value_tuples) when is_list(oid_type_value_tuples) do
-    try do
-      columns = 
-        oid_type_value_tuples
-        |> Enum.map(fn {oid_string, _type, _value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} when length(oid_list) >= 2 ->
-              # Get second-to-last element (column number)
-              oid_list |> Enum.reverse() |> Enum.at(1)
-            _ -> nil
-          end
-        end)
-        |> Enum.filter(&(&1 != nil))
-        |> Enum.uniq()
-        |> Enum.sort()
+    columns = 
+      oid_type_value_tuples
+      |> Enum.map(fn {oid_string, _type, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} when length(oid_list) >= 2 ->
+            # Get second-to-last element (column number)
+            oid_list |> Enum.reverse() |> Enum.at(1)
+          _ -> nil
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.uniq()
+      |> Enum.sort()
 
-      {:ok, columns}
-    rescue
-      error -> {:error, {:column_extraction_error, error}}
-    end
+    {:ok, columns}
   end
 
   @doc """
@@ -234,15 +214,11 @@ defmodule SnmpMgr.Table do
       {:ok, %{1 => %{2 => "eth0"}, 2 => %{2 => "eth1"}}}
   """
   def filter_by_index(table_data, index_filter) when is_map(table_data) and is_function(index_filter, 1) do
-    try do
-      filtered = 
-        table_data
-        |> Enum.filter(fn {index, _data} -> index_filter.(index) end)
-        |> Enum.into(%{})
-      {:ok, filtered}
-    rescue
-      error -> {:error, {:filter_error, error}}
-    end
+    filtered = 
+      table_data
+      |> Enum.filter(fn {index, _data} -> index_filter.(index) end)
+      |> Enum.into(%{})
+    {:ok, filtered}
   end
 
   @doc """
@@ -258,17 +234,13 @@ defmodule SnmpMgr.Table do
       ]}
   """
   def to_list(table_data) when is_map(table_data) do
-    try do
-      list = 
-        table_data
-        |> Enum.map(fn {index, columns} ->
-          Map.put(columns, :index, index)
-        end)
-        |> Enum.sort_by(fn row -> Map.get(row, :index) end)
-      {:ok, list}
-    rescue
-      error -> {:error, {:list_conversion_error, error}}
-    end
+    list = 
+      table_data
+      |> Enum.map(fn {index, columns} ->
+        Map.put(columns, :index, index)
+      end)
+      |> Enum.sort_by(fn row -> Map.get(row, :index) end)
+    {:ok, list}
   end
 
   @doc """
@@ -298,54 +270,50 @@ defmodule SnmpMgr.Table do
     analyze_types = Keyword.get(opts, :analyze_types, true)
     find_missing = Keyword.get(opts, :find_missing, true)
     
-    try do
-      indexes = Map.keys(table_data)
-      all_columns = table_data
-                   |> Map.values()
-                   |> Enum.flat_map(&Map.keys/1)
-                   |> Enum.uniq()
-                   |> Enum.sort()
-      
-      row_count = length(indexes)
-      column_count = length(all_columns)
-      
-      # Calculate completeness
-      total_cells = row_count * column_count
-      filled_cells = table_data
-                    |> Map.values()
-                    |> Enum.map(&map_size/1)
-                    |> Enum.sum()
-      completeness = if total_cells > 0, do: filled_cells / total_cells, else: 0.0
-      
-      analysis = %{
-        row_count: row_count,
-        column_count: column_count,
-        columns: all_columns,
-        indexes: Enum.sort(indexes),
-        completeness: completeness,
-        density: completeness
-      }
-      
-      # Add type analysis if requested
-      analysis = if analyze_types do
-        column_types = analyze_column_types(table_data, all_columns)
-        Map.put(analysis, :column_types, column_types)
-      else
-        analysis
-      end
-      
-      # Add missing data analysis if requested
-      analysis = if find_missing do
-        missing = find_missing_data(table_data, indexes, all_columns)
-        Map.put(analysis, :missing_data, missing)
-      else
-        analysis
-      end
-      
-      {:ok, analysis}
-    rescue
-      error -> {:error, {:analysis_error, error}}
+    indexes = Map.keys(table_data)
+    all_columns = table_data
+                 |> Map.values()
+                 |> Enum.flat_map(&Map.keys/1)
+                 |> Enum.uniq()
+                 |> Enum.sort()
+    
+    row_count = length(indexes)
+    column_count = length(all_columns)
+    
+    # Calculate completeness
+    total_cells = row_count * column_count
+    filled_cells = table_data
+                  |> Map.values()
+                  |> Enum.map(&map_size/1)
+                  |> Enum.sum()
+    completeness = if total_cells > 0, do: filled_cells / total_cells, else: 0.0
+    
+    analysis = %{
+      row_count: row_count,
+      column_count: column_count,
+      columns: all_columns,
+      indexes: Enum.sort(indexes),
+      completeness: completeness,
+      density: completeness
+    }
+    
+    # Add type analysis if requested
+    analysis = if analyze_types do
+      column_types = analyze_column_types(table_data, all_columns)
+      Map.put(analysis, :column_types, column_types)
+    else
+      analysis
     end
+    
+    # Add missing data analysis if requested
+    analysis = if find_missing do
+      missing = find_missing_data(table_data, indexes, all_columns)
+      Map.put(analysis, :missing_data, missing)
+    else
+      analysis
+    end
+    
+    {:ok, analysis}
   end
 
   @doc """
@@ -363,20 +331,16 @@ defmodule SnmpMgr.Table do
       {:ok, %{1 => %{2 => "eth0", 3 => 1}}}
   """
   def filter_by_column(table_data, column, filter_fn) when is_map(table_data) and is_function(filter_fn, 1) do
-    try do
-      filtered = 
-        table_data
-        |> Enum.filter(fn {_index, row_data} ->
-          case Map.get(row_data, column) do
-            nil -> false
-            value -> filter_fn.(value)
-          end
-        end)
-        |> Enum.into(%{})
-      {:ok, filtered}
-    rescue
-      error -> {:error, {:filter_error, error}}
-    end
+    filtered = 
+      table_data
+      |> Enum.filter(fn {_index, row_data} ->
+        case Map.get(row_data, column) do
+          nil -> false
+          value -> filter_fn.(value)
+        end
+      end)
+      |> Enum.into(%{})
+    {:ok, filtered}
   end
 
   @doc """
@@ -394,16 +358,12 @@ defmodule SnmpMgr.Table do
       {:ok, [{2, %{2 => "eth0"}}, {1, %{2 => "eth1"}}]}
   """
   def sort_by_column(table_data, column, direction \\ :asc) when is_map(table_data) do
-    try do
-      sorted = 
-        table_data
-        |> Enum.filter(fn {_index, row_data} -> Map.has_key?(row_data, column) end)
-        |> Enum.sort_by(fn {_index, row_data} -> Map.get(row_data, column) end, direction)
-      
-      {:ok, sorted}
-    rescue
-      error -> {:error, {:sort_error, error}}
-    end
+    sorted = 
+      table_data
+      |> Enum.filter(fn {_index, row_data} -> Map.has_key?(row_data, column) end)
+      |> Enum.sort_by(fn {_index, row_data} -> Map.get(row_data, column) end, direction)
+    
+    {:ok, sorted}
   end
 
   @doc """
@@ -420,23 +380,19 @@ defmodule SnmpMgr.Table do
       {:ok, %{1 => [%{index: 1, 2 => "eth", 3 => 1}, %{index: 2, 2 => "lo", 3 => 1}]}}
   """
   def group_by_column(table_data, column) when is_map(table_data) do
-    try do
-      grouped = 
-        table_data
-        |> Enum.filter(fn {_index, row_data} -> Map.has_key?(row_data, column) end)
-        |> Enum.group_by(fn {_index, row_data} -> Map.get(row_data, column) end)
-        |> Enum.map(fn {group_value, entries} ->
-          rows = Enum.map(entries, fn {index, row_data} ->
-            Map.put(row_data, :index, index)
-          end)
-          {group_value, rows}
+    grouped = 
+      table_data
+      |> Enum.filter(fn {_index, row_data} -> Map.has_key?(row_data, column) end)
+      |> Enum.group_by(fn {_index, row_data} -> Map.get(row_data, column) end)
+      |> Enum.map(fn {group_value, entries} ->
+        rows = Enum.map(entries, fn {index, row_data} ->
+          Map.put(row_data, :index, index)
         end)
-        |> Enum.into(%{})
-      
-      {:ok, grouped}
-    rescue
-      error -> {:error, {:group_error, error}}
-    end
+        {group_value, rows}
+      end)
+      |> Enum.into(%{})
+    
+    {:ok, grouped}
   end
 
   @doc """
@@ -453,38 +409,34 @@ defmodule SnmpMgr.Table do
       {:ok, %{3 => %{count: 2, sum: 300, avg: 150.0, min: 100, max: 200}}}
   """
   def column_stats(table_data, columns \\ nil) when is_map(table_data) do
-    try do
-      target_columns = columns || detect_numeric_columns(table_data)
-      
-      stats = 
-        target_columns
-        |> Enum.map(fn column ->
-          values = 
-            table_data
-            |> Map.values()
-            |> Enum.map(&Map.get(&1, column))
-            |> Enum.filter(&is_number/1)
-          
-          column_stats = if Enum.empty?(values) do
-            %{count: 0}
-          else
-            %{
-              count: length(values),
-              sum: Enum.sum(values),
-              avg: Enum.sum(values) / length(values),
-              min: Enum.min(values),
-              max: Enum.max(values)
-            }
-          end
-          
-          {column, column_stats}
-        end)
-        |> Enum.into(%{})
-      
-      {:ok, stats}
-    rescue
-      error -> {:error, {:stats_error, error}}
-    end
+    target_columns = columns || detect_numeric_columns(table_data)
+    
+    stats = 
+      target_columns
+      |> Enum.map(fn column ->
+        values = 
+          table_data
+          |> Map.values()
+          |> Enum.map(&Map.get(&1, column))
+          |> Enum.filter(&is_number/1)
+        
+        column_stats = if Enum.empty?(values) do
+          %{count: 0}
+        else
+          %{
+            count: length(values),
+            sum: Enum.sum(values),
+            avg: Enum.sum(values) / length(values),
+            min: Enum.min(values),
+            max: Enum.max(values)
+          }
+        end
+        
+        {column, column_stats}
+      end)
+      |> Enum.into(%{})
+    
+    {:ok, stats}
   end
 
   @doc """
@@ -501,19 +453,15 @@ defmodule SnmpMgr.Table do
       {:ok, [[{1, %{2 => "eth", 3 => 1}}, {2, %{2 => "eth", 3 => 1}}]]}
   """
   def find_duplicates(table_data, columns) when is_map(table_data) and is_list(columns) do
-    try do
-      duplicates = 
-        table_data
-        |> Enum.group_by(fn {_index, row_data} ->
-          Enum.map(columns, &Map.get(row_data, &1))
-        end)
-        |> Enum.filter(fn {_key, group} -> length(group) > 1 end)
-        |> Enum.map(fn {_key, group} -> group end)
-      
-      {:ok, duplicates}
-    rescue
-      error -> {:error, {:duplicate_detection_error, error}}
-    end
+    duplicates = 
+      table_data
+      |> Enum.group_by(fn {_index, row_data} ->
+        Enum.map(columns, &Map.get(row_data, &1))
+      end)
+      |> Enum.filter(fn {_key, group} -> length(group) > 1 end)
+      |> Enum.map(fn {_key, group} -> group end)
+    
+    {:ok, duplicates}
   end
 
   @doc """
@@ -530,53 +478,49 @@ defmodule SnmpMgr.Table do
       {:ok, %{valid: true, issues: []}}
   """
   def validate(table_data, opts \\ []) when is_map(table_data) do
-    try do
-      issues = []
-      
-      # Check for empty table
-      issues = if map_size(table_data) == 0 do
-        [{:warning, :empty_table} | issues]
-      else
-        issues
-      end
-      
-      # Check for inconsistent column sets
-      all_column_sets = 
-        table_data
-        |> Map.values()
-        |> Enum.map(&MapSet.new(Map.keys(&1)))
-        |> Enum.uniq()
-      
-      issues = if length(all_column_sets) > 1 do
-        [{:warning, :inconsistent_columns} | issues]
-      else
-        issues
-      end
-      
-      # Check for missing data in critical columns
-      issues = if Keyword.get(opts, :check_required_columns) do
-        required_columns = Keyword.get(opts, :required_columns, [])
-        missing_required = 
-          table_data
-          |> Enum.filter(fn {_index, row_data} ->
-            not Enum.all?(required_columns, &Map.has_key?(row_data, &1))
-          end)
-        
-        if not Enum.empty?(missing_required) do
-          [{:error, {:missing_required_columns, length(missing_required)}} | issues]
-        else
-          issues
-        end
-      else
-        issues
-      end
-      
-      valid = not Enum.any?(issues, fn {level, _} -> level == :error end)
-      
-      {:ok, %{valid: valid, issues: Enum.reverse(issues)}}
-    rescue
-      error -> {:error, {:validation_error, error}}
+    issues = []
+    
+    # Check for empty table
+    issues = if map_size(table_data) == 0 do
+      [{:warning, :empty_table} | issues]
+    else
+      issues
     end
+    
+    # Check for inconsistent column sets
+    all_column_sets = 
+      table_data
+      |> Map.values()
+      |> Enum.map(&MapSet.new(Map.keys(&1)))
+      |> Enum.uniq()
+    
+    issues = if length(all_column_sets) > 1 do
+      [{:warning, :inconsistent_columns} | issues]
+    else
+      issues
+    end
+    
+    # Check for missing data in critical columns
+    issues = if Keyword.get(opts, :check_required_columns) do
+      required_columns = Keyword.get(opts, :required_columns, [])
+      missing_required = 
+        table_data
+        |> Enum.filter(fn {_index, row_data} ->
+          not Enum.all?(required_columns, &Map.has_key?(row_data, &1))
+        end)
+      
+      if not Enum.empty?(missing_required) do
+        [{:error, {:missing_required_columns, length(missing_required)}} | issues]
+      else
+        issues
+      end
+    else
+      issues
+    end
+    
+    valid = not Enum.any?(issues, fn {level, _} -> level == :error end)
+    
+    {:ok, %{valid: valid, issues: Enum.reverse(issues)}}
   end
 
   # Private helper functions

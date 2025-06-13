@@ -407,86 +407,6 @@ defmodule SnmpMgr.Stream do
     :ok
   end
 
-  # Helper functions
-
-  defp init_adaptive_state(initial_size) do
-    %{
-      current_size: initial_size,
-      consecutive_successes: 0,
-      consecutive_errors: 0,
-      avg_response_time: nil
-    }
-  end
-
-  defp update_stream_adaptive_state(state, response_time, result_count) do
-    new_avg = if state.avg_response_time do
-      (state.avg_response_time + response_time) / 2
-    else
-      response_time
-    end
-    
-    cond do
-      # Too slow, reduce size
-      response_time > 200 and state.current_size > 5 ->
-        %{state | current_size: max(5, state.current_size - 5), avg_response_time: new_avg}
-      
-      # Fast and full results, increase size
-      response_time < 50 and result_count == state.current_size and state.current_size < 100 ->
-        %{state | current_size: min(100, state.current_size + 10), avg_response_time: new_avg}
-      
-      # Stable
-      true ->
-        %{state | avg_response_time: new_avg}
-    end
-  end
-
-  defp filter_stream_results(results, root_oid) do
-    in_scope_results = 
-      results
-      |> Enum.filter(fn 
-        # Handle 3-tuple format (preferred)
-        {oid_string, _type, _value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
-            _ -> false
-          end
-        # Handle 2-tuple format (backward compatibility)
-        {oid_string, _value} ->
-          case SnmpLib.OID.string_to_list(oid_string) do
-            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
-            _ -> false
-          end
-      end)
-    
-    next_oid = case List.last(results) do
-      {oid_string, _type, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> oid_list
-          _ -> nil
-        end
-      {oid_string, _value} ->
-        case SnmpLib.OID.string_to_list(oid_string) do
-          {:ok, oid_list} -> oid_list
-          _ -> nil
-        end
-      _ -> nil
-    end
-    
-    {in_scope_results, next_oid}
-  end
-
-  defp process_table_results(results, _table_oid, _columns) do
-    # Process results into table entries
-    # This is a simplified version - real implementation would be more sophisticated
-    {results, List.last(results) |> elem(0) |> SnmpLib.OID.string_to_list() |> elem(1)}
-  end
-
-  defp update_table_buffer(buffer, entries) do
-    # Update row buffer and return complete rows
-    # Simplified implementation
-    {[], Map.merge(buffer, Enum.into(entries, %{}))}
-  end
-
   defp poll_targets(targets, error_handling, opts) do
     SnmpMgr.Multi.get_multi(targets, opts)
     |> Enum.zip(targets)
@@ -566,4 +486,84 @@ defmodule SnmpMgr.Stream do
   end
   defp resolve_oid(oid) when is_list(oid), do: {:ok, oid}
   defp resolve_oid(_), do: {:error, :invalid_oid_format}
+
+  # Helper functions
+
+  defp init_adaptive_state(initial_size) do
+    %{
+      current_size: initial_size,
+      consecutive_successes: 0,
+      consecutive_errors: 0,
+      avg_response_time: nil
+    }
+  end
+
+  defp update_stream_adaptive_state(state, response_time, result_count) do
+    new_avg = if state.avg_response_time do
+      (state.avg_response_time + response_time) / 2
+    else
+      response_time
+    end
+    
+    cond do
+      # Too slow, reduce size
+      response_time > 200 and state.current_size > 5 ->
+        %{state | current_size: max(5, state.current_size - 5), avg_response_time: new_avg}
+      
+      # Fast and full results, increase size
+      response_time < 50 and result_count == state.current_size and state.current_size < 100 ->
+        %{state | current_size: min(100, state.current_size + 10), avg_response_time: new_avg}
+      
+      # Stable
+      true ->
+        %{state | avg_response_time: new_avg}
+    end
+  end
+
+  defp filter_stream_results(results, root_oid) do
+    in_scope_results = 
+      results
+      |> Enum.filter(fn 
+        # Handle 3-tuple format (preferred)
+        {oid_string, _type, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
+        # Handle 2-tuple format (backward compatibility)
+        {oid_string, _value} ->
+          case SnmpLib.OID.string_to_list(oid_string) do
+            {:ok, oid_list} -> List.starts_with?(oid_list, root_oid)
+            _ -> false
+          end
+      end)
+    
+    next_oid = case List.last(results) do
+      {oid_string, _type, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} -> oid_list
+          _ -> nil
+        end
+      {oid_string, _value} ->
+        case SnmpLib.OID.string_to_list(oid_string) do
+          {:ok, oid_list} -> oid_list
+          _ -> nil
+        end
+      _ -> nil
+    end
+    
+    {in_scope_results, next_oid}
+  end
+
+  defp process_table_results(results, _table_oid, _columns) do
+    # Process results into table entries
+    # This is a simplified version - real implementation would be more sophisticated
+    {results, List.last(results) |> elem(0) |> SnmpLib.OID.string_to_list() |> elem(1)}
+  end
+
+  defp update_table_buffer(buffer, entries) do
+    # Update row buffer and return complete rows
+    # Simplified implementation
+    {[], Map.merge(buffer, Enum.into(entries, %{}))}
+  end
 end

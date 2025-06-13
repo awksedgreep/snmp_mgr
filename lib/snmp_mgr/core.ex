@@ -37,14 +37,10 @@ defmodule SnmpMgr.Core do
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
 
     # Use SnmpLib.Manager for the actual operation
-    try do
-      case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
-        {:ok, {_type, value}} -> {:ok, value}
-        {:ok, value} -> {:ok, value}  # Fallback for older versions
-        {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
-      end
-    rescue
-      e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+    case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
+      {:ok, {_type, value}} -> {:ok, value}
+      {:ok, value} -> {:ok, value}  # Fallback for older versions
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -76,17 +72,13 @@ defmodule SnmpMgr.Core do
     # Map options to snmp_lib format
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
     
-    try do
-      case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
-        {:ok, {type, value}} -> {:ok, {oid_string, type, value}}
-        {:ok, value} -> 
-          # Handle case where snmp_lib returns just value without type (older versions)
-          inferred_type = infer_snmp_type(value)
-          {:ok, {oid_string, inferred_type, value}}
-        {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
-      end
-    rescue
-      e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+    case SnmpLib.Manager.get(host, oid_parsed, snmp_lib_opts) do
+      {:ok, {type, value}} -> {:ok, {oid_string, type, value}}
+      {:ok, value} -> 
+        # Handle case where snmp_lib returns just value without type (older versions)
+        inferred_type = infer_snmp_type(value)
+        {:ok, {oid_string, inferred_type, value}}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -119,15 +111,10 @@ defmodule SnmpMgr.Core do
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
     
     # Use the new SnmpLib.Manager.get_next function which properly handles version logic
-    try do
-      case SnmpLib.Manager.get_next(host, oid_parsed, snmp_lib_opts) do
-        {:ok, {next_oid, _type, value}} -> {:ok, {next_oid, value}}
-        {:ok, {next_oid, value}} -> {:ok, {next_oid, value}}  # Fallback for older versions
-        {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
-      end
-    rescue
-      error in [RuntimeError, ErlangError] ->
-        {:error, {:exception, Exception.message(error)}}
+    case SnmpLib.Manager.get_next(host, oid_parsed, snmp_lib_opts) do
+      {:ok, {next_oid, _type, value}} -> {:ok, {next_oid, value}}
+      {:ok, {next_oid, value}} -> {:ok, {next_oid, value}}  # Fallback for older versions
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -163,13 +150,9 @@ defmodule SnmpMgr.Core do
     snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
 
     # Use SnmpLib.Manager for the actual operation
-    try do
-      case SnmpLib.Manager.set(host, oid_parsed, typed_value, snmp_lib_opts) do
-        {:ok, result} -> {:ok, result}
-        {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
-      end
-    rescue
-      e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+    case SnmpLib.Manager.set(host, oid_parsed, typed_value, snmp_lib_opts) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -203,29 +186,25 @@ defmodule SnmpMgr.Core do
         snmp_lib_opts = map_options_to_snmp_lib(updated_opts)
 
         # Use SnmpLib.Manager for the actual operation
-        try do
-          case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
-            {:ok, results} -> 
-              # Process the results to extract varbinds in 3-tuple format
-              processed_results = case results do
-                # Map format (snmp_lib v1.0.5+)
-                %{"varbinds" => varbinds} when is_list(varbinds) ->
-                  varbinds
-                
-                # Direct list format (older versions)
-                results when is_list(results) ->
-                  results
-                
-                # Other formats
-                _other ->
-                  []
-              end
+        case SnmpLib.Manager.get_bulk(host, oid_parsed, snmp_lib_opts) do
+          {:ok, results} -> 
+            # Process the results to extract varbinds in 3-tuple format
+            processed_results = case results do
+              # Map format (snmp_lib v1.0.5+)
+              %{"varbinds" => varbinds} when is_list(varbinds) ->
+                varbinds
               
-              {:ok, processed_results}
-            {:error, reason} -> {:error, map_error_from_snmp_lib(reason)}
-          end
-        rescue
-          e in [RuntimeError, ErlangError] -> {:error, {:exception, e}}
+              # Direct list format (older versions)
+              results when is_list(results) ->
+                results
+              
+              # Other formats
+              _other ->
+                []
+            end
+            
+            {:ok, processed_results}
+          {:error, reason} -> {:error, reason}
         end
 
       _ ->
@@ -281,19 +260,6 @@ defmodule SnmpMgr.Core do
     mapped = if non_repeaters = Keyword.get(opts, :non_repeaters), do: [{:non_repeaters, non_repeaters} | mapped], else: mapped
 
     mapped
-  end
-
-  @spec map_error_from_snmp_lib(term()) :: term()
-  defp map_error_from_snmp_lib(reason) do
-    # Map SnmpLib errors back to SnmpMgr error format for backward compatibility
-    case reason do
-      :timeout -> :timeout
-      :nxdomain -> {:network_error, :hostname_resolution_failed}
-      {:error, :nxdomain} -> {:network_error, :hostname_resolution_failed}
-      {:error, :timeout} -> :timeout
-      {:error, reason} -> {:network_error, reason}
-      other -> other
-    end
   end
 
   @doc """

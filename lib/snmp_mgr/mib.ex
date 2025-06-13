@@ -1,9 +1,9 @@
 defmodule SnmpMgr.MIB do
   @compile {:no_warn_undefined, [:snmpc, :snmp_misc]}
-  
+
   @moduledoc """
   MIB compilation and symbolic name resolution.
-  
+
   This module provides MIB compilation using Erlang's :snmpc when available,
   and includes a built-in registry of standard MIB objects for basic operations.
   """
@@ -20,7 +20,7 @@ defmodule SnmpMgr.MIB do
     "sysName" => [1, 3, 6, 1, 2, 1, 1, 5],
     "sysLocation" => [1, 3, 6, 1, 2, 1, 1, 6],
     "sysServices" => [1, 3, 6, 1, 2, 1, 1, 7],
-    
+
     # Interface group (1.3.6.1.2.1.2)
     "ifNumber" => [1, 3, 6, 1, 2, 1, 2, 1],
     "ifTable" => [1, 3, 6, 1, 2, 1, 2, 2],
@@ -47,14 +47,14 @@ defmodule SnmpMgr.MIB do
     "ifOutErrors" => [1, 3, 6, 1, 2, 1, 2, 2, 1, 20],
     "ifOutQLen" => [1, 3, 6, 1, 2, 1, 2, 2, 1, 21],
     "ifSpecific" => [1, 3, 6, 1, 2, 1, 2, 2, 1, 22],
-    
+
     # IP group (1.3.6.1.2.1.4)
     "ipForwarding" => [1, 3, 6, 1, 2, 1, 4, 1],
     "ipDefaultTTL" => [1, 3, 6, 1, 2, 1, 4, 2],
     "ipInReceives" => [1, 3, 6, 1, 2, 1, 4, 3],
     "ipInHdrErrors" => [1, 3, 6, 1, 2, 1, 4, 4],
     "ipInAddrErrors" => [1, 3, 6, 1, 2, 1, 4, 5],
-    
+
     # SNMP group (1.3.6.1.2.1.11)
     "snmpInPkts" => [1, 3, 6, 1, 2, 1, 11, 1],
     "snmpOutPkts" => [1, 3, 6, 1, 2, 1, 11, 2],
@@ -97,7 +97,7 @@ defmodule SnmpMgr.MIB do
 
   @doc """
   Compiles a MIB file using SnmpLib.MIB with fallback to Erlang's :snmpc.
-  
+
   Enhanced to use SnmpLib.MIB for improved compilation with better error handling.
 
   ## Examples
@@ -111,16 +111,21 @@ defmodule SnmpMgr.MIB do
   def compile(mib_file, opts \\ []) do
     # Try SnmpLib.MIB first for enhanced compilation
     case compile_with_snmp_lib(mib_file, opts) do
-      {:ok, result} -> {:ok, result}
+      {:ok, result} ->
+        {:ok, result}
+
       {:error, :snmp_lib_not_available} ->
         # Fallback to Erlang :snmpc
         case Code.ensure_loaded(:snmpc) do
           {:module, :snmpc} ->
             compile_with_snmpc(mib_file, opts)
+
           {:error, _} ->
             {:error, :snmp_compiler_not_available}
         end
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -132,12 +137,17 @@ defmodule SnmpMgr.MIB do
     case File.exists?(directory) do
       true ->
         case compile_all_with_snmp_lib(directory, opts) do
-          {:ok, results} -> {:ok, results}
+          {:ok, results} ->
+            {:ok, results}
+
           {:error, :snmp_lib_not_available} ->
             # Fallback to individual file compilation
             compile_dir_fallback(directory, opts)
-          {:error, reason} -> {:error, reason}
+
+          {:error, reason} ->
+            {:error, reason}
         end
+
       false ->
         {:error, {:directory_error, :enoent}}
     end
@@ -145,11 +155,11 @@ defmodule SnmpMgr.MIB do
 
   @doc """
   Parses a MIB file to extract object definitions using SnmpLib.MIB.Parser.
-  
+
   This provides enhanced MIB analysis without requiring compilation.
-  
+
   ## Examples
-  
+
       iex> SnmpMgr.MIB.parse_mib_file("SNMPv2-MIB.mib")
       {:ok, %{objects: [...], imports: [...], exports: [...]}}
   """
@@ -157,40 +167,36 @@ defmodule SnmpMgr.MIB do
     case File.read(mib_file) do
       {:ok, content} ->
         parse_mib_content(content, opts)
+
       {:error, reason} ->
         {:error, {:file_read_error, reason}}
     end
   end
-  
+
   @doc """
   Parses MIB content string using SnmpLib.MIB.Parser.
-  
+
   ## Examples
-  
+
       iex> content = "sysDescr OBJECT-TYPE SYNTAX DisplayString ACCESS read-only STATUS mandatory"
       iex> SnmpMgr.MIB.parse_mib_content(content)
       {:ok, %{tokens: [...], parsed_objects: [...]}}
   """
   def parse_mib_content(content, opts \\ []) when is_binary(content) do
-    try do
-      # Use SnmpLib.MIB.Parser for enhanced parsing
-      case SnmpLib.MIB.Parser.tokenize(content) do
-        {:ok, tokens} ->
-          case parse_tokens_to_objects(tokens, opts) do
-            {:ok, objects} ->
-              {:ok, %{
-                tokens: tokens,
-                parsed_objects: objects,
-                parser: :snmp_lib_enhanced
-              }}
-            {:error, reason} ->
-              {:error, {:parsing_failed, reason}}
-          end
-        {:error, reason} ->
-          {:error, {:tokenization_failed, reason}}
-      end
-    rescue
-      error -> {:error, {:parser_error, error}}
+    # Use SnmpLib.MIB.Parser for enhanced parsing
+    case SnmpLib.MIB.Parser.tokenize(content) do
+      {:ok, tokens} ->
+        {:ok, objects} = parse_tokens_to_objects(tokens, opts)
+
+        {:ok,
+         %{
+           tokens: tokens,
+           parsed_objects: objects,
+           parser: :snmp_lib_enhanced
+         }}
+
+      {:error, reason} ->
+        {:error, {:tokenization_failed, reason}}
     end
   end
 
@@ -200,33 +206,40 @@ defmodule SnmpMgr.MIB do
   def load(compiled_mib_path) do
     # Try SnmpLib.MIB.load_compiled first for enhanced loading
     case load_with_snmp_lib(compiled_mib_path) do
-      {:ok, result} -> 
+      {:ok, result} ->
         GenServer.call(__MODULE__, {:register_loaded_mib, result})
+
       {:error, :snmp_lib_not_available} ->
         GenServer.call(__MODULE__, {:load_mib, compiled_mib_path})
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
-  
+
   @doc """
   Enhanced MIB object resolution with parsed MIB data integration.
-  
+
   Leverages both standard MIBs and any loaded/parsed MIB files for comprehensive name resolution.
   """
   def resolve_enhanced(name, opts \\ []) do
     # First try standard resolution
     case resolve(name) do
-      {:ok, oid} -> {:ok, oid}
+      {:ok, oid} ->
+        {:ok, oid}
+
       {:error, :not_found} ->
         # Try enhanced resolution with loaded MIB data
         GenServer.call(__MODULE__, {:resolve_enhanced, name, opts})
-      error -> error
+
+      error ->
+        error
     end
   end
-  
+
   @doc """
   Loads and parses a MIB file, integrating it into the name resolution system.
-  
+
   This combines compilation/loading with parsing for comprehensive MIB support.
   """
   def load_and_integrate_mib(mib_file, opts \\ []) do
@@ -299,7 +312,9 @@ defmodule SnmpMgr.MIB do
   def parent(oid) when is_list(oid) and length(oid) > 0 do
     {:ok, Enum.drop(oid, -1)}
   end
+
   def parent([]), do: {:error, :no_parent}
+
   def parent(oid_string) when is_binary(oid_string) do
     case SnmpLib.OID.string_to_list(oid_string) do
       {:ok, oid_list} -> parent(oid_list)
@@ -320,11 +335,13 @@ defmodule SnmpMgr.MIB do
   def init(_opts) do
     # Initialize with standard MIBs
     reverse_map = build_reverse_map(@standard_mibs)
+
     state = %{
       name_to_oid: @standard_mibs,
       oid_to_name: reverse_map,
       loaded_mibs: [:standard]
     }
+
     {:ok, state}
   end
 
@@ -358,6 +375,7 @@ defmodule SnmpMgr.MIB do
       {:ok, mib_data} ->
         new_state = merge_mib_data(state, mib_data)
         {:reply, :ok, new_state}
+
       error ->
         {:reply, error, state}
     end
@@ -368,21 +386,21 @@ defmodule SnmpMgr.MIB do
     # Standard MIBs are already loaded in init
     {:reply, :ok, state}
   end
-  
+
   @impl true
   def handle_call({:register_loaded_mib, mib_data}, _from, state) do
     # Register MIB data loaded via SnmpLib.MIB.load_compiled
     new_state = merge_snmp_lib_mib_data(state, mib_data)
     {:reply, :ok, new_state}
   end
-  
+
   @impl true
   def handle_call({:resolve_enhanced, name, _opts}, _from, state) do
     # Enhanced resolution using loaded MIB data
     result = resolve_with_loaded_mibs(name, state)
     {:reply, result, state}
   end
-  
+
   @impl true
   def handle_call({:integrate_mib_data, mib_file, parsed_data}, _from, state) do
     # Integrate both compiled and parsed MIB data
@@ -393,92 +411,94 @@ defmodule SnmpMgr.MIB do
   ## Private Functions
 
   defp compile_with_snmp_lib(mib_file, opts) do
-    try do
-      # Use SnmpLib.MIB for enhanced compilation
-      case SnmpLib.MIB.compile(mib_file, opts) do
-        {:ok, result} -> {:ok, result}
-        {:error, reason} -> {:error, {:snmp_lib_compilation_failed, reason}}
-      end
-    rescue
-      UndefinedFunctionError -> {:error, :snmp_lib_not_available}
-      error -> {:error, {:snmp_lib_error, error}}
+    case SnmpLib.MIB.compile(mib_file, opts) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, {:snmp_lib_compilation_failed, reason}}
     end
+  rescue
+    UndefinedFunctionError -> {:error, :snmp_lib_not_available}
   end
-  
+
   defp compile_all_with_snmp_lib(directory, opts) do
-    try do
-      # Use SnmpLib.MIB.compile_all for batch compilation
-      case SnmpLib.MIB.compile_all(directory, opts) do
-        {:ok, results} -> {:ok, results}
-        {:error, reason} -> {:error, {:snmp_lib_batch_compilation_failed, reason}}
-      end
-    rescue
-      UndefinedFunctionError -> {:error, :snmp_lib_not_available}
-      error -> {:error, {:snmp_lib_error, error}}
+    case File.ls(directory) do
+      {:ok, files} ->
+        mib_files =
+          files
+          |> Enum.filter(&String.ends_with?(&1, ".mib"))
+          |> Enum.map(&Path.join(directory, &1))
+
+        case SnmpLib.MIB.compile_all(mib_files, opts) do
+          {:ok, results} -> {:ok, results}
+          {:error, reason} -> {:error, {:snmp_lib_batch_compilation_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, {:directory_error, reason}}
     end
+  rescue
+    UndefinedFunctionError -> {:error, :snmp_lib_not_available}
   end
-  
+
   defp compile_dir_fallback(directory, opts) do
     case File.ls(directory) do
       {:ok, files} ->
         mib_files = Enum.filter(files, &String.ends_with?(&1, ".mib"))
-        results = Enum.map(mib_files, fn file ->
-          file_path = Path.join(directory, file)
-          {file, compile(file_path, opts)}
-        end)
+
+        results =
+          Enum.map(mib_files, fn file ->
+            file_path = Path.join(directory, file)
+            {file, compile(file_path, opts)}
+          end)
+
         {:ok, results}
+
       {:error, reason} ->
         {:error, {:directory_error, reason}}
     end
   end
-  
+
   defp parse_tokens_to_objects(tokens, _opts) do
-    try do
-      # Extract OBJECT-TYPE definitions from tokens
-      objects = extract_object_definitions(tokens)
-      {:ok, objects}
-    rescue
-      error -> {:error, {:object_extraction_failed, error}}
-    end
+    # Extract OBJECT-TYPE definitions from tokens
+    objects = extract_object_definitions(tokens)
+    {:ok, objects}
   end
-  
+
   defp extract_object_definitions(tokens) do
     # Simple object extraction - can be enhanced further
     tokens
     |> Enum.chunk_every(3, 1, :discard)
     |> Enum.filter(fn
-      [{:atom, _, name}, {:"OBJECT-TYPE", _}, _] -> 
+      [{:atom, _, name}, {:"OBJECT-TYPE", _}, _] ->
         %{name: name, type: :object}
-      _ -> false
+
+      _ ->
+        false
     end)
     |> Enum.map(fn [{:atom, _, name}, {:"OBJECT-TYPE", _}, _] ->
       %{name: name, type: :object_type}
     end)
   end
-  
+
   defp load_with_snmp_lib(compiled_mib_path) do
-    try do
-      # Use SnmpLib.MIB.load_compiled for enhanced loading
-      case SnmpLib.MIB.load_compiled(compiled_mib_path) do
-        {:ok, result} -> {:ok, result}
-        {:error, reason} -> {:error, {:snmp_lib_load_failed, reason}}
-      end
-    rescue
-      UndefinedFunctionError -> {:error, :snmp_lib_not_available}
-      error -> {:error, {:snmp_lib_error, error}}
+    case SnmpLib.MIB.load_compiled(compiled_mib_path) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, {:snmp_lib_load_failed, reason}}
     end
+  rescue
+    UndefinedFunctionError -> {:error, :snmp_lib_not_available}
   end
-  
+
   defp merge_snmp_lib_mib_data(state, mib_data) do
     # Merge SnmpLib.MIB loaded data with our state
     # This would extract name-to-OID mappings from the loaded MIB
     # For now, return state unchanged as implementation depends on SnmpLib.MIB structure
     Map.put(state, :snmp_lib_mibs, [mib_data | Map.get(state, :snmp_lib_mibs, [])])
   end
-  
+
   defp resolve_with_loaded_mibs(_name, state) do
     # Try to resolve using loaded MIB data
     loaded_mibs = Map.get(state, :snmp_lib_mibs, [])
+
     if Enum.empty?(loaded_mibs) do
       {:error, :not_found}
     else
@@ -486,7 +506,7 @@ defmodule SnmpMgr.MIB do
       {:error, :not_found}
     end
   end
-  
+
   defp integrate_parsed_mib_data(state, mib_file, parsed_data) do
     # Integrate parsed MIB objects into our name resolution
     integrated_mibs = Map.get(state, :integrated_mibs, %{})
@@ -497,23 +517,20 @@ defmodule SnmpMgr.MIB do
   defp compile_with_snmpc(mib_file, opts) do
     output_dir = Keyword.get(opts, :output_dir, ".")
     include_dirs = Keyword.get(opts, :include_dirs, [])
-    
+
     compile_opts = [
       {:outdir, String.to_charlist(output_dir)},
       {:i, Enum.map(include_dirs, &String.to_charlist/1)}
     ]
 
-    try do
-      case :snmpc.compile(String.to_charlist(mib_file), compile_opts) do
-        {:ok, _} ->
-          base_name = Path.basename(mib_file, ".mib")
-          output_file = Path.join(output_dir, "#{base_name}.bin")
-          {:ok, output_file}
-        {:error, reason} ->
-          {:error, {:compilation_failed, reason}}
-      end
-    catch
-      error -> {:error, {:compilation_error, error}}
+    case :snmpc.compile(String.to_charlist(mib_file), compile_opts) do
+      {:ok, _} ->
+        base_name = Path.basename(mib_file, ".mib")
+        output_file = Path.join(output_dir, "#{base_name}.bin")
+        {:ok, output_file}
+
+      {:error, reason} ->
+        {:error, {:compilation_failed, reason}}
     end
   end
 
@@ -522,25 +539,31 @@ defmodule SnmpMgr.MIB do
       # Handle nil or invalid names first
       is_nil(name) or not is_binary(name) ->
         {:error, :invalid_name}
-      
+
       # Direct match
       Map.has_key?(name_to_oid_map, name) ->
         {:ok, Map.get(name_to_oid_map, name)}
-      
+
       # Name with instance (e.g., "sysDescr.0")
       String.contains?(name, ".") ->
         [base_name | instance_parts] = String.split(name, ".")
+
         case Map.get(name_to_oid_map, base_name) do
-          nil -> {:error, :not_found}
+          nil ->
+            {:error, :not_found}
+
           base_oid ->
-            try do
-              instance_oids = Enum.map(instance_parts, &String.to_integer/1)
-              {:ok, base_oid ++ instance_oids}
-            rescue
-              _error -> {:error, :invalid_instance}
+            case Enum.reduce_while(instance_parts, [], fn part, acc ->
+                   case Integer.parse(part) do
+                     {int, ""} -> {:cont, [int | acc]}
+                     _ -> {:halt, :error}
+                   end
+                 end) do
+              :error -> {:error, :invalid_instance}
+              instance_oids -> {:ok, base_oid ++ Enum.reverse(instance_oids)}
             end
         end
-      
+
       true ->
         {:error, :not_found}
     end
@@ -551,6 +574,7 @@ defmodule SnmpMgr.MIB do
       nil ->
         # Try to find a partial match
         find_partial_reverse_match(oid, oid_to_name_map)
+
       name ->
         {:ok, name}
     end
@@ -565,7 +589,7 @@ defmodule SnmpMgr.MIB do
       if Enum.empty?(oid) do
         {:error, :empty_oid}
       else
-        # Try progressively shorter OIDs to find a base match  
+        # Try progressively shorter OIDs to find a base match
         find_partial_match(oid, oid_to_name_map, length(oid) - 1)
       end
     end
@@ -575,10 +599,14 @@ defmodule SnmpMgr.MIB do
 
   defp find_partial_match(oid, oid_to_name_map, length) do
     partial_oid = Enum.take(oid, length)
+
     case Map.get(oid_to_name_map, partial_oid) do
-      nil -> find_partial_match(oid, oid_to_name_map, length - 1)
+      nil ->
+        find_partial_match(oid, oid_to_name_map, length - 1)
+
       base_name ->
         instance_part = Enum.drop(oid, length)
+
         if Enum.empty?(instance_part) do
           {:ok, base_name}
         else
@@ -589,27 +617,34 @@ defmodule SnmpMgr.MIB do
   end
 
   defp find_children(parent_oid, name_to_oid_map) do
-    normalized_oid = cond do
-      is_nil(parent_oid) -> []
-      is_binary(parent_oid) ->
-        case SnmpLib.OID.string_to_list(parent_oid) do
-          {:ok, oid_list} -> oid_list
-          {:error, _} -> []
-        end
-      is_list(parent_oid) -> parent_oid
-      true -> []
-    end
+    normalized_oid =
+      cond do
+        is_nil(parent_oid) ->
+          []
+
+        is_binary(parent_oid) ->
+          case SnmpLib.OID.string_to_list(parent_oid) do
+            {:ok, oid_list} -> oid_list
+            {:error, _} -> []
+          end
+
+        is_list(parent_oid) ->
+          parent_oid
+
+        true ->
+          []
+      end
 
     # Return error for invalid OIDs
     if normalized_oid == [] and not is_nil(parent_oid) do
       {:error, :invalid_parent_oid}
     else
-      children = 
+      children =
         name_to_oid_map
         |> Enum.filter(fn {_name, oid} ->
           is_list(oid) and is_list(normalized_oid) and
-          length(oid) == length(normalized_oid) + 1 and 
-          List.starts_with?(oid, normalized_oid)
+            length(oid) == length(normalized_oid) + 1 and
+            List.starts_with?(oid, normalized_oid)
         end)
         |> Enum.map(fn {name, _oid} -> name end)
         |> Enum.sort()
@@ -619,21 +654,25 @@ defmodule SnmpMgr.MIB do
   end
 
   defp walk_tree_from_root(root_oid, name_to_oid_map) do
-    root_oid = cond do
-      is_binary(root_oid) ->
-        case SnmpLib.OID.string_to_list(root_oid) do
-          {:ok, oid_list} -> oid_list
-          {:error, _} -> []
-        end
-      is_list(root_oid) ->
-        root_oid
-      is_nil(root_oid) ->
-        []
-      true ->
-        []
-    end
+    root_oid =
+      cond do
+        is_binary(root_oid) ->
+          case SnmpLib.OID.string_to_list(root_oid) do
+            {:ok, oid_list} -> oid_list
+            {:error, _} -> []
+          end
 
-    descendants = 
+        is_list(root_oid) ->
+          root_oid
+
+        is_nil(root_oid) ->
+          []
+
+        true ->
+          []
+      end
+
+    descendants =
       name_to_oid_map
       |> Enum.filter(fn {_name, oid} ->
         is_list(oid) and List.starts_with?(oid, root_oid)
@@ -651,18 +690,15 @@ defmodule SnmpMgr.MIB do
   end
 
   defp load_mib_file(mib_path) do
-    try do
-      case Code.ensure_loaded(:snmp_misc) do
-        {:module, :snmp_misc} ->
-          case :snmp_misc.read_mib(String.to_charlist(mib_path)) do
-            {:ok, mib_data} -> parse_mib_data(mib_data)
-            {:error, reason} -> {:error, {:mib_load_failed, reason}}
-          end
-        {:error, _} ->
-          {:error, :snmp_modules_not_available}
-      end
-    catch
-      error -> {:error, {:mib_load_error, error}}
+    case Code.ensure_loaded(:snmp_misc) do
+      {:module, :snmp_misc} ->
+        case :snmp_misc.read_mib(String.to_charlist(mib_path)) do
+          {:ok, mib_data} -> parse_mib_data(mib_data)
+          {:error, reason} -> {:error, {:mib_load_failed, reason}}
+        end
+
+      {:error, _} ->
+        {:error, :snmp_modules_not_available}
     end
   end
 

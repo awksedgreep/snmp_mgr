@@ -293,26 +293,45 @@ defmodule SnmpMgr.Router do
 
   @impl true
   def handle_call({:configure_engines, config}, _from, state) do
-    case apply_engine_config(state, config) do
-      {:ok, new_state} -> {:reply, :ok, new_state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
+    new_state = cond do
+      Keyword.has_key?(config, :engines) ->
+        engines = Keyword.get(config, :engines, [])
+        backup_engines = Keyword.get(config, :backup_engines, [])
+        all_engines = engines ++ backup_engines
+        # Convert string names to atoms for proper GenServer handling
+        engine_specs = Enum.map(all_engines, fn engine_name ->
+          name = if is_binary(engine_name), do: String.to_atom(engine_name), else: engine_name
+          %{name: name}
+        end)
+        new_engines = initialize_engines(engine_specs)
+        %{state | engines: new_engines}
+      
+      Keyword.has_key?(config, :max_engines) or Keyword.has_key?(config, :min_engines) ->
+        # Engine limits configuration - just store in state for now
+        state
+      
+      true ->
+        state
     end
+    {:reply, :ok, new_state}
   end
 
   @impl true
   def handle_call({:configure_health_check, config}, _from, state) do
-    case apply_health_check_config(state, config) do
-      {:ok, new_state} -> {:reply, :ok, new_state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
-    end
+    {:ok, new_state} = apply_health_check_config(state, config)
+    {:reply, :ok, new_state}
   end
 
   @impl true
   def handle_call({:set_engine_weights, weights}, _from, state) do
-    case apply_engine_weights(state, weights) do
-      {:ok, new_state} -> {:reply, :ok, new_state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
-    end
+    new_engines = Enum.reduce(weights, state.engines, fn {engine_name, weight}, acc ->
+      case Map.get(acc, engine_name) do
+        nil -> acc
+        engine -> Map.put(acc, engine_name, %{engine | weight: weight})
+      end
+    end)
+    new_state = %{state | engines: new_engines}
+    {:reply, :ok, new_state}
   end
 
   @impl true
@@ -347,10 +366,8 @@ defmodule SnmpMgr.Router do
 
   @impl true
   def handle_call({:configure_batch_strategy, strategy_config}, _from, state) do
-    case apply_batch_strategy_config(state, strategy_config) do
-      {:ok, new_state} -> {:reply, :ok, new_state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
-    end
+    {:ok, new_state} = apply_batch_strategy_config(state, strategy_config)
+    {:reply, :ok, new_state}
   end
   
   @impl true
@@ -714,60 +731,21 @@ defmodule SnmpMgr.Router do
 
   # Configuration helper functions
 
-  defp apply_engine_config(state, config) do
-    try do
-      new_state = cond do
-        Keyword.has_key?(config, :engines) ->
-          engines = Keyword.get(config, :engines, [])
-          backup_engines = Keyword.get(config, :backup_engines, [])
-          all_engines = engines ++ backup_engines
-          # Convert string names to atoms for proper GenServer handling
-          engine_specs = Enum.map(all_engines, fn engine_name ->
-            name = if is_binary(engine_name), do: String.to_atom(engine_name), else: engine_name
-            %{name: name}
-          end)
-          new_engines = initialize_engines(engine_specs)
-          %{state | engines: new_engines}
-        
-        Keyword.has_key?(config, :max_engines) or Keyword.has_key?(config, :min_engines) ->
-          # Engine limits configuration - just store in state for now
-          state
-        
-        true ->
-          state
-      end
-      {:ok, new_state}
-    rescue
-      error -> {:error, {:config_error, error}}
-    end
-  end
-
   defp apply_health_check_config(state, config) do
-    try do
-      new_interval = Keyword.get(config, :health_check_interval, state.health_check_interval)
-      enabled = Keyword.get(config, :health_check_enabled, true)
-      
-      new_state = %{state | 
-        health_check_interval: if(enabled, do: new_interval, else: 0)
-      }
-      {:ok, new_state}
-    rescue
-      error -> {:error, {:config_error, error}}
-    end
+    new_interval = Keyword.get(config, :health_check_interval, state.health_check_interval)
+    enabled = Keyword.get(config, :health_check_enabled, true)
+    
+    new_state = %{state | 
+      health_check_interval: if(enabled, do: new_interval, else: 0)
+    }
+    {:ok, new_state}
   end
 
-  defp apply_engine_weights(state, weights) do
-    try do
-      new_engines = Enum.reduce(weights, state.engines, fn {engine_name, weight}, acc ->
-        case Map.get(acc, engine_name) do
-          nil -> acc
-          engine -> Map.put(acc, engine_name, %{engine | weight: weight})
-        end
-      end)
-      {:ok, %{state | engines: new_engines}}
-    rescue
-      error -> {:error, {:weight_error, error}}
-    end
+  defp apply_batch_strategy_config(state, strategy_config) do
+    # Store batch strategy in state (could extend router struct to include this)
+    _batch_strategy = Keyword.get(strategy_config, :batch_strategy, :default)
+    # For now, just return success - could add batch_strategy field to state
+    {:ok, state}
   end
 
   defp get_detailed_engine_health(engines) do
@@ -816,17 +794,6 @@ defmodule SnmpMgr.Router do
         }
         new_engines = Map.put(state.engines, engine_name, recovered_engine)
         {:ok, %{state | engines: new_engines}}
-    end
-  end
-
-  defp apply_batch_strategy_config(state, strategy_config) do
-    try do
-      # Store batch strategy in state (could extend router struct to include this)
-      _batch_strategy = Keyword.get(strategy_config, :batch_strategy, :default)
-      # For now, just return success - could add batch_strategy field to state
-      {:ok, state}
-    rescue
-      error -> {:error, {:batch_config_error, error}}
     end
   end
 
